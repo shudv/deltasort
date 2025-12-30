@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # Misc
 *.tgz
+
+# Latex auxiliary files
+paper/out/**

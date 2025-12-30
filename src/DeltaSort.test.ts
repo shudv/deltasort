@@ -60,27 +60,20 @@ function formatTable(stats: BenchmarkStats[]): string {
     ]);
 
     // Calculate column widths
-    const colWidths = headers.map((h, i) =>
-        Math.max(h.length, ...rows.map((r) => r[i]!.length))
-    );
+    const colWidths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i]!.length)));
 
     // Build table
-    const separator =
-        "+" + colWidths.map((w) => "-".repeat(w + 2)).join("+") + "+";
-    const headerRow =
-        "|" + headers.map((h, i) => ` ${h.padEnd(colWidths[i]!)} `).join("|") + "|";
+    const separator = "+" + colWidths.map((w) => "-".repeat(w + 2)).join("+") + "+";
+    const headerRow = "|" + headers.map((h, i) => ` ${h.padEnd(colWidths[i]!)} `).join("|") + "|";
     const dataRows = rows.map(
-        (row) =>
-            "|" +
-            row.map((cell, i) => ` ${cell.padStart(colWidths[i]!)} `).join("|") +
-            "|"
+        (row) => "|" + row.map((cell, i) => ` ${cell.padStart(colWidths[i]!)} `).join("|") + "|",
     );
 
     return [separator, headerRow, separator, ...dataRows, separator].join("\n");
 }
 
 const SCALE = [1000];
-const DELTA_VOLUME = [80];
+const DELTA_VOLUME = [0, 1, 5, 10, 20, 50, 80, 100];
 
 describe("DeltaSort", () => {
     describe.each(SCALE)("Scale 10^%d", (scale) => {
@@ -119,8 +112,8 @@ describe("DeltaSort", () => {
     });
 
     test(`performance`, () => {
-        const scales = [5];
-        const deltas = [0, 500, 1000];
+        const scales = [4];
+        const deltas = [0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 8000];
         const iterations = BENCHMARK_ITERATIONS;
         const stats: BenchmarkStats[] = [];
 
@@ -150,7 +143,7 @@ describe("DeltaSort", () => {
                     const nativeStart = performance.now();
                     arrayToSort.sort((a, b) => {
                         nativeComparisons++;
-                        for(let k=0; k<2; k++) {} // Artificial delay
+                        for (let k = 0; k < 25; k++) {} // Artificial delay
                         return a - b;
                     });
                     const nativeEnd = performance.now();
@@ -164,10 +157,10 @@ describe("DeltaSort", () => {
                         array,
                         (a, b) => {
                             deltasortComparisons++;
-                            for(let k=0; k<2; k++) {} // Artificial delay
+                            for (let k = 0; k < 25; k++) {} // Artificial delay
                             return a - b;
                         },
-                        indexSet
+                        indexSet,
                     );
                     const end = performance.now();
                     const deltasortTime = end - start;
@@ -189,16 +182,21 @@ describe("DeltaSort", () => {
 
                 // Calculate aggregate stats across iterations
                 const nativeTimeStats = calculateStats(iterationResults.map((r) => r.nativeTime));
-                const deltasortTimeStats = calculateStats(iterationResults.map((r) => r.deltasortTime));
+                const deltasortTimeStats = calculateStats(
+                    iterationResults.map((r) => r.deltasortTime),
+                );
                 const avgNativeComparisons = Math.round(
-                    iterationResults.reduce((sum, r) => sum + r.nativeComparisons, 0) / iterations
+                    iterationResults.reduce((sum, r) => sum + r.nativeComparisons, 0) / iterations,
                 );
                 const avgDeltasortComparisons = Math.round(
-                    iterationResults.reduce((sum, r) => sum + r.deltasortComparisons, 0) / iterations
+                    iterationResults.reduce((sum, r) => sum + r.deltasortComparisons, 0) /
+                        iterations,
                 );
                 const comparisonReduction =
                     avgNativeComparisons > 0
-                        ? ((avgNativeComparisons - avgDeltasortComparisons) / avgNativeComparisons) * 100
+                        ? ((avgNativeComparisons - avgDeltasortComparisons) /
+                              avgNativeComparisons) *
+                          100
                         : 0;
 
                 stats.push({
@@ -219,12 +217,13 @@ describe("DeltaSort", () => {
         }
 
         // Pretty print results as a table
-        console.log(`\n📊 DeltaSort Performance Benchmark Results (${iterations} iterations per config)\n`);
+        console.log(
+            `\n📊 DeltaSort Performance Benchmark Results (${iterations} iterations per config)\n`,
+        );
         console.log(formatTable(stats));
 
         // Summary statistics
-        const avgSpeedup =
-            stats.reduce((sum, s) => sum + s.speedup, 0) / stats.length;
+        const avgSpeedup = stats.reduce((sum, s) => sum + s.speedup, 0) / stats.length;
         const maxSpeedup = Math.max(...stats.map((s) => s.speedup));
         const minSpeedup = Math.min(...stats.map((s) => s.speedup));
         const bestCase = stats.find((s) => s.speedup === maxSpeedup)!;
@@ -233,26 +232,20 @@ describe("DeltaSort", () => {
         console.log("\n📈 Summary Statistics:");
         console.log(`   Average Speedup: ${avgSpeedup.toFixed(2)}x`);
         console.log(
-            `   Best Case: ${maxSpeedup.toFixed(2)}x (Size: ${bestCase.size.toLocaleString()}, Delta: ${bestCase.deltaVolume})`
+            `   Best Case: ${maxSpeedup.toFixed(2)}x (Size: ${bestCase.size.toLocaleString()}, Delta: ${bestCase.deltaVolume})`,
         );
         console.log(
-            `   Worst Case: ${minSpeedup.toFixed(2)}x (Size: ${worstCase.size.toLocaleString()}, Delta: ${worstCase.deltaVolume})`
+            `   Worst Case: ${minSpeedup.toFixed(2)}x (Size: ${worstCase.size.toLocaleString()}, Delta: ${worstCase.deltaVolume})`,
         );
 
         const avgCompReduction =
             stats.reduce((sum, s) => sum + s.comparisonReduction, 0) / stats.length;
-        const maxCompReduction = Math.max(
-            ...stats.map((s) => s.comparisonReduction)
-        );
-        const bestCompCase = stats.find(
-            (s) => s.comparisonReduction === maxCompReduction
-        )!;
+        const maxCompReduction = Math.max(...stats.map((s) => s.comparisonReduction));
+        const bestCompCase = stats.find((s) => s.comparisonReduction === maxCompReduction)!;
+        console.log(`\n   Average Comparison Reduction: ${avgCompReduction.toFixed(1)}%`);
         console.log(
-            `\n   Average Comparison Reduction: ${avgCompReduction.toFixed(1)}%`
-        );
-        console.log(
-            `   Best Comparison Reduction: ${maxCompReduction.toFixed(1)}% (Size: ${bestCompCase.size.toLocaleString()}, Delta: ${bestCompCase.deltaVolume})`
+            `   Best Comparison Reduction: ${maxCompReduction.toFixed(1)}% (Size: ${bestCompCase.size.toLocaleString()}, Delta: ${bestCompCase.deltaVolume})`,
         );
         console.log("");
     });
-}, 60000);
+}, 120000);

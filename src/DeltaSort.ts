@@ -1,10 +1,9 @@
 const SMALL_ARRAY_SORT_THRESHOLD = 256;
-const DELTA_SORT_THRESHOLD = 0.1;
 
 enum Direction {
-    L = 0,
-    R = 1,
-    S = 2,
+    LEFT = 0,
+    RIGHT = 1,
+    STABLE = 2,
 }
 
 /**
@@ -21,7 +20,7 @@ export function deltasort<T>(
 ): T[] {
     if (
         arr.length <= SMALL_ARRAY_SORT_THRESHOLD ||
-        deltaIndices.size > 5000 ||
+        deltaIndices.size > 10000 ||
         deltaIndices.size === 0
     ) {
         return arr.sort(cmp);
@@ -32,7 +31,6 @@ export function deltasort<T>(
     //console.log("deltaIndices:", [...deltaIndices]);
 
     const dirty = Array.from(deltaIndices).sort((a, b) => a - b);
-    if (dirty.length === 0) return arr;
 
     //console.log("sorted dirty indices:", dirty);
 
@@ -56,10 +54,6 @@ export function deltasort<T>(
         //console.log("before:", JSON.stringify(arr));
 
         const target = findLeftTarget(arr, v, leftBound, i - 1, cmp);
-        if (target === i) {
-            //console.log("[fixLeft] already in place");
-            return;
-        }
 
         //console.log(`[fixLeft] copyWithin(${target + 1}, ${target}, ${i})`);
         arr.copyWithin(target + 1, target, i);
@@ -77,10 +71,6 @@ export function deltasort<T>(
         //console.log("before:", JSON.stringify(arr));
 
         const target = findRightTarget(arr, v, i + 1, rightBound, cmp);
-        if (target === i) {
-            //console.log("[fixRight] already in place");
-            return;
-        }
 
         //console.log(`[fixRight] copyWithin(${i}, ${i + 1}, ${target + 1})`);
         arr.copyWithin(i, i + 1, target + 1);
@@ -99,7 +89,7 @@ export function deltasort<T>(
 
         const d = directionAt(arr, i, cmp);
 
-        if (d === Direction.L) {
+        if (d === Direction.LEFT) {
             const rightBound = i - 1;
 
             //console.log(`[scan] L detected → flushing stack, rightBound=${rightBound}`);
@@ -108,7 +98,7 @@ export function deltasort<T>(
                 const s = stack.pop()!;
                 const d = directionAt(arr, s, cmp);
 
-                if (d === Direction.R) {
+                if (d === Direction.RIGHT) {
                     fixRight(s, rightBound);
                 } else {
                     // S → no-op (already in correct position)
@@ -145,7 +135,7 @@ function directionAt<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Direc
     const leftBad = i > 0 && cmp(arr[i - 1]!, v) > 0;
     const rightBad = i < arr.length - 1 && cmp(v, arr[i + 1]!) > 0;
 
-    const d = leftBad ? Direction.L : rightBad ? Direction.R : Direction.S;
+    const d = leftBad ? Direction.LEFT : rightBad ? Direction.RIGHT : Direction.STABLE;
 
     //console.log(`[dir] index=${i}, value=${String(v)}, leftBad=${leftBad}, rightBad=${rightBad} → ${d}`);
 
@@ -181,8 +171,6 @@ function findRightTarget<T>(
     hi: number,
     cmp: (a: T, b: T) => number,
 ): number {
-    //console.log(`[findRightTarget] value=${String(value)}, range=[${lo}, ${hi}]`);
-
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(arr[mid]!, value);

@@ -1,0 +1,39 @@
+{
+    "compilerOptions": {
+        // Language and Environment
+        "target": "ES2015",
+        "lib": ["ES2022", "DOM"],
+        "module": "ESNext",
+        "jsx": "react-jsx",
+        "moduleResolution": "bundler",
+
+        // Emit
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "outDir": "./dist",
+        "removeComments": true,
+
+        // Interop Constraints
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "isolatedModules": true,
+
+        // Type Checking (Strict Mode)
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUncheckedIndexedAccess": true,
+
+        // Completeness
+        "skipLibCheck": true,
+
+        // Vitest
+        "types": ["vitest/globals"]
+    },
+    "include": ["src/**/*", "tests/**/*", "**/*.d.ts"],
+    "exclude": ["node_modules", "dist"]
+}

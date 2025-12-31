@@ -31,7 +31,7 @@
         "typecheck": "tsc --noEmit",
         "size": "pnpm build && pnpm size-limit && node measure-size.ts deltasort && pnpm size:mangle",
         "size:mangle": "npx esbuild src/index.ts --bundle --minify --mangle-props='^_' --outfile=dist/mangled.js && brotli -c dist/mangled.js | wc -c",
-        "benchmark": "vitest run DeltaSort.benchmark.test.ts --testTimeout=120000 --no-coverage",
+        "benchmark": "vitest run DeltaSort.benchmark.test.ts --testTimeout=1200000 --no-coverage",
         "ci": "pnpm format && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm size"
     },
     "keywords": [

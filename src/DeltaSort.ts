@@ -1,3 +1,7 @@
+/**
+ * Direction enum for dirty indices. This represents whether the element at the index
+ * needs to move left, right, or is stable based on it's current position.
+ */
 const enum Direction {
     LEFT = 0,
     RIGHT = 1,
@@ -81,6 +85,9 @@ function directionAt<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Direc
           : Direction.STABLE;
 }
 
+/**
+ * Fund the target index to insert value on the left side using binary search.
+ */
 function findLeftTarget<T>(
     arr: T[],
     value: T,
@@ -91,6 +98,7 @@ function findLeftTarget<T>(
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(value, arr[mid]!);
+
         if (c < 0) hi = mid - 1;
         else lo = mid + 1;
     }
@@ -98,6 +106,9 @@ function findLeftTarget<T>(
     return lo;
 }
 
+/**
+ * Find the target index to insert value on the right side using binary search.
+ */
 function findRightTarget<T>(
     arr: T[],
     value: T,
@@ -108,13 +119,29 @@ function findRightTarget<T>(
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(arr[mid]!, value);
+
         if (c <= 0) lo = mid + 1;
         else hi = mid - 1;
     }
     return hi;
 }
 
+/**
+ * Moves element from index `from` to index `to` in the array.
+ */
 function move<T>(arr: T[], from: number, to: number) {
+    // splice-based move implementation (turns out to be faster than copyWithin)
     const [v] = arr.splice(from, 1);
     arr.splice(to, 0, v!);
+
+    // copyWithin-based move implementation
+    // if (from < to) {
+    //     const v = arr[from]!;
+    //     arr.copyWithin(from, from + 1, to + 1);
+    //     arr[to] = v;
+    // } else if (from > to) {
+    //     const v = arr[from]!;
+    //     arr.copyWithin(to + 1, to, from);
+    //     arr[to] = v;
+    // }
 }

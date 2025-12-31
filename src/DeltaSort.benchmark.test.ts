@@ -207,7 +207,7 @@ function formatTimeWithVariance(mean: number, variancePercent: number): string {
 }
 
 function formatTimeTable(results: BenchmarkResult[]): string {
-    const headers = ["#Changes", "Native", "BinaryInsertion", "ExtractSortMerge", "DeltaSort"];
+    const headers = ["#Changes", "NativeSort", "BinaryInsertion", "ExtractSortMerge", "DeltaSort"];
     const rows = results.map((r) => [
         r.deltaCount.toString(),
         formatTimeWithVariance(r.native.timeMean, r.native.timeVariance),
@@ -220,7 +220,7 @@ function formatTimeTable(results: BenchmarkResult[]): string {
 }
 
 function formatComparisonTable(results: BenchmarkResult[]): string {
-    const headers = ["#Changes", "Native", "BinaryInsertion", "ExtractSortMerge", "DeltaSort"];
+    const headers = ["#Changes", "NativeSort", "BinaryInsertion", "ExtractSortMerge", "DeltaSort"];
     const rows = results.map((r) => [
         r.deltaCount.toString(),
         r.native.comparisons.toLocaleString(),
@@ -240,7 +240,7 @@ function formatSpeedupTable(results: BenchmarkResult[]): string {
         const delta = r.native.timeMean / r.deltasort.timeMean;
 
         const times = [
-            { name: "Native", time: r.native.timeMean },
+            { name: "NativeSort", time: r.native.timeMean },
             { name: "BinaryInsertion", time: r.binaryInsertion.timeMean },
             { name: "ExtractSortMerge", time: r.extractSortMerge.timeMean },
             { name: "DeltaSort", time: r.deltasort.timeMean },
@@ -275,7 +275,7 @@ function formatTableRows(headers: string[], rows: string[][]): string {
 // ============================================================================
 
 describe("DeltaSort Benchmark", () => {
-    test("Performance Comparison: Native vs BinaryInsertion vs ExtactSortMerge vs DeltaSort", () => {
+    test("Performance Comparison: NativeSort vs BinaryInsertion vs ExtactSortMerge vs DeltaSort", () => {
         printHeader("DELTASORT BENCHMARK SUITE");
 
         console.log("\n  Configuration:");
@@ -294,7 +294,7 @@ describe("DeltaSort Benchmark", () => {
             const deltasortResults: AlgorithmResult[] = [];
 
             for (let iter = 0; iter < ITERATIONS; iter++) {
-                const usersForNative = baseUsers.map((u) => ({ ...u }));
+                const usersForNativeSort = baseUsers.map((u) => ({ ...u }));
                 const usersForBinIns = baseUsers.map((u) => ({ ...u }));
                 const usersForExtSort = baseUsers.map((u) => ({ ...u }));
                 const usersForDeltasort = baseUsers.map((u) => ({ ...u }));
@@ -304,20 +304,20 @@ describe("DeltaSort Benchmark", () => {
 
                 for (let i = 0; i < deltaCount; i++) {
                     const idx = Math.floor(Math.random() * N);
-                    const newUser = mutateUser(usersForNative[idx]!);
+                    const newUser = mutateUser(usersForNativeSort[idx]!);
                     mutations.push({ idx, newUser });
                     dirtyIndices.add(idx);
                 }
 
                 for (const { idx, newUser } of mutations) {
-                    usersForNative[idx] = { ...newUser };
+                    usersForNativeSort[idx] = { ...newUser };
                     usersForBinIns[idx] = { ...newUser };
                     usersForExtSort[idx] = { ...newUser };
                     usersForDeltasort[idx] = { ...newUser };
                 }
 
                 nativeResults.push(
-                    runAlgorithm(usersForNative, userComparator, dirtyIndices, "native"),
+                    runAlgorithm(usersForNativeSort, userComparator, dirtyIndices, "native"),
                 );
                 binInsResults.push(
                     runAlgorithm(usersForBinIns, userComparator, dirtyIndices, "binaryInsertion"),
@@ -331,9 +331,9 @@ describe("DeltaSort Benchmark", () => {
 
                 if (iter === 0) {
                     for (let i = 0; i < N; i++) {
-                        expect(usersForBinIns[i]).toEqual(usersForNative[i]);
-                        expect(usersForExtSort[i]).toEqual(usersForNative[i]);
-                        expect(usersForDeltasort[i]).toEqual(usersForNative[i]);
+                        expect(usersForBinIns[i]).toEqual(usersForNativeSort[i]);
+                        expect(usersForExtSort[i]).toEqual(usersForNativeSort[i]);
+                        expect(usersForDeltasort[i]).toEqual(usersForNativeSort[i]);
                     }
                 }
             }
@@ -365,7 +365,7 @@ describe("DeltaSort Benchmark", () => {
         printHeader("RESULTS: Comparator Calls");
         console.log("\n" + formatComparisonTable(results));
 
-        printHeader("RESULTS: Speedup vs Native (higher is better)");
+        printHeader("RESULTS: Speedup vs NativeSort (higher is better)");
         console.log("\n" + formatSpeedupTable(results));
 
         console.log("\n" + "═".repeat(120) + "\n");

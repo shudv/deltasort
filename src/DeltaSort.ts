@@ -1,15 +1,8 @@
-const SMALL_ARRAY_SORT_THRESHOLD = 256;
-
-enum Direction {
+const enum Direction {
     LEFT = 0,
     RIGHT = 1,
     STABLE = 2,
 }
-
-export type DeltaSortConfig = {
-    arraySizeLowerBound: number;
-    deltaPercentageSizeUpperBound: number;
-};
 
 /**
  * Sorts the array using the provided comparator, only re-sorting if there are dirty indices.
@@ -21,22 +14,14 @@ export type DeltaSortConfig = {
 export function deltasort<T>(
     arr: T[],
     cmp: (a: T, b: T) => number,
-    deltaIndices: Set<number>,
-    config: Partial<DeltaSortConfig> = {},
+    dirtyIndices: Set<number>,
 ): T[] {
-    if (deltaIndices.size === 0) {
+    if (dirtyIndices.size === 0) {
         return arr;
     }
 
-    if (
-        arr.length <= (config.arraySizeLowerBound ?? SMALL_ARRAY_SORT_THRESHOLD) ||
-        (deltaIndices.size * 100.0) / arr.length > (config.deltaPercentageSizeUpperBound ?? 5.0)
-    ) {
-        return arr.sort(cmp);
-    }
-
     // Step 1: Extract and sort dirty values
-    const dirty = Array.from(deltaIndices).sort((a, b) => a - b);
+    const dirty = Array.from(dirtyIndices).sort((a, b) => a - b);
     const values = dirty.map((i) => arr[i]!).sort(cmp);
     for (let i = 0; i < dirty.length; i++) {
         arr[dirty[i]!] = values[i]!;
@@ -89,13 +74,11 @@ export function deltasort<T>(
 }
 
 function directionAt<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Direction {
-    const v = arr[i]!;
-
-    const leftBad = i > 0 && cmp(arr[i - 1]!, v) > 0;
-    const rightBad = i < arr.length - 1 && cmp(v, arr[i + 1]!) > 0;
-
-    const d = leftBad ? Direction.LEFT : rightBad ? Direction.RIGHT : Direction.STABLE;
-    return d;
+    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0
+        ? Direction.LEFT
+        : i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0
+          ? Direction.RIGHT
+          : Direction.STABLE;
 }
 
 function findLeftTarget<T>(
@@ -108,7 +91,6 @@ function findLeftTarget<T>(
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(value, arr[mid]!);
-
         if (c < 0) hi = mid - 1;
         else lo = mid + 1;
     }
@@ -126,7 +108,6 @@ function findRightTarget<T>(
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(arr[mid]!, value);
-
         if (c <= 0) lo = mid + 1;
         else hi = mid - 1;
     }

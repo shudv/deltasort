@@ -27,10 +27,7 @@ describe("DeltaSort", () => {
                     const expected = [...array].sort((a, b) => a - b);
 
                     // Sort using DeltaSort - ensure that it does not fallaback to native sort by setting high thresholds
-                    deltasort(array, (a, b) => a - b, dirtyIndices, {
-                        deltaPercentageSizeUpperBound: 100,
-                        arraySizeLowerBound: 0,
-                    });
+                    deltasort(array, (a, b) => a - b, dirtyIndices);
 
                     // Verify that the array is correctly sorted
                     for (let i = 1; i < array.length; i++) {
@@ -44,22 +41,5 @@ describe("DeltaSort", () => {
     test("no dirty indices - should be no-op", () => {
         // deltasort bails out if no dirty indices are provided
         expect(deltasort([1, 2, 3, 2, 1], (a, b) => a - b, new Set())).toEqual([1, 2, 3, 2, 1]);
-    });
-
-    test("various threshold configs", () => {
-        expect(deltasort([3, 1, 2], (a, b) => a - b, new Set([0]))).toEqual([1, 2, 3]);
-
-        expect(
-            deltasort([3, 1, 2], (a, b) => a - b, new Set([0]), {
-                arraySizeLowerBound: 2,
-                deltaPercentageSizeUpperBound: 0,
-            }),
-        ).toEqual([1, 2, 3]);
-
-        expect(
-            deltasort([3, 1, 2], (a, b) => a - b, new Set([0, 1, 2]), {
-                arraySizeLowerBound: 2,
-            }),
-        ).toEqual([1, 2, 3]);
     });
 }, 200000);

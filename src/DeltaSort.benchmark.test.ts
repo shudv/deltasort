@@ -6,13 +6,13 @@ import { deltasort } from "./DeltaSort";
 // ============================================================================
 
 /** Array size to test */
-const N = 25_000;
+const N = 100_000;
 
 /** Delta counts to test */
-const DELTA_COUNTS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+const DELTA_COUNTS = [1, 2, 5, 10, 20, 50, 100, 1000];
 
 /** Number of iterations per test configuration */
-const ITERATIONS = 200;
+const ITERATIONS = 100;
 
 // ============================================================================
 // SORTING ALGORITHMS
@@ -168,7 +168,7 @@ function runAlgorithm<T>(
 
     switch (algorithm) {
         case "native":
-            arr.sort(countingCmp);
+            arr.sort(countingCmp); // Unlike other sorts, native sort is blind to dirty indices
             break;
         case "binaryInsertion":
             binaryInsertionSort(arr, countingCmp, dirtyIndices);
@@ -177,10 +177,7 @@ function runAlgorithm<T>(
             extractSortMerge(arr, countingCmp, dirtyIndices);
             break;
         case "deltasort":
-            deltasort(arr, countingCmp, dirtyIndices, {
-                arraySizeLowerBound: 0,
-                deltaPercentageSizeUpperBound: 100,
-            });
+            deltasort(arr, countingCmp, dirtyIndices);
             break;
     }
 

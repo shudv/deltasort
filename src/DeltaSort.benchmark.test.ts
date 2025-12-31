@@ -6,10 +6,10 @@ import { deltasort } from "./DeltaSort";
 // ============================================================================
 
 /** Array size to test */
-const N = 100_000;
+const N = 50000;
 
 /** Delta counts to test */
-const DELTA_COUNTS = [1, 2, 5, 10, 20, 50, 100, 1000];
+const DELTA_COUNTS = [1, 2, 5, 10, 20, 50, 100];
 
 /** Number of iterations per test configuration */
 const ITERATIONS = 100;

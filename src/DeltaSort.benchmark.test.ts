@@ -233,7 +233,7 @@ function formatComparisonTable(results: BenchmarkResult[]): string {
 }
 
 function formatSpeedupTable(results: BenchmarkResult[]): string {
-    const headers = ["Delta", "BinaryInsertion", "ExtractSortMerge", "DeltaSort", "Best"];
+    const headers = ["#Changes", "BinaryInsertion", "ExtractSortMerge", "DeltaSort", "Best"];
     const rows = results.map((r) => {
         const binIns = r.native.timeMean / r.binaryInsertion.timeMean;
         const extSort = r.native.timeMean / r.extractSortMerge.timeMean;

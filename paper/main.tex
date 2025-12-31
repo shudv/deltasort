@@ -8,10 +8,12 @@
 \usepackage{tikz}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 \usetikzlibrary{arrows.meta, positioning, calc, fit}
 
 % ---------------- Metadata ----------------
-\title{DeltaSort: Fast incremental repair of sorted arrays under sparse updates}
+\title{DeltaSort: Fast incremental batched repair of sorted arrays under sparse updates}
 \author{
   Shubham Dwivedi \\
   Independent Researcher \\
@@ -44,7 +46,7 @@ functions are expensive. Limitations and directions for future work are discusse
 % ---------------- Introduction ----------------
 \section{Introduction}
 
-Sorted sequences are a foundational abstraction in software systems. User
+Sorted sequences are a foundational structure in software systems. User
 interfaces frequently render large sorted lists, such as tables or feeds, while
 data-processing systems maintain ordered views over continuously changing data.
 In many of these systems, updates are incremental: only a small subset of elements
@@ -157,7 +159,7 @@ indices is explicitly known.
 \end{algorithm}
 
 % ---------------- Diagram: Array with Dirty Indices ----------------
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \begin{tikzpicture}
   \foreach \i/\v in {0/1,1/3,2/5,3/2,4/7,5/9} {
@@ -183,7 +185,7 @@ This process is repeated until no violations remain.
 % ---------------- Correctness ----------------
 \section{Correctness}
 
-The correctness of DeltaSort follows from three invariants maintained throughout
+The correctness of DeltaSort follows from three invariants which are maintained throughout
 execution.
 
 \paragraph{Invariant 1 (Sorted Clean Regions).}
@@ -221,7 +223,7 @@ a dramatic reduction in comparator calls and can outperform native sorting,
 particularly when comparators are expensive.
 
 % ---------------- Placeholder Chart ----------------
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \fbox{
   \parbox{0.8\linewidth}{
@@ -240,10 +242,9 @@ As update volume increases, memory movement costs dominate and native sorting
 outperforms incremental repair. Additionally, this work does not address integration
 with database storage engines or query optimizers.
 
-Future work includes a formal correctness proof, tighter theoretical bounds on
-movement costs, comparison against fully instrumented reference sorting algorithms,
-and adaptive heuristics for selecting between DeltaSort and native sorting based
-on observed update patterns.
+Future work includes tighter theoretical bounds on movement costs, comparison against 
+fully instrumented reference sorting algorithms, and adaptive heuristics for selecting
+between DeltaSort and native sorting based on observed update patterns.
 
 % ---------------- Bibliography ----------------
 \bibliographystyle{plain}

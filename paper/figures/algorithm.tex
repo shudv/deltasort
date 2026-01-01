@@ -1,54 +1,94 @@
-% Figure: DeltaSort algorithm example
+% Figure: DeltaSort algorithm example (10 elements, 3 dirty: L, S, R)
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-    element/.style={minimum width=0.7cm, minimum height=0.7cm, draw, font=\small},
+    element/.style={minimum width=0.55cm, minimum height=0.55cm, draw, font=\scriptsize},
     dirty/.style={element, fill=red!25},
     clean/.style={element, fill=gray!15},
-    arrow/.style={-{Stealth}, thick, blue!70!black},
+    moving/.style={element, fill=yellow!40},
+    larrow/.style={-{Stealth}, thick, blue!70!black},
+    rarrow/.style={-{Stealth}, thick, red!70!black},
     phase/.style={font=\small\bfseries, anchor=west}
 ]
 
+\def\sp{0.62}
+
 % Phase labels
-\node[phase] at (-2.5, 0) {Initial:};
-\node[phase] at (-2.5, -1.3) {Phase 1:};
-\node[phase] at (-2.5, -2.6) {Phase 2-3:};
-\node[phase] at (-2.5, -3.9) {Final:};
+\node[phase] at (-2.2, 0) {Initial:};
+\node[phase] at (-2.2, -1.4) {Phase 1:};
+\node[phase] at (-2.2, -2.8) {Phase 2:};
+\node[phase] at (-2.2, -4.2) {Final:};
 
-% Initial: sorted array [1,3,5,7,9] with dirty at 1,3 getting values 8,2
-\node[clean] (i0) at (0*0.8, 0) {1};
-\node[dirty] (i1) at (1*0.8, 0) {8};
-\node[clean] (i2) at (2*0.8, 0) {5};
-\node[dirty] (i3) at (3*0.8, 0) {2};
-\node[clean] (i4) at (4*0.8, 0) {9};
-\node[font=\tiny, below=0.1cm of i1] {$d_1$};
-\node[font=\tiny, below=0.1cm of i3] {$d_2$};
+% Initial: sorted array [2,4,6,8,10,12,14,16,18,20] 
+% Dirty indices {2,5,8} with values {17,15,1}
+% So array becomes [2,4,17,8,10,15,14,16,1,20]
+\node[clean] (i0) at (0*\sp, 0) {2};
+\node[clean] (i1) at (1*\sp, 0) {4};
+\node[dirty] (i2) at (2*\sp, 0) {17};
+\node[clean] (i3) at (3*\sp, 0) {8};
+\node[clean] (i4) at (4*\sp, 0) {10};
+\node[dirty] (i5) at (5*\sp, 0) {15};
+\node[clean] (i6) at (6*\sp, 0) {14};
+\node[clean] (i7) at (7*\sp, 0) {16};
+\node[dirty] (i8) at (8*\sp, 0) {1};
+\node[clean] (i9) at (9*\sp, 0) {20};
+\node[font=\tiny, below=0.05cm of i2] {$d_1$};
+\node[font=\tiny, below=0.05cm of i5] {$d_2$};
+\node[font=\tiny, below=0.05cm of i8] {$d_3$};
 
-% After Phase 1: sort {8,2} -> {2,8}, write to {1,3}
-\node[clean] (p10) at (0*0.8, -1.3) {1};
-\node[dirty] (p11) at (1*0.8, -1.3) {2};
-\node[clean] (p12) at (2*0.8, -1.3) {5};
-\node[dirty] (p13) at (3*0.8, -1.3) {8};
-\node[clean] (p14) at (4*0.8, -1.3) {9};
-\node[font=\tiny, text=gray] at (2.5*0.8, -0.65) {sort \{8,2\}$\to$\{2,8\}};
+% After Phase 1: sort dirty values {17,15,1} -> {1,15,17}
+% Write to indices {2,5,8}: [2,4,1,8,10,15,14,16,17,20]
+% Directions: idx2(1): L, idx5(15): R, idx8(17): S
+\node[clean] (p10) at (0*\sp, -1.4) {2};
+\node[clean] (p11) at (1*\sp, -1.4) {4};
+\node[dirty] (p12) at (2*\sp, -1.4) {1};
+\node[clean] (p13) at (3*\sp, -1.4) {8};
+\node[clean] (p14) at (4*\sp, -1.4) {10};
+\node[dirty] (p15) at (5*\sp, -1.4) {15};
+\node[clean] (p16) at (6*\sp, -1.4) {14};
+\node[clean] (p17) at (7*\sp, -1.4) {16};
+\node[dirty] (p18) at (8*\sp, -1.4) {17};
+\node[clean] (p19) at (9*\sp, -1.4) {20};
+\node[font=\tiny, text=gray] at (4.5*\sp, -0.7) {sort dirty};
 
-% After Phase 2-3: 8 needs to move right
-\node[clean] (p20) at (0*0.8, -2.6) {1};
-\node[dirty] (p21) at (1*0.8, -2.6) {2};
-\node[clean] (p22) at (2*0.8, -2.6) {5};
-\node[dirty,fill=yellow!40] (p23) at (3*0.8, -2.6) {8};
-\node[clean] (p24) at (4*0.8, -2.6) {9};
-\draw[arrow] (p23.east) to[out=0,in=180] ++(0.6,0);
+% Phase 2: 
+% - Value 1 at index 2 moves LEFT to position 0
+% - Value 15 at index 5 moves RIGHT to position 6 (between 14 and 16)
+% - Value 17 at index 8 is STABLE
+\node[clean] (p20) at (0*\sp, -2.8) {2};
+\node[clean] (p21) at (1*\sp, -2.8) {4};
+\node[moving] (p22) at (2*\sp, -2.8) {1};
+\node[clean] (p23) at (3*\sp, -2.8) {8};
+\node[clean] (p24) at (4*\sp, -2.8) {10};
+\node[moving] (p25) at (5*\sp, -2.8) {15};
+\node[clean] (p26) at (6*\sp, -2.8) {14};
+\node[clean] (p27) at (7*\sp, -2.8) {16};
+\node[dirty] (p28) at (8*\sp, -2.8) {17};
+\node[clean] (p29) at (9*\sp, -2.8) {20};
 
-% Final
-\node[clean] (f0) at (0*0.8, -3.9) {1};
-\node[dirty] (f1) at (1*0.8, -3.9) {2};
-\node[clean] (f2) at (2*0.8, -3.9) {5};
-\node[dirty] (f3) at (3*0.8, -3.9) {8};
-\node[clean] (f4) at (4*0.8, -3.9) {9};
+% Arrow: 1 moves from index 2 to position 0
+\draw[larrow, thick] (p22.north) to[out=120,in=60] node[above, font=\tiny] {L} (p20.north);
+% Arrow: 15 moves from index 5 to position 6 (landing between 14 and 16)
+\draw[rarrow, thick] (p25.north) to[out=60,in=120] node[above, font=\tiny] {R} (p26.north);
+% Mark 17 as stable
+\node[font=\tiny, above=0.15cm of p28] {S};
+
+% Final result: [1,2,4,8,10,14,15,16,17,20]
+\node[dirty] (f0) at (0*\sp, -4.2) {1};
+\node[clean] (f1) at (1*\sp, -4.2) {2};
+\node[clean] (f2) at (2*\sp, -4.2) {4};
+\node[clean] (f3) at (3*\sp, -4.2) {8};
+\node[clean] (f4) at (4*\sp, -4.2) {10};
+\node[clean] (f5) at (5*\sp, -4.2) {14};
+\node[dirty] (f6) at (6*\sp, -4.2) {15};
+\node[clean] (f7) at (7*\sp, -4.2) {16};
+\node[dirty] (f8) at (8*\sp, -4.2) {17};
+\node[clean] (f9) at (9*\sp, -4.2) {20};
 
 \end{tikzpicture}
-\caption{DeltaSort example. Dirty indices $\{1,3\}$ with values $\{8,2\}$. Phase 1 sorts
-dirty values to $\{2,8\}$ and writes back, establishing monotonicity for bounded search.}
+\caption{DeltaSort example with 10 elements and 3 dirty indices. Dirty indices $\{2,5,8\}$
+receive values $\{17,15,1\}$. Phase 1 sorts these to $\{1,15,17\}$ and writes back.
+Phase 2 identifies directions: element 1 at index 2 is LEFT (moves to position 0),
+element 15 at index 5 is RIGHT (moves to position 6), and element 17 at index 8 is STABLE.}
 \label{fig:algorithm}
 \end{figure}

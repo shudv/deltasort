@@ -13,6 +13,7 @@
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{placeins}
+\usepackage{float}
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing}
 
@@ -160,16 +161,21 @@ Phase~1, each dirty element either violates order with its left neighbor
 locally ordered (STABLE). Moreover, adjacent dirty elements with the same
 direction form contiguous directional segments.
 
-This segmentation enables coordinated repair. LEFT-moving elements can be
+\input{figures/segments}
+
+This segmentation enables localized repair. LEFT-moving elements can be
 processed immediately in a left-to-right scan using progressively narrowed
 search ranges, since all elements to their left are already stable. In
-contrast, RIGHT-moving elements cannot be safely placed until elements to
-their right have been handled. DeltaSort therefore defers RIGHT segments
+contrast, RIGHT-moving elements cannot be safely placed until elements in 
+the next L-segment are handled. DeltaSort therefore defers RIGHT segments
 using a stack and processes them in LIFO order after the scan completes.
-
 Stack-based processing ensures that when a RIGHT-moving element is repaired,
 the impacted segment is already fixed. This coordination avoids overlapping
 data movement and redundant search.
+
+\subsection{Detailed Algorithm}
+
+\input{figures/algorithm-detailed}
 
 \subsection{Why Phase 1 Creates Segments}
 
@@ -254,82 +260,6 @@ dirty elements landed in positions where they satisfy ordering constraints immed
 
 \input{figures/cancellation}
 
-\subsection{Detailed Algorithm}
-
-\begin{algorithm}[t]
-\caption{DeltaSort}
-\label{alg:deltasort}
-\begin{algorithmic}[1]
-\Require Array $A[0..n-1]$, dirty indices $D$, comparator $\texttt{cmp}$
-\Ensure $A$ is sorted
-\Statex
-\State \textbf{Phase 1: Establish Monotonicity}
-\State $\texttt{dirty} \gets \text{sort}(D)$ \Comment{Sort indices ascending}
-\State $\texttt{values} \gets [A[d] : d \in \texttt{dirty}]$
-\State $\texttt{values} \gets \text{sort}(\texttt{values}, \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
-    \State $A[\texttt{dirty}[i]] \gets \texttt{values}[i]$
-\EndFor
-\Statex
-\State \textbf{Phase 2: Process Left-to-Right}
-\State $\texttt{stack} \gets []$; $\texttt{leftBound} \gets 0$
-\For{$p \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
-    \State $i \gets \texttt{dirty}[p]$
-    \State $d \gets \Call{Direction}{A, i}$
-    \If{$d = \texttt{LEFT}$}
-        \State \Call{FlushStack}{$\texttt{stack}, i-1$} \Comment{Flush before processing LEFT}
-        \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
-        \State \Call{Move}{A, i, t}
-        \State $\texttt{leftBound} \gets t + 1$
-    \Else
-        \State $\texttt{stack.push}(i)$
-    \EndIf
-\EndFor
-\Statex
-\State \textbf{// Flush remaining RIGHT violations}
-\State \Call{FlushStack}{$\texttt{stack}, n-1$}
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithmic}[1]
-\Function{Direction}{$A$, $i$}
-    \If{$i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$}
-        \State \Return \texttt{LEFT} \Comment{Violates order with left neighbor}
-    \ElsIf{$i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$}
-        \State \Return \texttt{RIGHT} \Comment{Violates order with right neighbor}
-    \Else
-        \State \Return \texttt{STABLE}
-    \EndIf
-\EndFunction
-\end{algorithmic}
-
-\vspace{0.5em}
-
-\begin{algorithmic}[1]
-\Function{FlushStack}{$\texttt{stack}$, $\texttt{rightBound}$}
-    \While{$\texttt{stack} \neq \emptyset$}
-        \State $s \gets \texttt{stack.pop}()$ \Comment{Process in LIFO order}
-        \If{$\Call{Direction}{A, s} = \texttt{RIGHT}$}
-            \State $t \gets \Call{BinarySearchRight}{A, A[s], s+1, \texttt{rightBound}}$
-            \State \Call{Move}{A, s, t}
-        \EndIf
-    \EndWhile
-\EndFunction
-\end{algorithmic}
-
-\vspace{0.5em}
-
-\begin{algorithmic}[1]
-\Function{Move}{$A$, $from$, $to$}
-    \State $v \gets A[from]$
-    \If{$from < to$}
-        \State Shift $A[from+1..to]$ left by one
-    \ElsIf{$from > to$}
-        \State Shift $A[to..from-1]$ right by one
-    \EndIf
-    \State $A[to] \gets v$
-\EndFunction
-\end{algorithmic}
 
 \subsection{Design Rationale}
 

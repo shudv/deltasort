@@ -395,7 +395,7 @@ fn print_summary(results: &[(usize, f64, f64, f64, f64)]) {
 
 fn main() {
     let n = 50_000;
-    let delta_counts = [1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+    let delta_counts = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
     let iterations = 100;
     let warmup = 5;
 

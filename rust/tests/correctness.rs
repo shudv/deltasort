@@ -7,9 +7,6 @@ use deltasort::deltasort;
 use rand::Rng;
 use std::collections::HashSet;
 
-/// Test scales (powers of 10): 10^1, 10^2, 10^3, 10^4
-const SCALES: [u32; 4] = [1, 2, 3, 4];
-
 /// Delta volumes as percentages of array size
 const DELTA_VOLUMES: [usize; 7] = [0, 1, 5, 10, 20, 50, 80];
 

@@ -250,7 +250,6 @@ mod tests {
 
     #[test]
     fn test_all_right_moves() {
-        let mut arr = vec![1, 2, 3, 4, 5];
         // Change to reverse order
         let mut arr = vec![1, 5, 4, 3, 2];
         let dirty: HashSet<usize> = [1, 2, 3, 4].into_iter().collect();

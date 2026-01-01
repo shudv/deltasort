@@ -1,0 +1,54 @@
+% Figure: DeltaSort algorithm example
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    element/.style={minimum width=0.7cm, minimum height=0.7cm, draw, font=\small},
+    dirty/.style={element, fill=red!25},
+    clean/.style={element, fill=gray!15},
+    arrow/.style={-{Stealth}, thick, blue!70!black},
+    phase/.style={font=\small\bfseries, anchor=west}
+]
+
+% Phase labels
+\node[phase] at (-2.5, 0) {Initial:};
+\node[phase] at (-2.5, -1.3) {Phase 1:};
+\node[phase] at (-2.5, -2.6) {Phase 2-3:};
+\node[phase] at (-2.5, -3.9) {Final:};
+
+% Initial: sorted array [1,3,5,7,9] with dirty at 1,3 getting values 8,2
+\node[clean] (i0) at (0*0.8, 0) {1};
+\node[dirty] (i1) at (1*0.8, 0) {8};
+\node[clean] (i2) at (2*0.8, 0) {5};
+\node[dirty] (i3) at (3*0.8, 0) {2};
+\node[clean] (i4) at (4*0.8, 0) {9};
+\node[font=\tiny, below=0.1cm of i1] {$d_1$};
+\node[font=\tiny, below=0.1cm of i3] {$d_2$};
+
+% After Phase 1: sort {8,2} -> {2,8}, write to {1,3}
+\node[clean] (p10) at (0*0.8, -1.3) {1};
+\node[dirty] (p11) at (1*0.8, -1.3) {2};
+\node[clean] (p12) at (2*0.8, -1.3) {5};
+\node[dirty] (p13) at (3*0.8, -1.3) {8};
+\node[clean] (p14) at (4*0.8, -1.3) {9};
+\node[font=\tiny, text=gray] at (2.5*0.8, -0.65) {sort \{8,2\}$\to$\{2,8\}};
+
+% After Phase 2-3: 8 needs to move right
+\node[clean] (p20) at (0*0.8, -2.6) {1};
+\node[dirty] (p21) at (1*0.8, -2.6) {2};
+\node[clean] (p22) at (2*0.8, -2.6) {5};
+\node[dirty,fill=yellow!40] (p23) at (3*0.8, -2.6) {8};
+\node[clean] (p24) at (4*0.8, -2.6) {9};
+\draw[arrow] (p23.east) to[out=0,in=180] ++(0.6,0);
+
+% Final
+\node[clean] (f0) at (0*0.8, -3.9) {1};
+\node[dirty] (f1) at (1*0.8, -3.9) {2};
+\node[clean] (f2) at (2*0.8, -3.9) {5};
+\node[dirty] (f3) at (3*0.8, -3.9) {8};
+\node[clean] (f4) at (4*0.8, -3.9) {9};
+
+\end{tikzpicture}
+\caption{DeltaSort example. Dirty indices $\{1,3\}$ with values $\{8,2\}$. Phase 1 sorts
+dirty values to $\{2,8\}$ and writes back, establishing monotonicity for bounded search.}
+\label{fig:algorithm}
+\end{figure}

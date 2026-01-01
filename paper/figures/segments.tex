@@ -1,0 +1,74 @@
+% Figure: Segmented view of dirty element directions
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    cell/.style={minimum width=0.5cm, minimum height=0.5cm, draw, font=\scriptsize},
+    clean/.style={cell},
+    left/.style={cell, fill=blue!25},
+    right/.style={cell, fill=red!25},
+    stable/.style={cell},
+    dots/.style={cell, fill=gray!8},
+    segment/.style={dashed, gray!70, thick},
+    label/.style={font=\tiny}
+]
+
+% Array cells showing segments with ... to indicate arbitrary spacing
+% Pattern: ... L ... L | ... R ... R | ... S | ... L ... L | ... R R ... | ... S ...
+\node[dots] (e0) at (0*0.6, 0) {\dots};
+\node[left] (d1) at (1*0.6, 0) {L};
+\node[dots] (e2) at (2*0.6, 0) {\dots};
+\node[left] (d3) at (3*0.6, 0) {L};
+% segment boundary
+\node[dots] (e4) at (4*0.6, 0) {\dots};
+\node[right] (d5) at (5*0.6, 0) {R};
+\node[dots] (e6) at (6*0.6, 0) {\dots};
+\node[right] (d7) at (7*0.6, 0) {R};
+% segment boundary
+\node[dots] (e8) at (8*0.6, 0) {\dots};
+\node[stable] (d9) at (9*0.6, 0) {S};
+% segment boundary
+\node[dots] (e10) at (10*0.6, 0) {\dots};
+\node[left] (d11) at (11*0.6, 0) {L};
+\node[dots] (e12) at (12*0.6, 0) {\dots};
+\node[left] (d13) at (13*0.6, 0) {L};
+% segment boundary
+\node[dots] (e14) at (14*0.6, 0) {\dots};
+\node[right] (d15) at (15*0.6, 0) {R};
+\node[dots] (e16) at (16*0.6, 0) {\dots};
+\node[right] (d17) at (17*0.6, 0) {R};
+\node[dots] (e18) at (18*0.6, 0) {\dots};
+
+% Segment dividers - never right beside R
+\draw[segment] (3.5*0.6, -0.45) -- (3.5*0.6, 0.7);
+\draw[segment] (9.5*0.6, -0.45) -- (9.5*0.6, 0.7);
+\draw[segment] (13.5*0.6, -0.45) -- (13.5*0.6, 0.7);
+
+% Segment labels
+\node[font=\tiny, anchor=north] at (1.75*0.6, -0.55) {Seg 1};
+\node[font=\tiny, anchor=north] at (6.5*0.6, -0.55) {Seg 2};
+\node[font=\tiny, anchor=north] at (11.5*0.6, -0.55) {Seg 3};
+\node[font=\tiny, anchor=north] at (16*0.6, -0.55) {Seg 4};
+
+% Legend
+\node[left, minimum width=0.4cm, minimum height=0.4cm, label=right:{\tiny LEFT}] at (13*0.6, 1.1) {L};
+\node[right, minimum width=0.4cm, minimum height=0.4cm, label=right:{\tiny RIGHT}] at (14.3*0.6, 1.1) {R};
+\node[stable, minimum width=0.4cm, minimum height=0.4cm, label=right:{\tiny STABLE}] at (15.6*0.6, 1.1) {S};
+\node[dots, minimum width=0.4cm, minimum height=0.4cm, label=right:{\tiny Clean}] at (17.2*0.6, 1.1) {\dots};
+
+% Movement arrows showing bounded regions within segments
+\draw[-{Stealth}, blue!70, thick] (2*0.6, 0.4) to[out=150,in=30] (0.5*0.6, 0.4);
+\draw[-{Stealth}, red!70, thick] (6*0.6, 0.4) to[out=30,in=150] (7.3*0.6, 0.4);
+\draw[-{Stealth}, blue!70, thick] (12*0.6, 0.4) to[out=150,in=30] (10.5*0.6, 0.4);
+\draw[-{Stealth}, red!70, thick] (16*0.6, 0.4) to[out=30,in=150] (18*0.6, 0.4);
+
+\end{tikzpicture}
+\caption{Segmented view of an array with 9 dirty elements after Phase 1. Each dirty element
+is classified as LEFT (L), RIGHT (R), or STABLE (S) based on its violation direction.
+Consecutive dirty elements of the same direction type form a \emph{segment}, delimited by
+vertical dashed lines. Movement within an L segment is confined to that segment alone (arrows
+show leftward movement). Movement within an R segment can span into the following L segment
+(arrows show rightward movement). Crucially, all movements remain \emph{bounded}---they never
+extend beyond the adjacent segment boundary. This boundedness, enabled by Phase 1's monotonicity,
+is key to DeltaSort's efficiency. Boxed ``\dots'' represents arbitrarily many clean elements.}
+\label{fig:segments}
+\end{figure}

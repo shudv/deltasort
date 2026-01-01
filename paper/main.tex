@@ -28,7 +28,7 @@
 \theoremstyle{remark}
 \newtheorem{remark}[theorem]{Remark}
 
-\title{DeltaSort: Efficient Incremental Repair of Sorted Arrays\\via Coordinated Element Movement}
+\title{DeltaSort: Fast incremental repair of sorted arrays}
 \author{Shubham Dwivedi \\
 \small Independent Researcher \\
 \small \texttt{shubd3@gmail.com}
@@ -44,7 +44,7 @@ When $k$ out of $n$ elements change, standard approaches either re-sort entirely
 $O(n \log n)$ time or perform $k$ independent binary insertions with $O(kn)$ worst-case
 element movement.
 
-We present \emph{DeltaSort}, a coordinated repair algorithm that exploits knowledge of
+This paper presents \emph{DeltaSort}, a coordinated repair algorithm that exploits knowledge of
 which indices changed. The key insight is a \textbf{pre-sorting phase} that establishes
 monotonicity among dirty values, enabling \textbf{progressive search narrowing} and
 \textbf{movement cancellation}---when dirty values would ``cross'' (one moving left,
@@ -52,7 +52,7 @@ another right over the same positions), pre-sorting reassigns them to minimize d
 Combined with \textbf{direction-aware processing}, DeltaSort achieves $O(k \log n)$
 comparisons---optimal for comparison-based algorithms.
 
-We prove correctness via loop invariants and validate through extensive randomized testing.
+Correctness is proven via loop invariants and validated through extensive randomized testing.
 Benchmarks using a Rust implementation show DeltaSort achieves 5--17$\times$ speedup over
 native sort for delta sizes up to 20--30\% of the array, with the crossover point (where
 native sort becomes faster) occurring at approximately 25\% dirty elements across array
@@ -100,8 +100,8 @@ This paper makes the following contributions:
         coordinates repairs through pre-sorting, direction classification, and progressive
         search narrowing.
   
-  \item \textbf{Movement Cancellation} (\S\ref{sec:algorithm}): We show that pre-sorting
-        can eliminate redundant movement when dirty values would otherwise ``cross.''
+  \item \textbf{Movement Cancellation} (\S\ref{sec:algorithm}): Pre-sorting is shown to
+        eliminate redundant movement when dirty values would otherwise ``cross.''
   
   \item \textbf{Correctness Proof} (\S\ref{sec:correctness}): Formal proof via loop invariants
         that DeltaSort produces correctly sorted output.
@@ -119,7 +119,7 @@ This paper makes the following contributions:
 Algorithms like TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} exploit
 existing runs. Mannila~\cite{mannila1985measures} formalized presortedness measures.
 However, these algorithms must \emph{discover} structure through $\Omega(n)$ scans;
-we assume dirty indices are \emph{given}.
+dirty indices are assumed to be \emph{given}.
 
 \paragraph{Dynamic Data Structures.}
 Self-balancing trees (AVL~\cite{avl1962}, red-black~\cite{guibas1978dichromatic},
@@ -131,7 +131,7 @@ Bender et al.~\cite{bender2006insertion} leave gaps for $O(\log n)$ amortized in
 but address a different problem (online insertion) with space overhead.
 
 \paragraph{Contribution Positioning.}
-Our work uniquely combines: (1) array semantics, (2) batched updates with known dirty
+This work uniquely combines: (1) array semantics, (2) batched updates with known dirty
 indices, and (3) coordinated processing that enables bounded search ranges.
 
 %==============================================================================
@@ -299,7 +299,7 @@ dirty values to $\{2,8\}$ and writes back, establishing monotonicity for bounded
 Consider array $[1, 8, 5, 2, 9]$ with dirty indices $\{1, 3\}$ (original sorted array
 was $[1, 3, 5, 7, 9]$, positions 1 and 3 were updated to 8 and 2).
 
-With standard binary insertion (extract-then-insert), we would:
+With standard binary insertion (extract-then-insert), the algorithm would:
 \begin{itemize}
   \item Extract dirty values $\{8, 2\}$, leaving placeholders or compacting
   \item Insert each back via binary search over the \emph{entire} remaining array
@@ -314,7 +314,7 @@ element settles at position $t$, subsequent LEFT searches need only consider $[t
 
 \begin{lemma}[Phase 1 Establishes Monotonicity]
 \label{lem:monotonicity}
-After Phase 1, for any dirty indices $d_i < d_j$, we have $\texttt{cmp}(A[d_i], A[d_j]) \leq 0$.
+After Phase 1, for any dirty indices $d_i < d_j$, it holds that $\texttt{cmp}(A[d_i], A[d_j]) \leq 0$.
 \end{lemma}
 
 \begin{proof}
@@ -325,7 +325,7 @@ index. Thus $A[d_i] \leq A[d_j]$ for $d_i < d_j$.
 \begin{remark}[Bounded Search via \texttt{leftBound}]
 \label{rem:leftbound}
 The implementation maintains a \texttt{leftBound} variable that advances after each
-LEFT move. When a dirty element moves from index $i$ to position $t < i$, we set
+LEFT move. When a dirty element moves from index $i$ to position $t < i$, the algorithm sets
 $\texttt{leftBound} = t + 1$. Subsequent LEFT searches only consider $[\texttt{leftBound}, i-1]$,
 not $[0, i-1]$. This progressively narrows the search range as LEFT-moving elements
 are processed.
@@ -556,19 +556,19 @@ so that both dirty elements are immediately STABLE---element 5 never moves.}
 \subsection{Design Rationale}
 
 \paragraph{Why flush before LEFT?}
-When we encounter a LEFT-moving dirty element at index $i$, any RIGHT-moving elements
+When a LEFT-moving dirty element is encountered at index $i$, any RIGHT-moving elements
 on the stack (with indices $< i$) must be processed first. Otherwise, moving the LEFT
 element could shift the RIGHT elements' positions, invalidating their stack indices.
 
 \paragraph{Why LIFO order?}
 Stack elements are pushed in ascending index order. LIFO processing (highest index first)
-ensures that when we move element at index $s$, elements at lower indices haven't shifted
+ensures that when the element at index $s$ is moved, elements at lower indices haven't shifted
 yet, so their stack indices remain valid.
 
 \paragraph{Why re-check Direction?}
 After Phase 1 writes or after flushing, an element's direction may change (a STABLE
-element might become RIGHT, or a RIGHT element might become STABLE). We re-check to
-avoid unnecessary moves.
+element might become RIGHT, or a RIGHT element might become STABLE). The re-check
+avoids unnecessary moves.
 
 %==============================================================================
 \section{Correctness Proof}
@@ -779,6 +779,14 @@ DeltaSort consistently outperforms all alternatives up to approximately $k = 10,
 (20\% of array size), achieving speedups of 7--17$\times$ over Native sort in the
 sweet spot ($20 \leq k \leq 200$).
 
+Figure~\ref{fig:crossover} visualizes the crossover between DeltaSort and Native sort
+on a linear scale. The crossover occurs at $k \approx 13,700$ (27\% of array size),
+clearly showing the region where DeltaSort provides substantial speedups.
+
+Figure~\ref{fig:all-algorithms} compares all four algorithms on a log-log scale,
+revealing the orders-of-magnitude performance gap between DeltaSort and the baseline
+algorithms (BI and ESM) across the full range of $k$ values.
+
 \begin{table}[t]
 \centering
 \caption{Execution time (\textmu s) for $n = 50,000$ elements. DS vs Best shows speedup
@@ -805,10 +813,119 @@ $k$ & Native & BI & ESM & DeltaSort & DS vs Best \\
 \end{tabular}
 \end{table}
 
+% Figure: DeltaSort vs Native (zoomed to show crossover)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\textwidth,
+    height=6cm,
+    xlabel={Number of dirty elements ($k$)},
+    ylabel={Execution time (\textmu s)},
+    xmin=0, xmax=21000,
+    ymin=0, ymax=8000,
+    xtick={0, 5000, 10000, 15000, 20000},
+    xticklabels={0, 5K, 10K, 15K, 20K},
+    ytick={0, 2000, 4000, 6000, 8000},
+    legend pos=north west,
+    legend style={font=\small, fill=white, fill opacity=0.8},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+]
+
+% Native sort (relatively flat ~4000-5000 µs)
+\addplot[color=blue, mark=square*, thick, mark size=2pt] coordinates {
+    (1, 439) (5, 749) (10, 747) (20, 962) (50, 1350) (100, 1867) 
+    (200, 2560) (500, 3703) (1000, 4253) (2000, 4158) 
+    (5000, 4223) (10000, 4539) (20000, 5042)
+};
+
+% DeltaSort (grows linearly with k)
+\addplot[color=orange, mark=*, thick, mark size=2pt] coordinates {
+    (1, 1) (5, 27) (10, 44) (20, 49) (50, 98) (100, 109) 
+    (200, 178) (500, 782) (1000, 465) (2000, 837) 
+    (5000, 1751) (10000, 3326) (20000, 6914)
+};
+
+% Crossover region annotation
+\draw[dashed, thick, gray] (axis cs:13672,0) -- (axis cs:13672,7500);
+\node[anchor=south, font=\small] at (axis cs:13672,7500) {crossover $\approx$ 13.7K};
+
+% Shade the "DeltaSort wins" region
+\fill[green!10, opacity=0.5] (axis cs:0,0) rectangle (axis cs:13672,8000);
+
+\legend{Native Sort, DeltaSort}
+\end{axis}
+\end{tikzpicture}
+\caption{DeltaSort vs.\ Native Sort for $n = 50,000$. The crossover point occurs at 
+$k \approx 13,700$ (27\% of $n$). The shaded region indicates where DeltaSort is faster.}
+\label{fig:crossover}
+\end{figure}
+
+% Figure: All algorithms comparison
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\textwidth,
+    height=7cm,
+    xlabel={Number of dirty elements ($k$)},
+    ylabel={Execution time (\textmu s)},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=1, xmax=25000,
+    ymin=1, ymax=700000,
+    legend pos=north west,
+    legend style={font=\small, fill=white, fill opacity=0.9},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+]
+
+% Native sort
+\addplot[color=blue, mark=square*, thick, mark size=2.5pt] coordinates {
+    (1, 439) (5, 749) (10, 747) (20, 962) (50, 1350) (100, 1867) 
+    (200, 2560) (500, 3703) (1000, 4253) (2000, 4158) 
+    (5000, 4223) (10000, 4539) (20000, 5042)
+};
+
+% Binary Insertion
+\addplot[color=red, mark=triangle*, thick, mark size=2.5pt] coordinates {
+    (1, 40) (5, 217) (10, 525) (20, 782) (50, 1994) (100, 4818) 
+    (200, 9022) (500, 22112) (1000, 44481) (2000, 87827) 
+    (5000, 211016) (10000, 377981) (20000, 615645)
+};
+
+% Extract-Sort-Merge
+\addplot[color=green!60!black, mark=diamond*, thick, mark size=2.5pt] coordinates {
+    (1, 188) (5, 293) (10, 494) (20, 655) (50, 1307) (100, 2673) 
+    (200, 4785) (500, 11655) (1000, 22480) (2000, 43627) 
+    (5000, 102198) (10000, 176373) (20000, 259835)
+};
+
+% DeltaSort
+\addplot[color=orange, mark=*, thick, mark size=2.5pt, line width=1.5pt] coordinates {
+    (1, 1) (5, 27) (10, 44) (20, 49) (50, 98) (100, 109) 
+    (200, 178) (500, 782) (1000, 465) (2000, 837) 
+    (5000, 1751) (10000, 3326) (20000, 6914)
+};
+
+\legend{Native, BI, ESM, DeltaSort}
+\end{axis}
+\end{tikzpicture}
+\caption{Execution time comparison of all algorithms for $n = 50,000$ (log-log scale).
+DeltaSort (orange) is consistently fastest across all tested $k$ values except $k = 20,000$
+where Native sort wins. Note the orders-of-magnitude gap between DeltaSort and BI/ESM.}
+\label{fig:all-algorithms}
+\end{figure}
+
 \subsection{Crossover Analysis}
 
 A key practical question is: at what delta size should one switch from DeltaSort to
-Native sort? We conducted a binary search for the crossover point $k_c$ across array
+Native sort? A binary search was conducted for the crossover point $k_c$ across array
 sizes from 1K to 1M elements. Table~\ref{tab:crossover} summarizes the results.
 
 \begin{table}[t]
@@ -842,7 +959,7 @@ falling in the 20--30\% range. This suggests a practical rule of thumb:
 
 \subsection{JavaScript Implementation}
 
-We also implemented DeltaSort in TypeScript running on Node.js v20 (V8 engine). While
+DeltaSort was also implemented in TypeScript running on Node.js v20 (V8 engine). While
 the implementation passes all correctness tests, the performance results show higher
 variance due to JIT compilation behavior, garbage collection pauses, and other
 engine-level effects. The JavaScript benchmarks will be refined in a future revision
@@ -860,7 +977,7 @@ entirely.
 \paragraph{DeltaSort vs.\ ESM.}
 DeltaSort also outperforms ESM for all tested $k$ values up to 10,000. ESM's $O(n)$
 merge pass becomes competitive only when $k$ is very large, and even then DeltaSort
-remains faster in our measurements.
+remains faster in these measurements.
 
 \paragraph{DeltaSort vs.\ Native Sort.}
 The crossover with Native sort occurs at approximately 20--30\% dirty elements. Below
@@ -900,7 +1017,7 @@ $O(n \log n)$ implementation wins.
 
 \subsection{Algorithm Selection Guide}
 
-Based on our Rust benchmarks across array sizes from 1K to 1M elements:
+Based on the Rust benchmarks across array sizes from 1K to 1M elements:
 
 \begin{center}
 \begin{tabular}{ll}
@@ -915,7 +1032,7 @@ $k \geq 0.25n$ & Native Sort \\
 \end{center}
 
 The crossover point of approximately 25\% is remarkably stable across array sizes,
-ranging from 15\% to 31\% in our experiments (Table~\ref{tab:crossover}).
+ranging from 15\% to 31\% in the experiments (Table~\ref{tab:crossover}).
 
 \subsection{Empirical Validation}
 
@@ -938,7 +1055,7 @@ without failure, providing high confidence in correctness.
 %==============================================================================
 
 \paragraph{Formal Locality Bounds.}
-We conjecture that Phase 1's monotonicity property constrains the movement of dirty
+A conjecture is that Phase 1's monotonicity property constrains the movement of dirty
 elements in a way that reduces total element displacement compared to extract-insert
 binary insertion. A formal proof characterizing the expected movement reduction---potentially
 in terms of the ``inversion distance'' between original dirty values and their indices---would
@@ -951,7 +1068,7 @@ Formalize why bounded search ranges help despite unchanged asymptotic complexity
 Analyze DeltaSort for B-tree maintenance, where batched updates may reduce node splits.
 
 \paragraph{JavaScript Implementation Refinement.}
-Our TypeScript/Node.js implementation shows higher variance due to JIT compilation,
+The TypeScript/Node.js implementation shows higher variance due to JIT compilation,
 garbage collection, and engine-level effects. Future work will characterize and minimize
 these effects to provide stable JavaScript benchmarks.
 
@@ -964,7 +1081,7 @@ potentially with dynamic adjustment based on observed performance.
 \label{sec:conclusion}
 %==============================================================================
 
-We presented DeltaSort, a coordinated incremental repair algorithm for sorted arrays.
+This paper presented DeltaSort, a coordinated incremental repair algorithm for sorted arrays.
 The key contributions are:
 
 \begin{enumerate}

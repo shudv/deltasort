@@ -1,0 +1,114 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{timsort}
+\citation{musser1997introspective}
+\citation{peters2021pdqsort}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The Efficiency Problem.}{1}{section*.1}\protected@file@percent }
+\citation{timsort}
+\citation{knuth1998art}
+\citation{mannila1985measures}
+\citation{avl1962}
+\citation{guibas1978dichromatic}
+\citation{bayer1970organization}
+\citation{pugh1990skip}
+\citation{bender2006insertion}
+\@writefile{toc}{\contentsline {paragraph}{Contributions.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{2}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Adaptive Sorting.}{2}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dynamic Data Structures.}{2}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Library Sort.}{2}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Contribution Positioning.}{2}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Model}{2}{section.3}\protected@file@percent }
+\newlabel{sec:model}{{3}{2}{Problem Model}{section.3}{}}
+\newlabel{def:problem}{{1}{2}{Informed Incremental Sorting}{theorem.1}{}}
+\newlabel{def:monotonicity-violation}{{3}{2}{Monotonicity Violation}{theorem.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Baseline Algorithms}{3}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Native Sort.}{3}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Binary Insertion (BI).}{3}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Extract-Sort-Merge (ESM).}{3}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Lower Bounds}{3}{subsection.3.2}\protected@file@percent }
+\newlabel{prop:comparison-lb}{{5}{3}{Comparison Lower Bound}{theorem.5}{}}
+\newlabel{prop:movement-lb}{{6}{3}{Movement Lower Bound}{theorem.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}DeltaSort Algorithm}{3}{section.4}\protected@file@percent }
+\newlabel{sec:algorithm}{{4}{3}{DeltaSort Algorithm}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Overview}{3}{subsection.4.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces DeltaSort example. Dirty indices $\{1,3\}$ with values $\{8,2\}$. Phase 1 sorts dirty values to $\{2,8\}$ and writes back, establishing monotonicity for bounded search.}}{4}{figure.caption.10}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:algorithm}{{1}{4}{DeltaSort example. Dirty indices $\{1,3\}$ with values $\{8,2\}$. Phase 1 sorts dirty values to $\{2,8\}$ and writes back, establishing monotonicity for bounded search}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Why Phase 1 Matters: Enabling Bounded Search}{4}{subsection.4.2}\protected@file@percent }
+\newlabel{ex:presort}{{8}{4}{Benefit of Pre-sorting}{theorem.8}{}}
+\newlabel{lem:monotonicity}{{9}{4}{Phase 1 Establishes Monotonicity}{theorem.9}{}}
+\newlabel{rem:leftbound}{{10}{4}{Bounded Search via \texttt {leftBound}}{theorem.10}{}}
+\newlabel{rem:locality}{{11}{5}{Movement Locality}{theorem.11}{}}
+\newlabel{ex:cancellation}{{12}{5}{Movement Cancellation}{theorem.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Detailed Algorithm}{5}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Movement cancellation comparison. Binary Insertion (top) extracts then reinserts, causing element 5 to shift multiple times. DeltaSort (bottom) reassigns values in Phase 1 so that both dirty elements are immediately STABLE---element 5 never moves.}}{6}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:cancellation}{{2}{6}{Movement cancellation comparison. Binary Insertion (top) extracts then reinserts, causing element 5 to shift multiple times. DeltaSort (bottom) reassigns values in Phase 1 so that both dirty elements are immediately STABLE---element 5 never moves}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Design Rationale}{6}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why flush before LEFT?}{6}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why LIFO order?}{6}{section*.13}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces DeltaSort}}{7}{algorithm.1}\protected@file@percent }
+\newlabel{alg:deltasort}{{1}{7}{DeltaSort}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Why re-check Direction?}{7}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Correctness Proof}{7}{section.5}\protected@file@percent }
+\newlabel{sec:correctness}{{5}{7}{Correctness Proof}{section.5}{}}
+\newlabel{lem:violations}{{14}{7}{Violations Only at Dirty Boundaries}{theorem.14}{}}
+\newlabel{lem:move-correct}{{15}{7}{Move Correctness}{theorem.15}{}}
+\newlabel{lem:stack-validity}{{16}{8}{Stack Index Validity}{theorem.16}{}}
+\newlabel{thm:correctness}{{17}{8}{Correctness}{theorem.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Movement Analysis}{8}{section.6}\protected@file@percent }
+\newlabel{sec:movement}{{6}{8}{Movement Analysis}{section.6}{}}
+\newlabel{thm:movement}{{18}{8}{Optimal Per-Element Movement}{theorem.18}{}}
+\newlabel{cor:total-movement}{{19}{9}{Total Movement}{theorem.19}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Complexity Analysis}{9}{section.7}\protected@file@percent }
+\newlabel{sec:complexity}{{7}{9}{Complexity Analysis}{section.7}{}}
+\newlabel{thm:time}{{22}{9}{Time Complexity}{theorem.22}{}}
+\newlabel{thm:space}{{23}{9}{Space Complexity}{theorem.23}{}}
+\newlabel{thm:optimal-comparisons}{{24}{9}{Comparison Optimality}{theorem.24}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Algorithm complexity comparison.}}{9}{table.caption.15}\protected@file@percent }
+\newlabel{tab:complexity}{{1}{9}{Algorithm complexity comparison}{table.caption.15}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Experimental Evaluation}{9}{section.8}\protected@file@percent }
+\newlabel{sec:experiments}{{8}{9}{Experimental Evaluation}{section.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Setup}{9}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Primary Implementation.}{9}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hardware.}{9}{section*.17}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Execution time (\textmu s) for $n = 50,000$ elements. DS vs Best shows speedup against the fastest alternative (Native, BI, or ESM).}}{10}{table.caption.20}\protected@file@percent }
+\newlabel{tab:rust-results}{{2}{10}{Execution time (\textmu s) for $n = 50,000$ elements. DS vs Best shows speedup against the fastest alternative (Native, BI, or ESM)}{table.caption.20}{}}
+\@writefile{toc}{\contentsline {paragraph}{Algorithms.}{10}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Data.}{10}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Results}{10}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Crossover Analysis}{10}{subsection.8.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces DeltaSort vs.\ Native Sort for $n = 50,000$. The crossover point occurs at $k \approx 13,700$ (27\% of $n$). The shaded region indicates where DeltaSort is faster.}}{11}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:crossover}{{3}{11}{DeltaSort vs.\ Native Sort for $n = 50,000$. The crossover point occurs at $k \approx 13,700$ (27\% of $n$). The shaded region indicates where DeltaSort is faster}{figure.caption.21}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Crossover point $k_c$ where Native sort becomes faster than DeltaSort.}}{11}{table.caption.23}\protected@file@percent }
+\newlabel{tab:crossover}{{3}{11}{Crossover point $k_c$ where Native sort becomes faster than DeltaSort}{table.caption.23}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}JavaScript Implementation}{11}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Analysis}{11}{subsection.8.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{DeltaSort vs.\ Binary Insertion.}{11}{section*.24}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Execution time comparison of all algorithms for $n = 50,000$ (log-log scale). DeltaSort (orange) is consistently fastest across all tested $k$ values except $k = 20,000$ where Native sort wins. Note the orders-of-magnitude gap between DeltaSort and BI/ESM.}}{12}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:all-algorithms}{{4}{12}{Execution time comparison of all algorithms for $n = 50,000$ (log-log scale). DeltaSort (orange) is consistently fastest across all tested $k$ values except $k = 20,000$ where Native sort wins. Note the orders-of-magnitude gap between DeltaSort and BI/ESM}{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{DeltaSort vs.\ ESM.}{12}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{DeltaSort vs.\ Native Sort.}{12}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{12}{section.9}\protected@file@percent }
+\newlabel{sec:discussion}{{9}{12}{Discussion}{section.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}What DeltaSort Provides}{12}{subsection.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}What DeltaSort Does NOT Provide}{13}{subsection.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Algorithm Selection Guide}{13}{subsection.9.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Empirical Validation}{13}{subsection.9.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Future Work}{13}{section.10}\protected@file@percent }
+\newlabel{sec:future}{{10}{13}{Future Work}{section.10}{}}
+\@writefile{toc}{\contentsline {paragraph}{Formal Locality Bounds.}{13}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Cache-Aware Analysis.}{13}{section*.28}\protected@file@percent }
+\bibstyle{plain}
+\bibdata{refs}
+\citation{*}
+\@writefile{toc}{\contentsline {paragraph}{Block Storage.}{14}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{JavaScript Implementation Refinement.}{14}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Adaptive Hybrid.}{14}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}Conclusion}{14}{section.11}\protected@file@percent }
+\newlabel{sec:conclusion}{{11}{14}{Conclusion}{section.11}{}}
+\gdef \@abspage@last{14}

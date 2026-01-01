@@ -1,0 +1,337 @@
+//! DeltaSort: Efficient incremental repair of sorted arrays.
+//!
+//! When a small number of elements in a sorted array change, DeltaSort
+//! restores sorted order more efficiently than a full re-sort by exploiting
+//! knowledge of which indices changed.
+//!
+//! # Example
+//!
+//! ```
+//! use deltasort::deltasort;
+//! use std::collections::HashSet;
+//!
+//! let mut arr = vec![1, 3, 5, 7, 9];
+//! // Modify indices 1 and 3
+//! arr[1] = 8;
+//! arr[3] = 2;
+//!
+//! let dirty: HashSet<usize> = [1, 3].into_iter().collect();
+//! deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+//!
+//! assert_eq!(arr, vec![1, 2, 5, 8, 9]);
+//! ```
+
+use std::collections::HashSet;
+
+/// Direction of movement for a dirty element.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    /// Element needs to move left (smaller than left neighbor)
+    Left,
+    /// Element needs to move right (larger than right neighbor)
+    Right,
+    /// Element is in correct position relative to neighbors
+    Stable,
+}
+
+/// Sorts an array that was previously sorted but has had some elements modified.
+///
+/// This function efficiently restores sorted order by only moving the elements
+/// that need to be repositioned, rather than performing a full sort.
+///
+/// # Arguments
+///
+/// * `arr` - A mutable slice that was previously sorted but has had some elements changed
+/// * `dirty_indices` - Set of indices where elements were modified
+/// * `cmp` - Comparison function returning `Ordering`
+///
+/// # Panics
+///
+/// Panics if any index in `dirty_indices` is out of bounds for `arr`.
+///
+/// # Example
+///
+/// ```
+/// use deltasort::deltasort;
+/// use std::collections::HashSet;
+///
+/// let mut arr = vec![1, 3, 5, 7, 9];
+/// arr[1] = 8;
+/// arr[3] = 2;
+///
+/// let dirty: HashSet<usize> = [1, 3].into_iter().collect();
+/// deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+///
+/// assert_eq!(arr, vec![1, 2, 5, 8, 9]);
+/// ```
+pub fn deltasort<T, F>(arr: &mut [T], dirty_indices: &HashSet<usize>, cmp: F)
+where
+    T: Clone,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    if dirty_indices.is_empty() {
+        return;
+    }
+
+    // Phase 1: Extract and sort dirty values, write back in index order
+    let mut dirty: Vec<usize> = dirty_indices.iter().copied().collect();
+    dirty.sort_unstable();
+
+    let mut values: Vec<T> = dirty.iter().map(|&i| arr[i].clone()).collect();
+    values.sort_by(&cmp);
+
+    for (i, &idx) in dirty.iter().enumerate() {
+        arr[idx] = values[i].clone();
+    }
+
+    // Phase 2: Process dirty indices left-to-right
+    let mut stack: Vec<usize> = Vec::with_capacity(dirty.len());
+    let mut left_bound = 0;
+
+    for &i in &dirty {
+        let d = direction_at(arr, i, &cmp);
+
+        if d == Direction::Left {
+            let right_bound = i.saturating_sub(1);
+
+            // Flush pending RIGHT indices
+            while let Some(s) = stack.pop() {
+                if direction_at(arr, s, &cmp) == Direction::Right {
+                    let target = find_right_target(arr, s + 1, right_bound, &cmp, s);
+                    move_element(arr, s, target);
+                }
+            }
+
+            // Fix LEFT index
+            let target = find_left_target(arr, left_bound, i.saturating_sub(1), &cmp, i);
+            move_element(arr, i, target);
+            left_bound = target + 1;
+        } else {
+            stack.push(i);
+        }
+    }
+
+    // Phase 3: Flush remaining RIGHT indices
+    let final_right_bound = arr.len().saturating_sub(1);
+    while let Some(s) = stack.pop() {
+        if direction_at(arr, s, &cmp) == Direction::Right {
+            let target = find_right_target(arr, s + 1, final_right_bound, &cmp, s);
+            move_element(arr, s, target);
+        }
+    }
+}
+
+/// Determines the direction an element at index `i` needs to move.
+fn direction_at<T, F>(arr: &[T], i: usize, cmp: &F) -> Direction
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    if i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater {
+        Direction::Left
+    } else if i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater {
+        Direction::Right
+    } else {
+        Direction::Stable
+    }
+}
+
+/// Binary search to find the target position for a left-moving element.
+fn find_left_target<T, F>(arr: &[T], lo: usize, hi: usize, cmp: &F, value_idx: usize) -> usize
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    let mut lo = lo;
+    let mut hi = hi as isize;
+
+    while lo as isize <= hi {
+        let mid = lo + ((hi as usize - lo) >> 1);
+        let c = cmp(&arr[value_idx], &arr[mid]);
+
+        if c == std::cmp::Ordering::Less {
+            hi = mid as isize - 1;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    lo
+}
+
+/// Binary search to find the target position for a right-moving element.
+fn find_right_target<T, F>(arr: &[T], lo: usize, hi: usize, cmp: &F, value_idx: usize) -> usize
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    let mut lo = lo;
+    let mut hi = hi as isize;
+
+    while lo as isize <= hi {
+        let mid = lo + ((hi as usize - lo) >> 1);
+        let c = cmp(&arr[mid], &arr[value_idx]);
+
+        if c != std::cmp::Ordering::Greater {
+            lo = mid + 1;
+        } else {
+            hi = mid as isize - 1;
+        }
+    }
+
+    hi as usize
+}
+
+/// Moves an element from index `from` to index `to`, shifting intermediate elements.
+fn move_element<T>(arr: &mut [T], from: usize, to: usize) {
+    if from == to {
+        return;
+    }
+
+    if from < to {
+        // Moving right: rotate left
+        arr[from..=to].rotate_left(1);
+    } else {
+        // Moving left: rotate right
+        arr[to..=from].rotate_right(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::Rng;
+
+    /// Test scales (powers of 10)
+    const SCALES: [u32; 4] = [1, 2, 3, 4];
+    /// Delta volumes as percentages
+    const DELTA_VOLUMES: [usize; 7] = [0, 1, 5, 10, 20, 50, 80];
+    /// Iterations per configuration
+    const ITERATIONS: usize = 10;
+
+    #[test]
+    fn test_empty_dirty_indices() {
+        let mut arr = vec![1, 2, 3, 2, 1];
+        let dirty: HashSet<usize> = HashSet::new();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        // Should be unchanged (no-op)
+        assert_eq!(arr, vec![1, 2, 3, 2, 1]);
+    }
+
+    #[test]
+    fn test_single_element() {
+        let mut arr = vec![42];
+        let dirty: HashSet<usize> = [0].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![42]);
+    }
+
+    #[test]
+    fn test_already_sorted() {
+        let mut arr = vec![1, 2, 3, 4, 5];
+        let dirty: HashSet<usize> = [1, 3].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_movement_cancellation() {
+        // Example from paper: values cross but pre-sorting cancels movement
+        let mut arr = vec![1, 8, 5, 2, 9];
+        let dirty: HashSet<usize> = [1, 3].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![1, 2, 5, 8, 9]);
+    }
+
+    #[test]
+    fn test_all_left_moves() {
+        let mut arr = vec![5, 4, 3, 2, 1];
+        let dirty: HashSet<usize> = [0, 1, 2, 3, 4].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_all_right_moves() {
+        let mut arr = vec![1, 2, 3, 4, 5];
+        // Change to reverse order
+        let mut arr = vec![1, 5, 4, 3, 2];
+        let dirty: HashSet<usize> = [1, 2, 3, 4].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_custom_comparator() {
+        // Sort in descending order
+        let mut arr = vec![1, 5, 3, 7, 2];
+        let dirty: HashSet<usize> = [0, 1, 2, 3, 4].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| b.cmp(a)); // Reverse comparator
+        assert_eq!(arr, vec![7, 5, 3, 2, 1]);
+    }
+
+    #[test]
+    fn test_with_duplicates() {
+        let mut arr = vec![1, 3, 3, 5, 2];
+        let dirty: HashSet<usize> = [4].into_iter().collect();
+        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
+        assert_eq!(arr, vec![1, 2, 3, 3, 5]);
+    }
+
+    #[test]
+    fn test_randomized_correctness() {
+        let mut rng = rand::thread_rng();
+
+        for &scale in &SCALES {
+            let size = 10_usize.pow(scale);
+
+            for &delta_volume in &DELTA_VOLUMES {
+                for _ in 0..ITERATIONS {
+                    let delta_count = (delta_volume * size / 100).max(1);
+
+                    // Create sorted array
+                    let mut arr: Vec<i32> = (0..size as i32).collect();
+                    let mut dirty_indices = HashSet::new();
+
+                    // Randomly modify delta_count elements
+                    for _ in 0..delta_count {
+                        let idx = rng.gen_range(0..size);
+                        arr[idx] = rng.gen_range(0..size as i32);
+                        dirty_indices.insert(idx);
+                    }
+
+                    // Create expected result via native sort
+                    let mut expected = arr.clone();
+                    expected.sort();
+
+                    // Sort with DeltaSort
+                    deltasort(&mut arr, &dirty_indices, |a, b| a.cmp(b));
+
+                    assert_eq!(arr, expected, "Failed at scale={}, delta_volume={}", scale, delta_volume);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_struct_sorting() {
+        #[derive(Clone, Debug, PartialEq, Eq)]
+        struct User {
+            name: String,
+            age: u32,
+        }
+
+        let mut users = vec![
+            User { name: "Alice".into(), age: 30 },
+            User { name: "Bob".into(), age: 25 },
+            User { name: "Charlie".into(), age: 35 },
+        ];
+
+        // Modify Bob's age
+        users[1].age = 40;
+
+        let dirty: HashSet<usize> = [1].into_iter().collect();
+        deltasort(&mut users, &dirty, |a, b| a.age.cmp(&b.age));
+
+        assert_eq!(users[0].name, "Alice");
+        assert_eq!(users[1].name, "Charlie");
+        assert_eq!(users[2].name, "Bob");
+    }
+}

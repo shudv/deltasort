@@ -34,6 +34,15 @@
         // Vitest
         "types": ["vitest/globals"]
     },
-    "include": ["src/**/*", "tests/**/*", "**/*.d.ts"],
+    "include": [
+        "src/**/*",
+        "tests/**/*",
+        "**/*.d.ts",
+        "measure-size.ts",
+        "tsup.config.ts",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "tsconfig.json"
+    ],
     "exclude": ["node_modules", "dist"]
 }

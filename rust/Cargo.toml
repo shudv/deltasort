@@ -14,11 +14,14 @@ name = "deltasort"
 path = "src/lib.rs"
 
 [dependencies]
-
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 
-[[bench]]
-name = "benchmarks"
-harness = false
+[dev-dependencies]
+
+[[bin]]
+name = "benchmark"
+path = "benchmark/main.rs"
+
+[[bin]]
+name = "crossover"
+path = "benchmark/crossover.rs"

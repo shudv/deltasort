@@ -42,54 +42,23 @@
 \maketitle
 
 \begin{abstract}
-Maintaining sorted order under incremental updates is a common requirement in read-heavy systems,
-yet most production sorting routines are blind to which elements have changed and must repeatedly
-rediscover partial order from scratch. This paper explores an alternative model in which the sorting
-routine is explicitly informed of the indices updated since the previous sort. Under this model,
-we present \emph{DeltaSort}, an incremental repair algorithm for arrays that batches multiple
-updates instead of applying them independently. \emph{DeltaSort} reduces redundant comparison work
-and overlapping data movement by exploiting update locality and batching. An experimental evaluation
-of a Rust implementation shows that \emph{DeltaSort} outperforms repeated binary insertion sort
-and NativeSort for update batch sizes up to approximately 25\%, with multi-fold speedups and a clear
-crossover point depending on array size where full re-sorting becomes preferable. These results
-suggest that tighter integration between update pipelines and sorting routines can yield significant
-performance gains in real incremental-sorting workloads at the cost of increased memory usage to
-track updated indices.
+Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we dive into why the traditional approaches are sub-optimal and how we can do better. This paper also formulates an alternative model in which sorting routine is explicitly informed of the indices updated since the previous sort. Under this model, we present \emph{DeltaSort}, an incremental repair algorithm for arrays that batches multiple updates instead of applying them independently. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads at the cost of increased memory usage to track updated indices. We also explore limitations of this approach and show that there is a clear crossover point depending on array size where full re-sorting becomes preferable. 
 \end{abstract}
 
 %==============================================================================
 \section{Introduction}
 %==============================================================================
 
-Sorting is among the most heavily optimized primitives in modern systems. Standard library
-implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and
-PDQSort~\cite{peters2021pdqsort}—deliver excellent performance for general inputs by
-exploiting partial order, cache locality, and adaptive strategies. However, these algorithms
-operate under a \emph{blind} model: they rediscover structure dynamically rather than being
-explicitly informed about which elements have changed since the previous sort.
+Sorting is among the most optimized primitives in modern systems backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they rediscover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
 
-In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are
-often maintained incrementally in read-heavy workloads where updates affect only a subset
-of elements and the indices of those updates can be easily tracked and known. Nevertheless,
-this information is typically not tracked or utilized, and systems fall back to blind re-sorting
-or independent incremental repairs using binary-insertion or extract-sort-merge. To address
-these limitations, this paper makes the following contributions:
+In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or sub-optimal repair approaches using binary-insertion or extract-sort-merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts user experience. The traditional approaches don't serve us very well - full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for large number of updates.   To address these limitations, this paper makes the following contributions:
 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
-  We formulate an incremental sorting model in which the sorting routine is explicitly
-  informed of the indices updated since the previous sort. Under this model, a natural
-  baseline is repeated binary insertion, where each update is repaired independently using
-  binary search. While correct, this approach exhibits efficiency limitations for batched
-  updates due to repeated full-range searches and overlapping data movement.
+  We formulate an incremental sorting model in which the sorting routine is explicitly informed of the indices updated since the previous sort. Under this model, a coupe standard algorithms are Binary-Insertion-Sort and Extract-Sort-Merge because they help maintain sorted order by processing incremental updates.
 
   \item \textbf{DeltaSort algorithm:}
-  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays
-  designed for the update-aware model. DeltaSort batches updates and repairs them jointly,
-  reducing redundant comparison work and overlapping element movement by exploiting update
-  locality and batching. DeltaSort preserves correctness and does not improve asymptotic
-  complexity, but achieves consistent practical performance improvements over repeated
-  binary insertion and blind native sorting in relevant update regimes.
+  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches updates and repairs them jointly, reducing redundant comparison work and overlapping element movement by exploiting update locality and batching. DeltaSort achieves multi-fold speed ups over traditional approaches and also beats Native-Sort for a wide range of update batch sizes.
 \end{enumerate}
 
 %==============================================================================
@@ -97,25 +66,11 @@ these limitations, this paper makes the following contributions:
 \label{sec:related}
 %==============================================================================
 
-Adaptive sorting algorithms exploit existing order in the input to improve performance on
-nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} identify
-monotonic runs dynamically and merge them efficiently, yielding improved performance when
-such structure is present. A substantial body of work formalizes measures of presortedness
-and studies sorting algorithms whose complexity depends on these measures rather than input
-size alone~\cite{mannila1985measures}. These approaches, however, must discover structure
-through full-array scans and do not assume explicit knowledge of which elements were modified.
+Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} identify monotonic runs dynamically and merge them efficiently, yielding improved performance when such structure is present. A substantial body of work formalizes measures of presortedness and studies sorting algorithms whose complexity depends on these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, must discover structure through full-array scans and do not assume explicit knowledge of which elements were modified.
 
-Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL
-trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1970organization},
-and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost,
-but sacrifice contiguous memory layout and cache locality. Library sort~\cite{bender2006insertion}
-reduces insertion cost by maintaining gaps in the array, but addresses online insertion and
-incurs additional space overhead.
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1970organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but sacrifice contiguous memory layout and cache locality. Library sort~\cite{bender2006insertion} reduces insertion cost by maintaining gaps in the array, but addresses online insertion and incurs additional space overhead.
 
-In contrast, this work focuses on maintaining sorted order in arrays under batched updates
-where the indices of modified elements are explicitly available. This update-aware model
-enables efficient repair without auxiliary data structures or additional memory, and
-distinguishes DeltaSort from prior adaptive and incremental approaches.
+In contrast, this work focuses on maintaining sorted order in arrays under batched updates where the indices of modified elements are explicitly available. This update-aware model enables efficient repair without auxiliary data structures, and distinguishes DeltaSort from prior adaptive and incremental approaches.
 
 %==============================================================================
 \section{Problem Model}
@@ -124,15 +79,9 @@ distinguishes DeltaSort from prior adaptive and incremental approaches.
 
 \begin{definition}[Update-Aware Sorting]
 \label{def:problem}
-Let $A[0..n-1]$ be an array sorted according to a strict weak ordering
-defined by a comparator $\texttt{cmp}$. Suppose a set of indices
-$D = \{d_1, \ldots, d_k\} \subseteq \{0, \ldots, n-1\}$ is given such that
-the values at these indices may have been arbitrarily modified, while
-values at all other indices remain unchanged.
+Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Suppose a set of indices $D = \{d_1, \ldots, d_k\} \subseteq \{0, \ldots, n-1\}$ is given such that the values at these indices may have been arbitrarily modified, while values at all other indices remain unchanged.
 
-The \emph{update-aware sorting problem} is to restore $A$ to a state that
-is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the
-set $D$.
+The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $D$.
 \end{definition}
 
 %==============================================================================
@@ -153,12 +102,7 @@ For a dirty index $i$, we classify its \emph{violation} based on local order:
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a maximal contiguous group of dirty indices that ends with
-a LEFT violation. Formally, a segment has structure $(\textrm{R})^*\textrm{L}^+$:
-zero or more RIGHT dirty indices followed by one or more LEFT dirty indices.
-Clean elements may be interspersed between dirty indices within a segment.
-Any trailing RIGHT-only dirty indices after the last segment form a degenerate
-segment processed during the final flush.
+A \emph{segment} is a \emph{maximal} contiguous subsequence of $D$ (with respect to this ordering) whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or the empty suffix if the sequence ends.
 \end{definition}
 
 \input{figures/segment-diagram}
@@ -166,12 +110,8 @@ segment processed during the final flush.
 DeltaSort operates in two phases:
 
 \begin{enumerate}
-  \item \textbf{Phase 1 (Preparation):} Extract dirty values, sort them, write back to
-        dirty positions in index order. This establishes direction segments in the array which
-        are disjoint and can be repaired independently.
-  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices
-        to a stack until the first LEFT index is encountered. Flush and repair the RIGHT
-        indices in stack in LIFO order. Then repair all LEFT indices left-to-right.
+  \item \textbf{Phase 1 (Preparation):} Extract dirty values sort them, write back to dirty positions in index order. This establishes direction segments in the array which are disjoint and can be repaired independently.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. Flush and repair the RIGHT indices in stack in LIFO order. Then repair all LEFT indices left-to-right.
 \end{enumerate}
 
 \subsection{Key Insight: Directional segmentation enables localized repair}

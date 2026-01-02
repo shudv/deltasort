@@ -52,7 +52,8 @@ of a Rust implementation shows that \emph{DeltaSort} consistently outperforms re
 and blind native sorting for update batch sizes up to ~25\%, with multi-fold speedups and a clear
 crossover point depending on array size where full re-sorting becomes preferable. These results
 suggest that tighter integration between update pipelines and sorting routines can yield significant
-performance gains in real incremental-sorting workloads.
+performance gains in real incremental-sorting workloads at the cost of increased memory usage to
+track updated indices.
 \end{abstract}
 
 %==============================================================================
@@ -64,24 +65,24 @@ implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspectiv
 PDQSort~\cite{peters2021pdqsort}—deliver excellent performance for general inputs by
 exploiting partial order, cache locality, and adaptive strategies. However, these algorithms
 operate under a \emph{blind} model: they rediscover structure dynamically rather than being
-explicitly informed which elements have changed since the previous sort.
+explicitly informed about which elements have changed since the previous sort.
 
 In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are
-often maintained incrementally in read-heavy workloads where updates affect only a small
-subset of elements and the indices of those updates are already known. Nevertheless, this
-information is typically discarded, and systems fall back to blind re-sorting or independent
-incremental repairs. To address these limitations, this paper makes the following
-contributions:
+often maintained incrementally in read-heavy workloads where updates affect only a subset
+of elements and the indices of those updates can be easily tracked and known. Nevertheless,
+this information is typically not tracked or utilized, and systems fall back to blind re-sorting
+or independent incremental repairs using binary-insertion or extract-sort-merge. To address
+these limitations, this paper makes the following contributions:
 
 \begin{enumerate}
-  \item \textbf{Update-aware sorting model.}
+  \item \textbf{Update-aware sorting model:}
   We formulate an incremental sorting model in which the sorting routine is explicitly
   informed of the indices updated since the previous sort. Under this model, a natural
   baseline is repeated binary insertion, where each update is repaired independently using
   binary search. While correct, this approach exhibits efficiency limitations for batched
   updates due to repeated full-range searches and overlapping data movement.
 
-  \item \textbf{DeltaSort algorithm.}
+  \item \textbf{DeltaSort algorithm:}
   We present \emph{DeltaSort}, a coordinated incremental repair algorithm for sorted arrays
   designed for the update-aware model. DeltaSort batches updates and repairs them jointly,
   reducing redundant comparison work and overlapping data movement by exploiting update
@@ -140,38 +141,112 @@ set $D$.
 
 \subsection{Overview}
 
+\begin{definition}[Violation]
+\label{def:violation}
+For a dirty index $i$, we classify its \emph{violation} based on local order:
+\begin{itemize}
+  \item \textbf{LEFT (L)}: Element \textbf{must} move left — $\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$).
+  \item \textbf{RIGHT (R)}: Element \textbf{may} move right or stay stable. Essentially, all dirty indices that are not LEFT.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Segment]
+\label{def:segment}
+A \emph{segment} is a maximal group of dirty indices with structure
+$(\textrm{R})^*\textrm{L}^+$: zero or more RIGHT dirty indices
+followed by one or more LEFT dirty indices. Clean elements may be interspersed
+between dirty indices within a segment.
+
+\end{definition}
+
+\begin{center}
+\begin{tikzpicture}[
+    cell/.style={minimum width=0.7cm, minimum height=0.55cm, draw, font=\scriptsize},
+    dotcell/.style={cell, fill=white},
+    right/.style={cell, fill=red!25},
+    left/.style={cell, fill=blue!25},
+    clean/.style={cell, fill=gray!10},
+    boundary/.style={dashed, thick, black!50}
+]
+% Clean elements before (attached to segment)
+\node[clean] (c0) at (0, 0) {};
+\node[dotcell] at (0.7, 0) {\dots};
+\node[clean] (c1) at (1.4, 0) {};
+
+% Segment boundary (between c1 and r1)
+\draw[boundary] (1.75, 0.5) -- (1.75, -0.35);
+
+% R/M region: R ... M ... R ... M
+\node[right] (r1) at (2.1, 0) {R};
+\node[dotcell] at (2.8, 0) {\dots};
+\node[right] (r2) at (3.5, 0) {R};
+\node[dotcell] at (4.2, 0) {\dots};
+\node[right] (r3) at (4.9, 0) {R};
+\node[dotcell] at (5.6, 0) {\dots};
+\node[right] (r4) at (6.3, 0) {R};
+
+% L region: ... L ... L
+\node[dotcell] at (7.0, 0) {\dots};
+\node[left] (l1) at (7.7, 0) {L};
+\node[dotcell] at (8.4, 0) {\dots};
+\node[left] (l2) at (9.1, 0) {L};
+
+% Segment boundary (between l2 and c2)
+\draw[boundary] (9.45, 0.5) -- (9.45, -0.35);
+
+% Clean elements after (attached to segment)
+\node[clean] (c2) at (9.8, 0) {};
+\node[dotcell] at (10.5, 0) {\dots};
+\node[clean] (c3) at (11.2, 0) {};
+
+% Braces
+\draw[decorate, decoration={brace, amplitude=4pt}] 
+    (1.75, 0.55) -- (9.45, 0.55) node[midway, above=5pt, font=\small] {segment};
+\draw[decorate, decoration={brace, amplitude=3pt, mirror}] 
+    (1.75, -0.4) -- (6.65, -0.4) node[midway, below=4pt, font=\tiny] {RIGHT indices};
+\draw[decorate, decoration={brace, amplitude=3pt, mirror}] 
+    (6.65, -0.4) -- (9.45, -0.4) node[midway, below=4pt, font=\tiny] {LEFT indices};
+\end{tikzpicture}
+\end{center}
+
 DeltaSort operates in two phases:
+
 \begin{enumerate}
   \item \textbf{Phase 1 (Preparation):} Extract dirty values, sort them, write back to
-        dirty positions in index order. This establishes monotonicity among dirty elements.
-  \item \textbf{Phase 2 (Repair):} Process dirty indices left-to-right, immediately
-        repairing LEFT violations while deferring RIGHT violations to a stack. After
-        the left-to-right pass, flush the stack in LIFO order to process RIGHT violations.
+        dirty positions in index order. This establishes direction segments in the array which
+        are disjoint and can be repaired independently.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices
+        to a stack until the first LEFT index is encountered. Flush and repair the the RIGHT
+        indexes in stack in LIFO order. Then repair all LEFT indices left-to-right.
 \end{enumerate}
 
-\input{figures/algorithm}
-
-\subsection{Key Insight: Directional Segmentation}
+\subsection{Key Insight: Directional segmentation enables localized repair}
 \label{sec:insight}
 
-The central insight behind DeltaSort is that pre-sorting the dirty values
-induces a segmentation of updates by \emph{direction of movement}. After
-Phase~1, each dirty element either violates order with its left neighbor
-(LEFT), violates order with its right neighbor (RIGHT), or is already
-locally ordered (STABLE). Moreover, adjacent dirty elements with the same
-direction form contiguous directional segments.
+The key insight behind DeltaSort is that pre-sorting dirty values induces a
+\emph{directional segmentation} of updates. After Phase~1, dirty indices partition
+into disjoint segments of the form $(\textrm{R})^*\textrm{L}^+$.
 
-\input{figures/segments}
+\begin{lemma}[Movement Confinement]
+\label{lem:confinement}
+Element movement is bounded within each segment: no element crosses a segment boundary.
+\end{lemma}
 
-This segmentation enables localized repair. LEFT-moving elements can be
-processed immediately in a left-to-right scan using progressively narrowed
-search ranges, since all elements to their left are already stable. In
-contrast, RIGHT-moving elements cannot be safely placed until elements in 
-the next L-segment are handled. DeltaSort therefore defers RIGHT segments
-using a stack and processes them in LIFO order after the scan completes.
-Stack-based processing ensures that when a RIGHT-moving element is repaired,
-the impacted segment is already fixed. This coordination avoids overlapping
-data movement and redundant search.
+\begin{proof}
+Let $S$ be a segment with RIGHT indices $R_1, \ldots, R_m$ followed by LEFT indices
+$L_1, \ldots, L_p$. After Phase~1, dirty values are monotonically ordered by index,
+so $A[R_1] < \cdots < A[R_m] < A[L_1] < \cdots < A[L_p]$.
+
+\begin{enumerate}
+  \item \emph{RIGHT elements cannot pass the leftmost LEFT.}
+        Since $A[R_i] < A[L_1]$ for all $i$.
+
+  \item \emph{LEFT elements cannot pass the rightmost RIGHT.}
+        Since $A[R_m] < A[L_j]$ for all $j$.
+\end{enumerate}
+
+Since no element exits its segment, segments can be repaired independently.
+\end{proof}
 
 \subsection{Detailed Algorithm}
 
@@ -179,75 +254,37 @@ data movement and redundant search.
 
 \subsection{Correctness Proof}
 
-\begin{definition}[Violation and Direction]
-\label{def:violation}
-A \emph{violation} at index $i$ exists if the element at $i$ is out of order
-with at least one neighbor, i.e.,
-$\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$) or
-$\texttt{cmp}(A[i], A[i+1]) > 0$ (for $i < n-1$).
+\begin{lemma}[Segment Boundary Invariant]
+\label{lem:boundary-invariant}
+Segment boundaries are never violated. For any two consecutive segments $S_i$ and 
+$S_{i+1}$, all values in $S_i$ remain less than all values in $S_{i+1}$ throughout 
+the repair process.
+\end{lemma}
 
-For a dirty index $i$, violations are classified by \emph{direction}:
-\begin{itemize}
-  \item \textbf{LEFT (L)}: $\texttt{cmp}(A[i-1], A[i]) > 0$.
-  \item \textbf{RIGHT (R)}: $\texttt{cmp}(A[i], A[i+1]) > 0$.
-  \item \textbf{STABLE (S)}: no violation exists at $i$.
-\end{itemize}
-\end{definition}
+\begin{proof}[Proof sketch]
+After Phase~1, dirty values are monotonically ordered by index. A segment boundary 
+occurs where a LEFT dirty index is followed by a RIGHT dirty index. At such a 
+boundary, the RIGHT element satisfies $A[d_{i+1}] \geq A[d_{i+1}-1]$, establishing 
+sorted order. By Lemma~\ref{lem:confinement}, movement is confined within segments, 
+so boundaries remain intact. A fully rigorous proof is deferred to future work.
+\end{proof}
 
-After Phase 1, dirty elements form \emph{directional segments}: contiguous groups where
-all dirty elements share the same direction. This follows from Phase 1's monotonicity
-property (dirty values are sorted and written to sorted indices).
-
-\begin{lemma}[Fixing LEFT Does Not Introduce Violations]
-\label{lem:fix-left}
-When a LEFT dirty element at index $i$ is moved to its correct position $t < i$,
+\begin{lemma}[Fixing Does Not Introduce Violations]
+\label{lem:fix-invariant}
+When a LEFT or RIGHT element is moved to its correct position via binary search, 
 no new violations are introduced.
 \end{lemma}
 
 \begin{proof}
-Consider the state when we fix a LEFT element at index $i$:
+\emph{LEFT fix}: Binary search finds position $t < i$ where the element belongs. 
+Elements in $A[t..i-1]$ shift right by one. The shift preserves relative order. 
+By binary search, the moved element satisfies $A[t-1] \leq A[t] < A[t+1]$.
 
-\input{figures/L-fix-invariant}
+\emph{RIGHT fix}: Binary search finds position $t > s$ where the element belongs. 
+Elements in $A[s+1..t]$ shift left by one. The shift preserves relative order. 
+By binary search, the moved element satisfies $A[t-1] < A[t] \leq A[t+1]$.
 
-\emph{Key invariant}: At the time a LEFT element at index $i$ is processed,
-the prefix $A[0..i-1]$ is sorted and contains no dirty elements with unresolved
-violations.
-\end{proof}
-
-\begin{lemma}[Fixing RIGHT Does Not Introduce Violations]
-\label{lem:fix-right}
-When a RIGHT dirty element at index $s$ is moved to its correct position $t > s$,
-no new violations are introduced.
-\end{lemma}
-
-\begin{proof}
-RIGHT elements are processed from the stack in LIFO order (rightmost first).
-Consider the array state when fixing a RIGHT segment:
-
-\input{figures/R-fix-invariant}
-
-\emph{Key invariant}: The next L-segment (to the right) is already sorted because
-L-elements are fixed immediately during the scan. R-elements are processed from
-the stack in LIFO order (rightmost first), so each R moves into a region bounded
-by already-fixed elements. Binary search finds the correct position, elements shift
-left, and the R-element slots in without introducing new violations.
-\end{proof}
-
-\begin{lemma}[All Dirty Indices Are Processed]
-\label{lem:progress}
-Phase 2 processes every dirty index exactly once, resolving its violation if any.
-\end{lemma}
-
-\begin{proof}
-Phase 2 iterates through dirty indices in ascending order. For each index $i$:
-\begin{itemize}
-  \item \textbf{LEFT}: Fixed immediately via binary insertion into $A[0..i-1]$.
-  \item \textbf{RIGHT}: Pushed to stack for deferred processing.
-  \item \textbf{STABLE}: Pushed to stack (will be skipped when popped).
-\end{itemize}
-Since every dirty index is encountered during the scan and reconsidered
-at most once during stack processing, and since each reconsideration
-either fixes the element or leaves it STABLE, all violations are eventually resolved.
+In both cases, no new violations are introduced.
 \end{proof}
 
 \begin{theorem}[Correctness]
@@ -256,20 +293,14 @@ DeltaSort produces a correctly sorted array.
 \end{theorem}
 
 \begin{proof}
-We show that after Phase 2, $A[i] \leq A[i+1]$ for all $i$.
+Phase~2 processes each dirty index exactly once, fixing its violation if any. 
+By Lemma~\ref{lem:fix-invariant}, each fix resolves a violation without 
+introducing new ones. After all dirty indices are processed, each segment 
+is internally sorted.
 
-\emph{Base case}: After Phase 1, clean elements remain in their original sorted positions.
-Violations can only occur at boundaries involving dirty elements.
-
-\emph{Invariant}: After processing each dirty index, no new violations are introduced
-(Lemmas~\ref{lem:fix-left} and~\ref{lem:fix-right}), and at least one violation is resolved.
-
-\emph{Termination}: By Lemma~\ref{lem:progress}, all dirty indices are eventually processed.
-By Lemmas~\ref{lem:fix-left} and~\ref{lem:fix-right}, each processing step
-eliminates an existing violation without introducing new ones.
-Since violations can only occur at dirty indices after Phase~1,
-and no violations remain after all dirty indices are processed,
-the array satisfies $A[i] \leq A[i+1]$ for all $i$ and is therefore sorted.
+By Lemma~\ref{lem:boundary-invariant}, segment boundaries maintain sorted 
+order throughout. Since each segment is internally sorted and boundaries 
+preserve global order, the entire array is sorted.
 \end{proof}
 
 \subsection{Algorithm Analysis}

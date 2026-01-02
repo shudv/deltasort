@@ -319,13 +319,13 @@ Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
 \label{sec:experiments}
 %==============================================================================
 
-All experiments are run using a Rust implementation of DeltaSort on a synthetic dataset
+All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset
 of user objects with composite keys (country, age, name) on a M3 Pro Macbook Pro with 18GB RAM. DeltaSort is compared against
 three baselines: Native sort (Rust's \texttt{sort\_by}), Binary Insertion Sort (BIS),
 and Extract-Sort-Merge (ESM).
 
 \subsection{Correctness}
-Correctness is verified by an extensive set of randomized unit tests across various scales and
+Correctness is verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and
 update sizes. The test routine generates a sorted base array of size $N$, applies $k$ random
 updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains
 all original elements with updated values. All tests pass successfully.
@@ -371,7 +371,7 @@ for the upper limit of delta size before which DeltaSort remains advantageous.
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript running on Node.js v20 (V8 engine). While
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} running on Node.js v20 (V8 engine). While
 the implementation passes all correctness tests, the performance results show higher
 variance due to JIT compilation behavior, garbage collection pauses, and other
 engine-level effects. The JavaScript benchmarks will be refined in a future revision

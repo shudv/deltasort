@@ -6,6 +6,7 @@
 
 use deltasort::deltasort;
 use rand::Rng;
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::time::Instant;
 
@@ -69,6 +70,23 @@ fn user_comparator(a: &User, b: &User) -> std::cmp::Ordering {
         .then_with(|| a.name.cmp(&b.name))
 }
 
+thread_local! {
+    static COMPARISON_COUNT: Cell<u64> = const { Cell::new(0) };
+}
+
+fn counting_comparator(a: &User, b: &User) -> std::cmp::Ordering {
+    COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
+    user_comparator(a, b)
+}
+
+fn reset_comparison_count() {
+    COMPARISON_COUNT.with(|c| c.set(0));
+}
+
+fn get_comparison_count() -> u64 {
+    COMPARISON_COUNT.with(|c| c.get())
+}
+
 fn generate_sorted_users(n: usize) -> Vec<User> {
     let mut users: Vec<User> = (0..n).map(User::generate).collect();
     users.sort_by(user_comparator);
@@ -81,6 +99,10 @@ fn generate_sorted_users(n: usize) -> Vec<User> {
 
 fn native_sort(arr: &mut Vec<User>) {
     arr.sort_by(user_comparator);
+}
+
+fn native_sort_counting(arr: &mut Vec<User>) {
+    arr.sort_by(counting_comparator);
 }
 
 /// Binary Insertion Sort
@@ -111,6 +133,26 @@ fn binary_insertion_sort(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     for value in extracted {
         let pos = arr.partition_point(|x| user_comparator(x, &value) == std::cmp::Ordering::Less);
         arr.insert(pos, value);  // O(n) shift - inherent to algorithm
+    }
+}
+
+/// Binary Insertion Sort with comparison counting
+fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
+    if dirty_indices.is_empty() {
+        return;
+    }
+
+    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
+    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
+
+    let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
+    for &idx in &sorted_desc {
+        extracted.push(arr.remove(idx));
+    }
+
+    for value in extracted {
+        let pos = arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
+        arr.insert(pos, value);
     }
 }
 
@@ -171,8 +213,55 @@ fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     *arr = result;
 }
 
+/// Extract-Sort-Merge with comparison counting
+fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
+    if dirty_indices.is_empty() {
+        return;
+    }
+
+    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
+    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
+
+    let mut dirty_elements: Vec<User> = Vec::with_capacity(sorted_desc.len());
+    for &idx in &sorted_desc {
+        dirty_elements.push(arr.remove(idx));
+    }
+
+    dirty_elements.sort_by(counting_comparator);
+
+    let clean_len = arr.len();
+    let dirty_len = dirty_elements.len();
+    let mut result: Vec<User> = Vec::with_capacity(clean_len + dirty_len);
+    
+    let mut i = 0;
+    let mut j = 0;
+
+    while i < clean_len && j < dirty_len {
+        if counting_comparator(&arr[i], &dirty_elements[j]) != std::cmp::Ordering::Greater {
+            result.push(std::mem::take(&mut arr[i]));
+            i += 1;
+        } else {
+            result.push(std::mem::take(&mut dirty_elements[j]));
+            j += 1;
+        }
+    }
+
+    for item in arr.drain(i..) {
+        result.push(item);
+    }
+    for item in dirty_elements.drain(j..) {
+        result.push(item);
+    }
+
+    *arr = result;
+}
+
 fn deltasort_wrapper(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     deltasort(arr.as_mut_slice(), dirty_indices, user_comparator);
+}
+
+fn deltasort_wrapper_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
+    deltasort(arr.as_mut_slice(), dirty_indices, counting_comparator);
 }
 
 // ============================================================================
@@ -265,6 +354,48 @@ fn run_native_benchmark(
 }
 
 // ============================================================================
+// COMPARISON COUNTING
+// ============================================================================
+
+struct ComparisonResult {
+    native: u64,
+    bi: u64,
+    esm: u64,
+    ds: u64,
+}
+
+fn count_comparisons(
+    mutated_users: &[User],
+    dirty_indices: &HashSet<usize>,
+) -> ComparisonResult {
+    // Native sort
+    reset_comparison_count();
+    let mut users = mutated_users.to_vec();
+    native_sort_counting(&mut users);
+    let native = get_comparison_count();
+
+    // Binary Insertion Sort
+    reset_comparison_count();
+    let mut users = mutated_users.to_vec();
+    binary_insertion_sort_counting(&mut users, dirty_indices);
+    let bi = get_comparison_count();
+
+    // Extract-Sort-Merge
+    reset_comparison_count();
+    let mut users = mutated_users.to_vec();
+    extract_sort_merge_counting(&mut users, dirty_indices);
+    let esm = get_comparison_count();
+
+    // DeltaSort
+    reset_comparison_count();
+    let mut users = mutated_users.to_vec();
+    deltasort_wrapper_counting(&mut users, dirty_indices);
+    let ds = get_comparison_count();
+
+    ComparisonResult { native, bi, esm, ds }
+}
+
+// ============================================================================
 // OUTPUT FORMATTING
 // ============================================================================
 
@@ -316,6 +447,91 @@ fn print_table_row(k: usize, native: &BenchResult, bi: &BenchResult, esm: &Bench
 fn print_table_footer() {
     println!("└────────┴───────────────┴───────────────┴───────────────┴───────────────┴─────────────────┘");
     println!("  Note: Values shown as mean ± 95% CI");
+}
+
+// ============================================================================
+// COMPARISON COUNT OUTPUT FORMATTING
+// ============================================================================
+
+fn print_comparison_header() {
+    println!();
+    println!("╔══════════════════════════════════════════════════════════════════════════════╗");
+    println!("║                      Comparator Invocation Count                             ║");
+    println!("╠══════════════════════════════════════════════════════════════════════════════╣");
+    println!("║  n = 50,000 elements  │  Exact counts (no variance)                          ║");
+    println!("╚══════════════════════════════════════════════════════════════════════════════╝");
+    println!();
+}
+
+fn print_comparison_table_header() {
+    println!("┌────────┬────────────┬────────────┬────────────┬────────────┬─────────────────┐");
+    println!("│   k    │   Native   │     BI     │    ESM     │  DeltaSort │   DS vs Best    │");
+    println!("├────────┼────────────┼────────────┼────────────┼────────────┼─────────────────┤");
+}
+
+fn format_count(n: u64) -> String {
+    if n >= 1_000_000 {
+        format!("{:>7.2}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{:>7.2}K", n as f64 / 1_000.0)
+    } else {
+        format!("{:>8}", n)
+    }
+}
+
+fn print_comparison_table_row(k: usize, cmp: &ComparisonResult) {
+    let best_other = cmp.native.min(cmp.bi).min(cmp.esm);
+    let ratio = best_other as f64 / cmp.ds as f64;
+
+    let ratio_str = if ratio >= 1.0 {
+        format!("{:>6.2}x fewer ✓", ratio)
+    } else {
+        format!("{:>6.2}x more  ✗", 1.0 / ratio)
+    };
+
+    println!(
+        "│ {:>6} │ {:>10} │ {:>10} │ {:>10} │ {:>10} │ {:>15} │",
+        k,
+        format_count(cmp.native),
+        format_count(cmp.bi),
+        format_count(cmp.esm),
+        format_count(cmp.ds),
+        ratio_str
+    );
+}
+
+fn print_comparison_table_footer() {
+    println!("└────────┴────────────┴────────────┴────────────┴────────────┴─────────────────┘");
+}
+
+fn print_comparison_summary(results: &[(usize, ComparisonResult)]) {
+    println!();
+    println!("Comparison Count Analysis:");
+    
+    // Find where DS uses fewest comparisons
+    let best_k = results
+        .iter()
+        .filter(|(_, c)| c.ds < c.native && c.ds < c.bi && c.ds < c.esm)
+        .map(|(k, c)| {
+            let best_other = c.native.min(c.bi).min(c.esm);
+            (*k, best_other as f64 / c.ds as f64)
+        })
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+    if let Some((k, ratio)) = best_k {
+        println!("  • Best reduction: {:.2}x fewer comparisons at k={}", ratio, k);
+    }
+
+    // Theoretical bound check: O(k log n) for DeltaSort
+    println!();
+    println!("  Theoretical bounds (k log n for n=50,000):");
+    for (k, cmp) in results.iter().take(8) {
+        let theoretical = (*k as f64) * (50_000f64).log2();
+        let ratio = cmp.ds as f64 / theoretical;
+        println!("    k={:>5}: actual={:>8}, k·log₂(n)={:>8.0}, ratio={:.2}x", 
+                 k, cmp.ds, theoretical, ratio);
+    }
+    println!();
 }
 
 fn print_summary(results: &[(usize, f64, f64, f64, f64)]) {
@@ -409,6 +625,7 @@ fn main() {
     }
 
     let mut all_results: Vec<(usize, f64, f64, f64, f64)> = Vec::new();
+    let mut comparison_results: Vec<(usize, ComparisonResult)> = Vec::new();
 
     print_table_header();
 
@@ -424,7 +641,7 @@ fn main() {
             dirty_indices.insert(idx);
         }
 
-        // Run benchmarks
+        // Run timing benchmarks
         let native = run_native_benchmark("Native", &mutated_users, iterations);
         let bi = run_benchmark("BI", &base_users, &dirty_indices, &mutated_users, iterations, binary_insertion_sort);
         let esm = run_benchmark("ESM", &base_users, &dirty_indices, &mutated_users, iterations, extract_sort_merge);
@@ -433,8 +650,21 @@ fn main() {
         print_table_row(k, &native, &bi, &esm, &ds);
 
         all_results.push((k, native.mean(), bi.mean(), esm.mean(), ds.mean()));
+
+        // Count comparisons (single run - exact count)
+        let cmp_result = count_comparisons(&mutated_users, &dirty_indices);
+        comparison_results.push((k, cmp_result));
     }
 
     print_table_footer();
     print_summary(&all_results);
+
+    // Print comparison count table
+    print_comparison_header();
+    print_comparison_table_header();
+    for (k, cmp) in &comparison_results {
+        print_comparison_table_row(*k, cmp);
+    }
+    print_comparison_table_footer();
+    print_comparison_summary(&comparison_results);
 }

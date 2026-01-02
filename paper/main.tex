@@ -49,8 +49,8 @@ routine is explicitly informed of the indices updated since the previous sort. U
 we present \emph{DeltaSort}, an incremental repair algorithm for arrays that batches multiple
 updates instead of applying them independently. \emph{DeltaSort} reduces redundant comparison work
 and overlapping data movement by exploiting update locality and batching. An experimental evaluation
-of a Rust implementation shows that \emph{DeltaSort} outperforms repeated Binary-Insertion-Sort
-and NativeSort for update batch sizes up to ~25\%, with multi-fold speedups and a clear
+of a Rust implementation shows that \emph{DeltaSort} outperforms repeated binary insertion sort
+and NativeSort for update batch sizes up to approximately 25\%, with multi-fold speedups and a clear
 crossover point depending on array size where full re-sorting becomes preferable. These results
 suggest that tighter integration between update pipelines and sorting routines can yield significant
 performance gains in real incremental-sorting workloads at the cost of increased memory usage to
@@ -153,11 +153,12 @@ For a dirty index $i$, we classify its \emph{violation} based on local order:
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a maximal group of dirty indices with structure
-$(\textrm{R})^*\textrm{L}^+$: zero or more RIGHT dirty indices
-followed by one or more LEFT dirty indices. Clean elements may be interspersed
-between dirty indices within a segment.
-
+A \emph{segment} is a maximal contiguous group of dirty indices that ends with
+a LEFT violation. Formally, a segment has structure $(\textrm{R})^*\textrm{L}^+$:
+zero or more RIGHT dirty indices followed by one or more LEFT dirty indices.
+Clean elements may be interspersed between dirty indices within a segment.
+Any trailing RIGHT-only dirty indices after the last segment form a degenerate
+segment processed during the final flush.
 \end{definition}
 
 \input{figures/segment-diagram}
@@ -169,8 +170,8 @@ DeltaSort operates in two phases:
         dirty positions in index order. This establishes direction segments in the array which
         are disjoint and can be repaired independently.
   \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices
-        to a stack until the first LEFT index is encountered. Flush and repair the the RIGHT
-        indexes in stack in LIFO order. Then repair all LEFT indices left-to-right.
+        to a stack until the first LEFT index is encountered. Flush and repair the RIGHT
+        indices in stack in LIFO order. Then repair all LEFT indices left-to-right.
 \end{enumerate}
 
 \subsection{Key Insight: Directional segmentation enables localized repair}
@@ -276,6 +277,11 @@ Total: $O(k \log n)$. Movement: $O(M)$.
 DeltaSort uses $O(k)$ auxiliary space.
 \end{theorem}
 
+\begin{proof}
+Phase~1 stores $k$ dirty indices and $k$ dirty values. Phase~2 maintains a pending
+stack of at most $k$ indices. No $O(n)$ auxiliary structures are required.
+\end{proof}
+
 \begin{remark}[Movement Efficiency]
 While worst-case movement is $O(kn)$, the segmentation created by Phase 1 tends to
 reduce movement in practice in the average case. Empirical results in \S\ref{sec:experiments}
@@ -299,7 +305,7 @@ to compare DeltaSort's performance:
 \centering
 \caption{Algorithm complexity comparison.}
 \label{tab:complexity}
-\begin{tabular}{l c c c c}
+\begin{tabular}{l c c c}
 \toprule
 Algorithm & Comparisons & Movement & Space \\
 \midrule
@@ -321,7 +327,7 @@ Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
 
 All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset
 of user objects with composite keys (country, age, name) on a M3 Pro Macbook Pro with 18GB RAM. DeltaSort is compared against
-three baselines: Native sort (Rust's \texttt{sort\_by}), Binary Insertion Sort (BIS),
+three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary Insertion Sort (BIS),
 and Extract-Sort-Merge (ESM).
 
 \subsection{Correctness}
@@ -344,9 +350,9 @@ $k$ values.
 \subsection{Comparator Invocation Count}
 
 The following chart shows the number of comparator invocations for each algorithm. DeltaSort
-and Binary Insertion both achieve $O(k \log n)$ comparisons, substantially fewer than Native
-sort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10-40\%
-more than BI , confirming that DeltaSort's performance advantage comes from reduced data movement.
+and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than Native
+Sort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\%
+higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement.
 
 \input{figures/comparator-count}
 
@@ -359,11 +365,11 @@ sizes from 1K to 10M elements.
 Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies 
 with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) 
 and declines for very large arrays, suggesting that DeltaSort's advantage 
-narrows arrays grow very large. More study is needed to understand this trend fully.
+narrows as arrays grow very large. More study is needed to understand this trend fully.
 
 \input{figures/crossover-ratio}
 
-The key takeway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes.
+The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes.
 So DeltaSort remains a viable choice even when delta sizes are large. The exact threshold
 depends on the scenario specifics (array sizes, data types, comparator cost, etc.) but
 the results suggest that a \textbf{25\% dirty fraction} is a reasonable rule of thumb

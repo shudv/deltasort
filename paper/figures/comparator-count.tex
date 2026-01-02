@@ -1,0 +1,64 @@
+% Figure: Comparator invocation count comparison
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=7.5cm,
+    xlabel={Dirty count ($k$)},
+    ylabel={Comparator invocations},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=0.8, xmax=25000,
+    ymin=10, ymax=1000000,
+    xtick={1, 10, 100, 1000, 10000},
+    xticklabels={1, 10, 100, 1K, 10K},
+    ytick={10, 100, 1000, 10000, 100000, 1000000},
+    yticklabels={10, 100, 1K, 10K, 100K, 1M},
+    legend pos=south east,
+    legend style={font=\small},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+]
+
+% Native Sort
+\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] coordinates {
+    (1, 56480) (2, 91240) (5, 118650) (10, 170350) (20, 190450)
+    (50, 240000) (100, 335090) (200, 435400) (500, 623820)
+    (1000, 681640) (2000, 705140) (5000, 719680) (10000, 743180) (20000, 779850)
+};
+
+% Binary Insertion
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] coordinates {
+    (1, 17) (2, 34) (5, 85) (10, 170) (20, 340)
+    (50, 850) (100, 1700) (200, 3400) (500, 8450)
+    (1000, 16810) (2000, 33130) (5000, 80990) (10000, 153490) (20000, 280040)
+};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] coordinates {
+    (1, 44860) (2, 41250) (5, 41930) (10, 42050) (20, 45690)
+    (50, 48770) (100, 50540) (200, 51390) (500, 54670)
+    (1000, 60420) (2000, 72690) (5000, 112640) (10000, 176640) (20000, 295740)
+};
+
+% DeltaSort
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] coordinates {
+    (1, 15) (2, 34) (5, 90) (10, 159) (20, 329)
+    (50, 982) (100, 2090) (200, 3960) (500, 10080)
+    (1000, 20620) (2000, 41470) (5000, 106360) (10000, 221200) (20000, 364320)
+};
+
+\legend{Native, BI, ESM, DeltaSort}
+\end{axis}
+\end{tikzpicture}
+\caption{Comparator invocation count for $n = 50{,}000$ elements. DeltaSort and BI
+both achieve $O(k \log n)$ comparisons, while Native uses $O(n \log n)$ regardless
+of $k$, and ESM uses $O(k \log k + n)$. The similar comparison counts for DeltaSort
+and BI confirm that DeltaSort's speedup derives from movement efficiency, not fewer
+comparisons.}
+\label{fig:comparisons}
+\end{figure}

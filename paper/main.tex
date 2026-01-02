@@ -160,55 +160,7 @@ between dirty indices within a segment.
 
 \end{definition}
 
-\begin{center}
-\begin{tikzpicture}[
-    cell/.style={minimum width=0.7cm, minimum height=0.55cm, draw, font=\scriptsize},
-    dotcell/.style={cell, fill=white},
-    right/.style={cell, fill=red!25},
-    left/.style={cell, fill=blue!25},
-    clean/.style={cell, fill=gray!10},
-    boundary/.style={dashed, thick, black!50}
-]
-% Clean elements before (attached to segment)
-\node[clean] (c0) at (0, 0) {};
-\node[dotcell] at (0.7, 0) {\dots};
-\node[clean] (c1) at (1.4, 0) {};
-
-% Segment boundary (between c1 and r1)
-\draw[boundary] (1.75, 0.5) -- (1.75, -0.35);
-
-% R/M region: R ... M ... R ... M
-\node[right] (r1) at (2.1, 0) {R};
-\node[dotcell] at (2.8, 0) {\dots};
-\node[right] (r2) at (3.5, 0) {R};
-\node[dotcell] at (4.2, 0) {\dots};
-\node[right] (r3) at (4.9, 0) {R};
-\node[dotcell] at (5.6, 0) {\dots};
-\node[right] (r4) at (6.3, 0) {R};
-
-% L region: ... L ... L
-\node[dotcell] at (7.0, 0) {\dots};
-\node[left] (l1) at (7.7, 0) {L};
-\node[dotcell] at (8.4, 0) {\dots};
-\node[left] (l2) at (9.1, 0) {L};
-
-% Segment boundary (between l2 and c2)
-\draw[boundary] (9.45, 0.5) -- (9.45, -0.35);
-
-% Clean elements after (attached to segment)
-\node[clean] (c2) at (9.8, 0) {};
-\node[dotcell] at (10.5, 0) {\dots};
-\node[clean] (c3) at (11.2, 0) {};
-
-% Braces
-\draw[decorate, decoration={brace, amplitude=4pt}] 
-    (1.75, 0.55) -- (9.45, 0.55) node[midway, above=5pt, font=\small] {segment};
-\draw[decorate, decoration={brace, amplitude=3pt, mirror}] 
-    (1.75, -0.4) -- (6.65, -0.4) node[midway, below=4pt, font=\tiny] {RIGHT indices};
-\draw[decorate, decoration={brace, amplitude=3pt, mirror}] 
-    (6.65, -0.4) -- (9.45, -0.4) node[midway, below=4pt, font=\tiny] {LEFT indices};
-\end{tikzpicture}
-\end{center}
+\input{figures/segment-diagram}
 
 DeltaSort operates in two phases:
 
@@ -396,69 +348,7 @@ and Binary Insertion both achieve $O(k \log n)$ comparisons, substantially fewer
 sort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10-40\%
 more than BI , confirming that DeltaSort's performance advantage comes from reduced data movement.
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    width=0.92\textwidth,
-    height=7.5cm,
-    xlabel={Dirty count ($k$)},
-    ylabel={Comparator invocations},
-    xmode=log,
-    ymode=log,
-    log basis x=10,
-    log basis y=10,
-    xmin=0.8, xmax=25000,
-    ymin=10, ymax=1000000,
-    xtick={1, 10, 100, 1000, 10000},
-    xticklabels={1, 10, 100, 1K, 10K},
-    ytick={10, 100, 1000, 10000, 100000, 1000000},
-    yticklabels={10, 100, 1K, 10K, 100K, 1M},
-    legend pos=south east,
-    legend style={font=\small},
-    grid=both,
-    grid style={line width=0.1pt, draw=gray!30},
-    major grid style={line width=0.2pt, draw=gray!50},
-]
-
-% Native Sort
-\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] coordinates {
-    (1, 56480) (2, 91240) (5, 118650) (10, 170350) (20, 190450)
-    (50, 240000) (100, 335090) (200, 435400) (500, 623820)
-    (1000, 681640) (2000, 705140) (5000, 719680) (10000, 743180) (20000, 779850)
-};
-
-% Binary Insertion
-\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] coordinates {
-    (1, 17) (2, 34) (5, 85) (10, 170) (20, 340)
-    (50, 850) (100, 1700) (200, 3400) (500, 8450)
-    (1000, 16810) (2000, 33130) (5000, 80990) (10000, 153490) (20000, 280040)
-};
-
-% Extract-Sort-Merge
-\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] coordinates {
-    (1, 44860) (2, 41250) (5, 41930) (10, 42050) (20, 45690)
-    (50, 48770) (100, 50540) (200, 51390) (500, 54670)
-    (1000, 60420) (2000, 72690) (5000, 112640) (10000, 176640) (20000, 295740)
-};
-
-% DeltaSort
-\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] coordinates {
-    (1, 15) (2, 34) (5, 90) (10, 159) (20, 329)
-    (50, 982) (100, 2090) (200, 3960) (500, 10080)
-    (1000, 20620) (2000, 41470) (5000, 106360) (10000, 221200) (20000, 364320)
-};
-
-\legend{Native, BI, ESM, DeltaSort}
-\end{axis}
-\end{tikzpicture}
-\caption{Comparator invocation count for $n = 50{,}000$ elements. DeltaSort and BI
-both achieve $O(k \log n)$ comparisons, while Native uses $O(n \log n)$ regardless
-of $k$, and ESM uses $O(k \log k + n)$. The similar comparison counts for DeltaSort
-and BI confirm that DeltaSort's speedup derives from movement efficiency, not fewer
-comparisons.}
-\label{fig:comparisons}
-\end{figure}
+\input{figures/comparator-count}
 
 \subsection{Crossover Threshold Analysis}
 
@@ -471,50 +361,7 @@ with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx
 and declines for very large arrays, suggesting that DeltaSort's advantage 
 narrows arrays grow very large. More study is needed to understand this trend fully.
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    width=0.85\textwidth,
-    height=6cm,
-    xlabel={Array size ($n$)},
-    ylabel={Crossover ratio $k_c / n$ (\%)},
-    xmode=log,
-    log basis x=10,
-    xmin=500, xmax=20000000,
-    ymin=0, ymax=40,
-    ytick={0, 10, 20, 30, 40},
-    yticklabels={0, 10, 20, 30, 40},
-    xtick={1000, 10000, 100000, 1000000, 10000000},
-    xticklabels={1K, 10K, 100K, 1M, 10M},
-    legend pos=north east,
-    legend style={font=\small},
-    grid=both,
-    grid style={line width=0.1pt, draw=gray!30},
-    major grid style={line width=0.2pt, draw=gray!50},
-]
-
-% Crossover ratio line
-\addplot[color=blue, mark=*, thick, mark size=2.5pt] coordinates {
-    (1000, 26.3) (2000, 24.4) (5000, 25.6) (10000, 26.3) 
-    (20000, 29.4) (50000, 31.3) (100000, 28.8) (200000, 27.5) 
-    (500000, 23.1) (1000000, 17.5) (2000000, 8.8) (5000000, 3.1) (10000000, 1.3)
-};
-
-% Reference line at 25%
-\addplot[color=red, dashed, thick] coordinates {
-    (500, 25) (20000000, 25)
-};
-
-\legend{$k_c / n$, 25\% threshold}
-\end{axis}
-\end{tikzpicture}
-\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms 
-Native sort when the dirty fraction is below this curve. The 25\% rule of thumb 
-(dashed line) is conservative for small-to-medium arrays but optimistic for very 
-large arrays where the crossover drops significantly.}
-\label{fig:crossover-ratio}
-\end{figure}
+\input{figures/crossover-ratio}
 
 The key takeway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes.
 So DeltaSort remains a viable choice even when delta sizes are large. The exact threshold

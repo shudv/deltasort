@@ -1,6 +1,6 @@
 # DeltaSort
 
-A fast incremental repair algorithm for sorted arrays. When a fraction (< ~25%) of elements change in an already-sorted array, DeltaSort restores order much faster than a full sort.
+An incremental repair algorithm for sorted arrays. When a fraction (< ~25%) of elements change in an already-sorted array, DeltaSort restores order much faster than a full sort.
 
 📄 **[Read the paper](paper/out/main.pdf)**
 

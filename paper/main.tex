@@ -29,6 +29,7 @@
 \newtheorem{example}[theorem]{Example}
 \theoremstyle{remark}
 \newtheorem{remark}[theorem]{Remark}
+\newtheorem{claim}[theorem]{Claim}
 
 \title{DeltaSort: Incremental repair of sorted arrays with known updates}
 \author{Shubham Dwivedi \\
@@ -48,8 +49,8 @@ routine is explicitly informed of the indices updated since the previous sort. U
 we present \emph{DeltaSort}, an incremental repair algorithm for arrays that batches multiple
 updates instead of applying them independently. \emph{DeltaSort} reduces redundant comparison work
 and overlapping data movement by exploiting update locality and batching. An experimental evaluation
-of a Rust implementation shows that \emph{DeltaSort} consistently outperforms repeated binary-insertion
-and blind native sorting for update batch sizes up to ~25\%, with multi-fold speedups and a clear
+of a Rust implementation shows that \emph{DeltaSort} outperforms repeated Binary-Insertion-Sort
+and NativeSort for update batch sizes up to ~25\%, with multi-fold speedups and a clear
 crossover point depending on array size where full re-sorting becomes preferable. These results
 suggest that tighter integration between update pipelines and sorting routines can yield significant
 performance gains in real incremental-sorting workloads at the cost of increased memory usage to
@@ -254,12 +255,12 @@ Since no element exits its segment, segments can be repaired independently.
 
 \subsection{Correctness Proof}
 
-\begin{lemma}[Segment Boundary Invariant]
-\label{lem:boundary-invariant}
+\begin{claim}[Segment Boundary Invariant]
+\label{claim:boundary-invariant}
 Segment boundaries are never violated. For any two consecutive segments $S_i$ and 
 $S_{i+1}$, all values in $S_i$ remain less than all values in $S_{i+1}$ throughout 
 the repair process.
-\end{lemma}
+\end{claim}
 
 \begin{proof}[Proof sketch]
 After Phase~1, dirty values are monotonically ordered by index. A segment boundary 
@@ -298,7 +299,7 @@ By Lemma~\ref{lem:fix-invariant}, each fix resolves a violation without
 introducing new ones. After all dirty indices are processed, each segment 
 is internally sorted.
 
-By Lemma~\ref{lem:boundary-invariant}, segment boundaries maintain sorted 
+By Claim~\ref{claim:boundary-invariant}, segment boundaries maintain sorted 
 order throughout. Since each segment is internally sorted and boundaries 
 preserve global order, the entire array is sorted.
 \end{proof}
@@ -321,13 +322,6 @@ Total: $O(k \log n)$. Movement: $O(M)$.
 \begin{theorem}[Space Complexity]
 \label{thm:space}
 DeltaSort uses $O(k)$ auxiliary space.
-\end{theorem}
-
-\begin{theorem}[Comparison Optimality]
-\label{thm:optimal-comparisons}
-DeltaSort achieves $O(k \log n)$ comparisons, which matches the information-theoretic
-lower bound: each of $k$ dirty elements can occupy any of $n$ final positions, requiring
-$\log_2(n^k) = k \log n$ comparisons to distinguish all configurations.
 \end{theorem}
 
 \begin{remark}[Movement Efficiency]

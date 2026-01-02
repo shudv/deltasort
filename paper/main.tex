@@ -400,7 +400,7 @@ This work suggests several directions for future investigation:
   \item \textbf{Average-case movement bounds:}
   Beyond worst-case correctness and empirical evaluation, establishing
   average-case bounds on data movement under reasonable update distributions
-  may help explain observed crossover behavior and clarify when coordinated
+  will help explain observed speedup and crossover behavior and clarify when segmented
   repair is most effective.
 
   \item \textbf{Structured workload analysis:}
@@ -419,7 +419,7 @@ This work suggests several directions for future investigation:
   \item \textbf{Block-structured storage.}
   Although this work focuses on in-memory arrays, the update-aware model
   naturally extends to block-structured storage. Exploring how DeltaSort-style
-  coordination interacts with page- or block-based layouts may clarify its
+  segmentation interacts with page- or block-based layouts may clarify its
   applicability to database and external-memory settings.
 \end{itemize}
 
@@ -437,7 +437,7 @@ can be repaired independently.
 DeltaSort leverages this segmentation through stack-based processing. LEFT-moving elements
 are repaired immediately with progressively narrowed search ranges, while RIGHT-moving
 elements are deferred and processed in reverse order to ensure stable target positions.
-This coordination avoids redundant comparisons and overlapping element movement that arise
+This segmentation avoids redundant comparisons and overlapping element movement that arise
 from repeated binary insertion.
 
 An experimental evaluation in Rust demonstrates that DeltaSort consistently outperforms
@@ -447,7 +447,7 @@ and update volumes. In practice, DeltaSort remains advantageous until approximat
 
 More broadly, this work highlights the value of integrating application-level update
 information into core algorithms. When sorting routines are informed of which elements
-changed, coordination becomes possible, enabling performance improvements that blind
+changed, batching and segmentation becomes possible, enabling performance improvements that blind
 algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation
 combined with disciplined processing order—can yield substantial practical gains.
 

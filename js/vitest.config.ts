@@ -26,10 +26,11 @@ export default defineConfig({
                 "**/*.config.ts",
                 "**/contracts/**",
                 "**/index.{ts,tsx}",
+                "**/BenchmarkData.ts",
             ],
         },
 
         // Test file patterns
-        include: ["src/**/*.{test,spec}.{ts,tsx}"],
+        include: ["src/**/*.test.ts"],
     },
 });

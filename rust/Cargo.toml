@@ -1,0 +1,27 @@
+[package]
+name = "deltasort"
+version = "0.1.0"
+edition = "2021"
+authors = ["Shubham Dwivedi <shubd3@gmail.com>"]
+description = "Efficient incremental repair of sorted arrays via coordinated element movement"
+license = "MIT"
+repository = "https://github.com/shubd3/deltasort"
+keywords = ["sorting", "incremental", "algorithm"]
+categories = ["algorithms"]
+
+[lib]
+name = "deltasort"
+path = "src/lib.rs"
+
+[dependencies]
+rand = "0.8"
+
+[dev-dependencies]
+
+[[bin]]
+name = "benchmark"
+path = "benchmark/main.rs"
+
+[[bin]]
+name = "crossover"
+path = "benchmark/crossover.rs"

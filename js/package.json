@@ -23,16 +23,15 @@
         "dev": "tsup src/index.ts --watch",
         "demo": "vite examples/react",
         "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean",
-        "test": "vitest run --coverage",
+        "test": "vitest run DeltaSort.test.ts --coverage",
         "test:watch": "vitest",
         "lint": "eslint .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "typecheck": "tsc --noEmit",
-        "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-        "size": "pnpm build && pnpm size-limit && node measure-size.ts deltasort Table && pnpm size:mangle",
+        "size": "pnpm build && pnpm size-limit && node measure-size.ts deltasort && pnpm size:mangle",
         "size:mangle": "npx esbuild src/index.ts --bundle --minify --mangle-props='^_' --outfile=dist/mangled.js && brotli -c dist/mangled.js | wc -c",
-        "benchmark": "vitest run Table.benchmark.test.ts --testTimeout=120000 --no-coverage",
+        "benchmark": "vitest run DeltaSort.benchmark.test.ts --testTimeout=1200000 --no-coverage",
         "ci": "pnpm format && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm size"
     },
     "keywords": [
@@ -94,7 +93,7 @@
         {
             "name": "deltasort",
             "path": "dist/index.js",
-            "import": "{ sort }",
+            "import": "{ deltasort }",
             "limit": "2000 B"
         }
     ],

@@ -1,0 +1,88 @@
+\begin{algorithm}[H]
+\caption{DeltaSort}
+\label{alg:deltasort}
+\begin{algorithmic}[1]
+\Require Array $A[0..n-1]$, dirty indices $D$, comparator $\texttt{cmp}$
+\Ensure $A$ is sorted
+\Statex
+\State \textbf{Phase 1: Prepare}
+\State $\texttt{dirty} \gets \text{sort}(D)$ \Comment{Sort indices ascending}
+\State $\texttt{values} \gets [A[d] : d \in \texttt{dirty}]$
+\State $\texttt{values} \gets \text{sort}(\texttt{values}, \texttt{cmp})$
+\For{$i \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
+    \State $A[\texttt{dirty}[i]] \gets \texttt{values}[i]$
+\EndFor
+\Statex
+\State \textbf{Phase 2: Repair}
+\State $\texttt{pending} \gets []$; $\texttt{leftBound} \gets 0$
+\For{$p \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
+    \State $i \gets \texttt{dirty}[p]$
+    \If{$\Call{IsLeftViolation}{A, i}$}
+        \State \Call{FlushPending}{$\texttt{pending}, i-1$} \Comment{Fix pending before LEFT}
+        \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+    \Else
+        \State $\texttt{pending.push}(i)$ \Comment{Defer RIGHT indices}
+    \EndIf
+\EndFor
+\Statex
+\State \Call{FlushPending}{$\texttt{pending}, n-1$} \Comment{Fix remaining RIGHT violations}
+\end{algorithmic}
+\end{algorithm}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{IsLeftViolation}{$A$, $i$}
+    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$
+\EndFunction
+\Statex
+\Function{IsRightViolation}{$A$, $i$}
+    \State \Return $i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FixLeftViolation}{$A$, $i$, $\texttt{leftBound}$}
+    \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
+    \State \Call{Move}{A, i, t}
+    \State \Return $t$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FlushPending}{$\texttt{pending}$, $\texttt{rightBound}$}
+    \While{$\texttt{pending} \neq \emptyset$}
+        \State $s \gets \texttt{pending.pop}()$ \Comment{Process in LIFO order}
+        \If{$\Call{IsRightViolation}{A, s}$}
+            \State $t \gets \Call{BinarySearchRight}{A, A[s], s+1, \texttt{rightBound}}$
+            \State \Call{Move}{A, s, t}
+        \EndIf
+    \EndWhile
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{Move}{$A$, $from$, $to$}
+    \State $v \gets A[from]$
+    \If{$from < to$}
+        \State Shift $A[from+1..to]$ left by one
+    \ElsIf{$from > to$}
+        \State Shift $A[to..from-1]$ right by one
+    \EndIf
+    \State $A[to] \gets v$
+\EndFunction
+\end{algorithmic}
+\end{minipage}

@@ -20,13 +20,13 @@ const COUNTRIES: &[&str] = &[
 ];
 
 const FIRST_NAMES: &[&str] = &[
-    "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael",
-    "Linda", "William", "Elizabeth", "David", "Barbara", "Richard", "Susan",
+    "Vijay", "Meera", "Akash", "Kashish", "Sunita", "Aviral", "Saumya",
+    "Aman", "Sanjay", "Kavitha", "Radhika", "Meenakshi", "Suresh", "Krishna",
 ];
 
 const LAST_NAMES: &[&str] = &[
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-    "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez",
+    "Sharma", "Patel", "Dwivedi", "Kumar", "Singh", "Gupta", "Nair",
+    "Iyer", "Rao", "Menon", "Pillai", "Joshi", "Verma",
 ];
 
 #[derive(Clone, Debug, Default)]
@@ -80,7 +80,7 @@ fn generate_sorted_users(n: usize) -> Vec<User> {
 // MEASUREMENT
 // ============================================================================
 
-const ITERATIONS: usize = 10;
+const ITERATIONS: usize = 5;
 
 /// Measure mean time for native sort (in microseconds)
 fn measure_native(base_users: &[User], k: usize, n: usize) -> f64 {
@@ -155,7 +155,7 @@ fn find_crossover(n: usize) -> usize {
     }
 
     let mut lo: usize = 1;
-    let mut hi: usize = n;
+    let mut hi: usize = (n*2)/5; // Crossover is usually not beyond 40% of n
     
     // First, check if DeltaSort is faster at k=1 (should be)
     if !deltasort_is_faster(&base_users, 1, n) {
@@ -212,7 +212,7 @@ fn main() {
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 
-    let test_sizes = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000];
+    let test_sizes = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000];
     let mut results: Vec<(usize, usize, f64)> = Vec::new();
 
     for &n in &test_sizes {

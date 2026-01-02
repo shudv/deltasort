@@ -19,13 +19,13 @@ const COUNTRIES: &[&str] = &[
 ];
 
 const FIRST_NAMES: &[&str] = &[
-    "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael",
-    "Linda", "William", "Elizabeth", "David", "Barbara", "Richard", "Susan",
+    "Vijay", "Meera", "Akash", "Kashish", "Sunita", "Aviral", "Saumya",
+    "Aman", "Sanjay", "Kavitha", "Radhika", "Meenakshi", "Suresh", "Krishna",
 ];
 
 const LAST_NAMES: &[&str] = &[
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-    "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez",
+    "Sharma", "Patel", "Dwivedi", "Kumar", "Singh", "Gupta", "Nair",
+    "Iyer", "Rao", "Menon", "Pillai", "Joshi", "Verma",
 ];
 
 #[derive(Clone, Debug, Default)]

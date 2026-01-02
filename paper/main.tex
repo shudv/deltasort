@@ -177,161 +177,77 @@ data movement and redundant search.
 
 \input{figures/algorithm-detailed}
 
-\subsection{Why Phase 1 Creates Segments}
-
-\begin{example}[Benefit of Pre-sorting]
-\label{ex:presort}
-Consider array $[1, 8, 5, 2, 9]$ with dirty indices $\{1, 3\}$ (original sorted array
-was $[1, 3, 5, 7, 9]$, positions 1 and 3 were updated to 8 and 2).
-
-With standard binary insertion (extract-then-insert), the algorithm would:
-\begin{itemize}
-  \item Extract dirty values $\{8, 2\}$, leaving placeholders or compacting
-  \item Insert each back via binary search over the \emph{entire} remaining array
-\end{itemize}
-This is correct but each insertion searches the full range.
-\end{example}
-
-Phase 1 sorts $\{8, 2\} \to \{2, 8\}$ and writes to positions $\{1, 3\}$, yielding
-$[1, 2, 5, 8, 9]$. This establishes \emph{monotonicity} among dirty values, which has
-two critical consequences:
-
-\begin{enumerate}
-  \item \textbf{Bounded search ranges}: Once a LEFT-moving element settles at position $t$,
-        subsequent LEFT searches need only consider $[t+1, ...]$.
-  \item \textbf{Directional coherence}: Dirty elements naturally form segments where all
-        elements in a segment move in the same direction, enabling coordinated processing.
-\end{enumerate}
-
-\begin{lemma}[Phase 1 Establishes Monotonicity]
-\label{lem:monotonicity}
-After Phase 1, for any dirty indices $d_i < d_j$, it holds that $\texttt{cmp}(A[d_i], A[d_j]) \leq 0$.
-\end{lemma}
-
-\begin{proof}
-Phase 1 sorts dirty values and assigns the $i$-th smallest value to the $i$-th smallest
-index. Thus $A[d_i] \leq A[d_j]$ for $d_i < d_j$.
-\end{proof}
-
-\begin{remark}[Bounded Search via \texttt{leftBound}]
-\label{rem:leftbound}
-The implementation maintains a \texttt{leftBound} variable that advances after each
-LEFT move. When a dirty element moves from index $i$ to position $t < i$, the algorithm sets
-$\texttt{leftBound} = t + 1$. Subsequent LEFT searches only consider $[\texttt{leftBound}, i-1]$,
-not $[0, i-1]$. This progressively narrows the search range as LEFT-moving elements
-are processed.
-\end{remark}
-
-The monotonicity established by Phase 1 enables DeltaSort's efficiency through segmentation:
-\begin{enumerate}
-  \item \textbf{Directional segments}: After Phase 1, dirty elements form contiguous segments
-        where all elements in a segment have the same direction (LEFT, RIGHT, or STABLE).
-        Figure~\ref{fig:segments} illustrates this segmentation.
-  \item \textbf{Stack-based coordination}: RIGHT-moving elements are pushed to a stack and
-        processed in LIFO order. This ensures that when processing element at index $s$,
-        all elements at indices $> s$ have already been processed, so $s$'s target is stable.
-  \item \textbf{Progressive search narrowing}: The \texttt{leftBound} variable ensures
-        that LEFT searches become progressively narrower as elements are processed.
-  \item \textbf{STABLE detection}: After pre-sorting, some dirty elements may already
-        be in their correct position relative to neighbors, requiring no movement.
-\end{enumerate}
-
-\begin{example}[Movement Cancellation]
-\label{ex:cancellation}
-Consider array $[1, 3, 5, 7, 9]$ with dirty indices $\{1, 3\}$ receiving values $8$ and $2$
-respectively, yielding $[1, 8, 5, 2, 9]$.
-
-\textbf{Binary Insertion} (extract-then-insert):
-\begin{itemize}
-  \item Extract values at indices $3, 1$ (descending): array becomes $[1, 5, 9]$
-  \item Insert $8$: finds position $2$, array becomes $[1, 5, 8, 9]$ (9 shifts right)
-  \item Insert $2$: finds position $1$, array becomes $[1, 2, 5, 8, 9]$ (5, 8, 9 shift right)
-\end{itemize}
-Clean element $5$ shifted during extraction and again during insertion.
-
-\textbf{DeltaSort}:
-\begin{itemize}
-  \item Phase 1: Sort $\{8, 2\} \to \{2, 8\}$, write to indices $\{1, 3\}$: $[1, 2, 5, 8, 9]$
-  \item Phase 2: Check directions---both elements are now STABLE!
-\end{itemize}
-Clean element $5$ never moved. The pre-sorting phase reassigned values such that both
-dirty elements landed in positions where they satisfy ordering constraints immediately.
-\end{example}
-
-\input{figures/cancellation}
-
-
-\subsection{Design Rationale}
-
-\paragraph{Why flush before LEFT?}
-When a LEFT-moving dirty element is encountered at index $i$, any RIGHT-moving elements
-on the stack (with indices $< i$) must be processed first. Otherwise, moving the LEFT
-element could shift the RIGHT elements' positions, invalidating their stack indices.
-
-\paragraph{Why LIFO order?}
-Stack elements are pushed in ascending index order. LIFO processing (highest index first)
-ensures that when the element at index $s$ is moved, elements at lower indices haven't shifted
-yet, so their stack indices remain valid.
-
-\paragraph{Why re-check Direction?}
-After Phase 1 writes or after flushing, an element's direction may change (a STABLE
-element might become RIGHT, or a RIGHT element might become STABLE). The re-check
-avoids unnecessary moves.
-
 \subsection{Correctness Proof}
 
-\begin{definition}[Violation]
-A \emph{violation} at index $i$ exists if $\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$)
-or $\texttt{cmp}(A[i], A[i+1]) > 0$ (for $i < n-1$).
+\begin{definition}[Violation and Direction]
+\label{def:violation}
+A \emph{violation} at index $i$ exists if the element at $i$ is out of order
+with at least one neighbor, i.e.,
+$\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$) or
+$\texttt{cmp}(A[i], A[i+1]) > 0$ (for $i < n-1$).
+
+For a dirty index $i$, violations are classified by \emph{direction}:
+\begin{itemize}
+  \item \textbf{LEFT (L)}: $\texttt{cmp}(A[i-1], A[i]) > 0$.
+  \item \textbf{RIGHT (R)}: $\texttt{cmp}(A[i], A[i+1]) > 0$.
+  \item \textbf{STABLE (S)}: no violation exists at $i$.
+\end{itemize}
 \end{definition}
 
-\begin{lemma}[Violations Only at Dirty Boundaries]
-\label{lem:violations}
-After Phase 1, violations can only exist at boundaries involving dirty indices.
-Specifically, a violation at position $i$ implies $i \in D$ or $i+1 \in D$.
+After Phase 1, dirty elements form \emph{directional segments}: contiguous groups where
+all dirty elements share the same direction. This follows from Phase 1's monotonicity
+property (dirty values are sorted and written to sorted indices).
+
+\begin{lemma}[Fixing LEFT Does Not Introduce Violations]
+\label{lem:fix-left}
+When a LEFT dirty element at index $i$ is moved to its correct position $t < i$,
+no new violations are introduced.
 \end{lemma}
 
 \begin{proof}
-Clean elements retain their values from the original sorted array. For two adjacent
-clean elements at positions $i$ and $i+1$, neither has changed, so
-$\texttt{cmp}(A[i], A[i+1]) \leq 0$ (sorted order preserved). Violations only occur
-where a dirty element is adjacent to another element with which it violates order.
+Consider the state when we fix a LEFT element at index $i$:
+
+\input{figures/L-fix-invariant}
+
+\emph{Key invariant}: At the time a LEFT element at index $i$ is processed,
+the prefix $A[0..i-1]$ is sorted and contains no dirty elements with unresolved
+violations.
 \end{proof}
 
-\begin{lemma}[Move Correctness]
-\label{lem:move-correct}
-After $\Call{Move}{A, i, t}$ where $t = \Call{BinarySearchLeft/Right}{\ldots}$:
-\begin{enumerate}
-  \item The element originally at $A[i]$ is now at position $t$
-  \item $\texttt{cmp}(A[t-1], A[t]) \leq 0$ (if $t > 0$)
-  \item $\texttt{cmp}(A[t], A[t+1]) \leq 0$ (if $t < n-1$ and within search bounds)
-\end{enumerate}
+\begin{lemma}[Fixing RIGHT Does Not Introduce Violations]
+\label{lem:fix-right}
+When a RIGHT dirty element at index $s$ is moved to its correct position $t > s$,
+no new violations are introduced.
 \end{lemma}
 
 \begin{proof}
-Binary search finds the correct insertion point by comparing with neighbors. The
-element is placed where it satisfies order constraints with its new neighbors.
+RIGHT elements are processed from the stack in LIFO order (rightmost first).
+Consider the array state when fixing a RIGHT segment:
+
+\input{figures/R-fix-invariant}
+
+\emph{Key invariant}: The next L-segment (to the right) is already sorted because
+L-elements are fixed immediately during the scan. R-elements are processed from
+the stack in LIFO order (rightmost first), so each R moves into a region bounded
+by already-fixed elements. Binary search finds the correct position, elements shift
+left, and the R-element slots in without introducing new violations.
 \end{proof}
 
-\begin{lemma}[Stack Index Validity]
-\label{lem:stack-validity}
-When an index $s$ is popped from the stack and processed, $s$ still refers to the
-same element that was pushed.
+\begin{lemma}[All Dirty Indices Are Processed]
+\label{lem:progress}
+Phase 2 processes every dirty index exactly once, resolving its violation if any.
 \end{lemma}
 
 \begin{proof}
-Consider when $s$ was pushed: it was a dirty index with direction RIGHT or STABLE.
-Between push and pop, two types of operations can occur:
-
-\emph{(a) LEFT repairs}: These move elements at index $i > s$ to positions $t \leq i - 1$.
-Since $s < i$, the region $[t, i-1]$ is to the right of $s$; elements at $s$ don't shift.
-
-\emph{(b) RIGHT repairs from stack flushes}: These process indices in LIFO order.
-When $s$ is popped, all indices greater than $s$ have already been processed. Their
-movements shift elements to the right, in regions $[s'+1, t']$ where $s' > s$. Since
-$s < s'$, position $s$ is unaffected.
-
-In both cases, the element at index $s$ hasn't moved, so $s$ remains valid.
+Phase 2 iterates through dirty indices in ascending order. For each index $i$:
+\begin{itemize}
+  \item \textbf{LEFT}: Fixed immediately via binary insertion into $A[0..i-1]$.
+  \item \textbf{RIGHT}: Pushed to stack for deferred processing.
+  \item \textbf{STABLE}: Pushed to stack (will be skipped when popped).
+\end{itemize}
+Since every dirty index is encountered during the scan and reconsidered
+at most once during stack processing, and since each reconsideration
+either fixes the element or leaves it STABLE, all violations are eventually resolved.
 \end{proof}
 
 \begin{theorem}[Correctness]
@@ -340,19 +256,20 @@ DeltaSort produces a correctly sorted array.
 \end{theorem}
 
 \begin{proof}
-By Lemma~\ref{lem:violations}, after Phase 1, violations only involve dirty indices.
-Figure~\ref{fig:segments} illustrates how the array can be viewed as segments where
-dirty elements move within bounded regions without crossing segment boundaries.
-Each dirty index is processed exactly once in Phase 2:
-\begin{itemize}
-  \item If Direction is LEFT: processed immediately with Move
-  \item If Direction is RIGHT or STABLE: pushed to stack, later processed (if still RIGHT)
-\end{itemize}
+We show that after Phase 2, $A[i] \leq A[i+1]$ for all $i$.
 
-By Lemma~\ref{lem:stack-validity}, stack indices remain valid when processed.
-By Lemma~\ref{lem:move-correct}, each Move places the element correctly.
-After all dirty indices are processed, no violations remain (all were fixed), so
-the array is sorted.
+\emph{Base case}: After Phase 1, clean elements remain in their original sorted positions.
+Violations can only occur at boundaries involving dirty elements.
+
+\emph{Invariant}: After processing each dirty index, no new violations are introduced
+(Lemmas~\ref{lem:fix-left} and~\ref{lem:fix-right}), and at least one violation is resolved.
+
+\emph{Termination}: By Lemma~\ref{lem:progress}, all dirty indices are eventually processed.
+By Lemmas~\ref{lem:fix-left} and~\ref{lem:fix-right}, each processing step
+eliminates an existing violation without introducing new ones.
+Since violations can only occur at dirty indices after Phase~1,
+and no violations remain after all dirty indices are processed,
+the array satisfies $A[i] \leq A[i+1]$ for all $i$ and is therefore sorted.
 \end{proof}
 
 \subsection{Algorithm Analysis}

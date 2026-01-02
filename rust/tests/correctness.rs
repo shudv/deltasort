@@ -11,7 +11,7 @@ use std::collections::HashSet;
 const DELTA_VOLUMES: [usize; 7] = [0, 1, 5, 10, 20, 50, 80];
 
 /// Number of iterations per configuration
-const ITERATIONS: usize = 10;
+const ITERATIONS: usize = 100;
 
 #[test]
 fn test_correctness_scale_10() {

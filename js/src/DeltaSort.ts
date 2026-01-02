@@ -1,14 +1,4 @@
 /**
- * Direction enum for dirty indices. This represents whether the element at the index
- * needs to move left, right, or is stable based on it's current position.
- */
-const enum Direction {
-    LEFT = 0,
-    RIGHT = 1,
-    STABLE = 2,
-}
-
-/**
  * Sorts the array using the provided comparator, only re-sorting if there are dirty indices.
  * @param sortedArray
  * @param comparator
@@ -24,106 +14,97 @@ export function deltasort<T>(
         return arr;
     }
 
-    // Step 1: Extract and sort dirty values
+    // Phase 1: Extract and sort dirty values
     const dirty = Array.from(dirtyIndices).sort((a, b) => a - b);
     const values = dirty.map((i) => arr[i]!).sort(cmp);
     for (let i = 0; i < dirty.length; i++) {
         arr[dirty[i]!] = values[i]!;
     }
 
-    const stack = new Array<number>(dirty.length);
+    // Stack for pending violations
+    const pending = new Array<number>(dirty.length);
     let stackTop = 0;
+
+    // Left boundary for fixing LEFT violations, everything up to leftBound is already fixed
     let leftBound = 0;
 
-    // Step 2: Scan dirty indices
+    // Phase 2: Scan dirty indices left to right
     for (let p = 0; p < dirty.length; p++) {
         const i = dirty[p]!;
-        const d = directionAt(arr, i, cmp);
-
-        if (d === Direction.LEFT) {
-            const rightBound = i - 1;
-
-            // Flush pending RIGHT indices
+        if (isLeftViolation(arr, i, cmp)) {
+            // Fix all pending indices before fixing LEFT
             while (stackTop > 0) {
-                const s = stack[--stackTop]!;
-                if (directionAt(arr, s, cmp) === Direction.RIGHT) {
-                    const v = arr[s]!;
-                    const target = findRightTarget(arr, v, s + 1, rightBound, cmp);
-                    move(arr, s, target);
-                }
+                fixPendingViolation(arr, pending[--stackTop]!, i - 1, cmp);
             }
 
             // Fix LEFT index
-            const v = arr[i]!;
-            const target = findLeftTarget(arr, v, leftBound, i - 1, cmp);
-            move(arr, i, target);
-            leftBound = target + 1;
+            leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
         } else {
-            stack[stackTop++] = i;
+            pending[stackTop++] = i;
         }
     }
 
-    // Step 3: Flush remaining RIGHT indices
-    const finalRightBound = arr.length - 1;
+    // Fix any remaining RIGHT violations
     while (stackTop > 0) {
-        const s = stack[--stackTop]!;
-        if (directionAt(arr, s, cmp) === Direction.RIGHT) {
-            const v = arr[s]!;
-            const target = findRightTarget(arr, v, s + 1, finalRightBound, cmp);
-            move(arr, s, target);
-        }
+        fixPendingViolation(arr, pending[--stackTop]!, arr.length - 1, cmp);
     }
 
     return arr;
 }
 
-function directionAt<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Direction {
-    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0
-        ? Direction.LEFT
-        : i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0
-          ? Direction.RIGHT
-          : Direction.STABLE;
+function fixPendingViolation<T>(
+    arr: T[],
+    index: number,
+    rightBound: number,
+    cmp: (a: T, b: T) => number,
+): void {
+    if (!isRightViolation(arr, index, cmp)) {
+        return;
+    }
+
+    const value = arr[index]!;
+
+    // Binary search for target position on the right
+    let lo = index + 1;
+    let hi = rightBound;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        const c = cmp(arr[mid]!, value);
+        if (c <= 0) lo = mid + 1;
+        else hi = mid - 1;
+    }
+
+    move(arr, index, hi);
 }
 
-/**
- * Fund the target index to insert value on the left side using binary search.
- */
-function findLeftTarget<T>(
+function fixLeftViolation<T>(
     arr: T[],
-    value: T,
-    lo: number,
-    hi: number,
+    index: number,
+    leftBound: number,
     cmp: (a: T, b: T) => number,
 ): number {
+    const value = arr[index]!;
+
+    // Binary search for target position on the left
+    let lo = leftBound;
+    let hi = index - 1;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(value, arr[mid]!);
-
         if (c < 0) hi = mid - 1;
         else lo = mid + 1;
     }
 
+    move(arr, index, lo);
     return lo;
 }
 
-/**
- * Find the target index to insert value on the right side using binary search.
- */
-function findRightTarget<T>(
-    arr: T[],
-    value: T,
-    lo: number,
-    hi: number,
-    cmp: (a: T, b: T) => number,
-): number {
-    while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        const c = cmp(arr[mid]!, value);
+function isLeftViolation<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): boolean {
+    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0;
+}
 
-        if (c <= 0) lo = mid + 1;
-        else hi = mid - 1;
-    }
-    return hi;
+function isRightViolation<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): boolean {
+    return i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0;
 }
 
 /**

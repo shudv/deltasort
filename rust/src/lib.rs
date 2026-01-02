@@ -23,17 +23,6 @@
 
 use std::collections::HashSet;
 
-/// Direction of movement for a dirty element.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Direction {
-    /// Element needs to move left (smaller than left neighbor)
-    Left,
-    /// Element needs to move right (larger than right neighbor)
-    Right,
-    /// Element is in correct position relative to neighbors
-    Stable,
-}
-
 /// Sorts an array that was previously sorted but has had some elements modified.
 ///
 /// This function efficiently restores sorted order by only moving the elements
@@ -85,89 +74,66 @@ where
     }
 
     // Phase 2: Process dirty indices left-to-right
-    let mut stack: Vec<usize> = Vec::with_capacity(dirty.len());
+    // Pending stack holds RIGHT and STABLE indices for deferred processing
+    let mut pending: Vec<usize> = Vec::with_capacity(dirty.len());
     let mut left_bound = 0;
 
     for &i in &dirty {
-        let d = direction_at(arr, i, &cmp);
-
-        if d == Direction::Left {
-            let right_bound = i.saturating_sub(1);
-
-            // Flush pending RIGHT indices
-            while let Some(s) = stack.pop() {
-                if direction_at(arr, s, &cmp) == Direction::Right {
-                    let target = find_right_target(arr, s + 1, right_bound, &cmp, s);
-                    move_element(arr, s, target);
-                }
+        if is_left_violation(arr, i, &cmp) {
+            // Flush pending indices before fixing LEFT
+            while let Some(idx) = pending.pop() {
+                fix_pending_violation(arr, idx, i.saturating_sub(1), &cmp);
             }
 
-            // Fix LEFT index
-            let target = find_left_target(arr, left_bound, i.saturating_sub(1), &cmp, i);
-            move_element(arr, i, target);
-            left_bound = target + 1;
+            // Fix LEFT violation
+            left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
         } else {
-            stack.push(i);
+            // RIGHT or STABLE - defer to pending stack
+            pending.push(i);
         }
     }
 
-    // Phase 3: Flush remaining RIGHT indices
-    let final_right_bound = arr.len().saturating_sub(1);
-    while let Some(s) = stack.pop() {
-        if direction_at(arr, s, &cmp) == Direction::Right {
-            let target = find_right_target(arr, s + 1, final_right_bound, &cmp, s);
-            move_element(arr, s, target);
-        }
+    // Flush remaining pending indices
+    let right_bound = arr.len().saturating_sub(1);
+    while let Some(idx) = pending.pop() {
+        fix_pending_violation(arr, idx, right_bound, &cmp);
     }
 }
 
-/// Determines the direction an element at index `i` needs to move.
-fn direction_at<T, F>(arr: &[T], i: usize, cmp: &F) -> Direction
+/// Checks if element at index `i` has a LEFT violation (smaller than left neighbor).
+#[inline]
+fn is_left_violation<T, F>(arr: &[T], i: usize, cmp: &F) -> bool
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    if i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater {
-        Direction::Left
-    } else if i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater {
-        Direction::Right
-    } else {
-        Direction::Stable
-    }
+    i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater
 }
 
-/// Binary search to find the target position for a left-moving element.
-fn find_left_target<T, F>(arr: &[T], lo: usize, hi: usize, cmp: &F, value_idx: usize) -> usize
+/// Checks if element at index `i` has a RIGHT violation (larger than right neighbor).
+#[inline]
+fn is_right_violation<T, F>(arr: &[T], i: usize, cmp: &F) -> bool
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    let mut lo = lo;
-    let mut hi = hi as isize;
+    i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater
+}
+
+/// Fixes a pending violation if it's a RIGHT violation, otherwise no-op (STABLE).
+fn fix_pending_violation<T, F>(arr: &mut [T], index: usize, right_bound: usize, cmp: &F)
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    if !is_right_violation(arr, index, cmp) {
+        return;
+    }
+
+    // Binary search for target position on the right
+    let mut lo = index + 1;
+    let mut hi = right_bound as isize;
 
     while lo as isize <= hi {
         let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[value_idx], &arr[mid]);
-
-        if c == std::cmp::Ordering::Less {
-            hi = mid as isize - 1;
-        } else {
-            lo = mid + 1;
-        }
-    }
-
-    lo
-}
-
-/// Binary search to find the target position for a right-moving element.
-fn find_right_target<T, F>(arr: &[T], lo: usize, hi: usize, cmp: &F, value_idx: usize) -> usize
-where
-    F: Fn(&T, &T) -> std::cmp::Ordering,
-{
-    let mut lo = lo;
-    let mut hi = hi as isize;
-
-    while lo as isize <= hi {
-        let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[mid], &arr[value_idx]);
+        let c = cmp(&arr[mid], &arr[index]);
 
         if c != std::cmp::Ordering::Greater {
             lo = mid + 1;
@@ -176,10 +142,36 @@ where
         }
     }
 
-    hi as usize
+    move_element(arr, index, hi as usize);
+}
+
+/// Fixes a LEFT violation by moving element to its correct position.
+/// Returns the target position.
+fn fix_left_violation<T, F>(arr: &mut [T], index: usize, left_bound: usize, cmp: &F) -> usize
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    // Binary search for target position on the left
+    let mut lo = left_bound;
+    let mut hi = index.saturating_sub(1) as isize;
+
+    while lo as isize <= hi {
+        let mid = lo + ((hi as usize - lo) >> 1);
+        let c = cmp(&arr[index], &arr[mid]);
+
+        if c == std::cmp::Ordering::Less {
+            hi = mid as isize - 1;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    move_element(arr, index, lo);
+    lo
 }
 
 /// Moves an element from index `from` to index `to`, shifting intermediate elements.
+#[inline]
 fn move_element<T>(arr: &mut [T], from: usize, to: usize) {
     if from == to {
         return;

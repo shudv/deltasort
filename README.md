@@ -14,7 +14,7 @@ A fast incremental repair algorithm for sorted arrays. When a fraction (< ~25%) 
 
 ## Reproducing Results
 
-### Rust Benchmarks (Table 1 & Figure 2)
+### Rust Benchmarks
 
 ```bash
 cd rust

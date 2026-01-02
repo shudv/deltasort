@@ -1,5 +1,5 @@
 % Figure: All algorithms comparison (log-log scale)
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
@@ -11,7 +11,7 @@
     ymode=log,
     log basis x=10,
     log basis y=10,
-    xmin=1, xmax=25000,
+    xmin=1, xmax=30000,
     ymin=1, ymax=700000,
     legend pos=north west,
     legend style={font=\small, fill=white, fill opacity=0.9},
@@ -48,11 +48,9 @@
     (5000, 1751) (10000, 3326) (20000, 6914)
 };
 
-\legend{Native, BI, ESM, DeltaSort}
+\legend{NativeSort, BI, ESM, DeltaSort}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison of all algorithms for $n = 50,000$ (log-log scale).
-DeltaSort (orange) is consistently fastest across all tested $k$ values except $k = 20,000$
-where Native sort wins. Note the orders-of-magnitude gap between DeltaSort and BI/ESM.}
+\caption{Execution time comparison of all algorithms for $n = 50,000$ (log-log scale)}
 \label{fig:all-algorithms}
 \end{figure}

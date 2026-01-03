@@ -273,6 +273,7 @@ The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of up
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
+\clearpage
 %==============================================================================
 \section{Future Work}
 \label{sec:future}
@@ -314,6 +315,7 @@ An experimental evaluation in Rust demonstrates that DeltaSort consistently outp
 
 More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
 
+\clearpage
 %==============================================================================
 \bibliographystyle{plain}
 \bibliography{refs}

@@ -42,7 +42,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we present why the traditional approaches are sub-optimal and how we can do better. This paper also formulates an alternative model in which sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and show that there is a clear crossover point depending on array size where full re-sorting becomes preferable. 
+Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we present why the traditional approaches are sub-optimal and how we can do better. This paper also formulates an alternative model in which sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable. 
 \end{abstract}
 
 %==============================================================================
@@ -51,7 +51,7 @@ Reading sorted data is a fundamental requirement in almost all data processing s
 
 Sorting is among the most optimized primitives in modern systems backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they rediscover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
 
-In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or sub-optimal repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches don't serve us very well - full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for large number of updates. To address these limitations, this paper makes the following contributions:
+In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or sub-optimal repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches do not serve us very well---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
@@ -110,7 +110,7 @@ A \emph{segment} is a \textbf{maximal subarray} of $D$ whose elements follow the
 DeltaSort operates in two phases:
 
 \begin{enumerate}
-  \item \textbf{Phase 1 (Preparation):} Extract updated values sort them, write back to updated indices in index order. This establishes directional segments in the array which are disjoint and can be repaired independently.
+  \item \textbf{Phase 1 (Preparation):} Extract updated values, sort them, and write back to updated indices in index order. This establishes directional segments in the array which are disjoint and can be repaired independently.
   \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. Flush and repair the RIGHT indices in stack in LIFO order. Then repair all LEFT indices left-to-right.
 \end{enumerate}
 
@@ -244,28 +244,28 @@ Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
 \label{sec:experiments}
 %==============================================================================
 
-All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on a M3 Pro Macbook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary Insertion Sort (BIS), and Extract-Sort-Merge (ESM).
+All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM).
 
 \subsection{Correctness}
 Correctness is formally-proven as Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $N$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original elements with updated values. All tests pass successfully.
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of dirty count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 15K$ (crossover point), achieving significant speedups of 6--20$\times$ over Native sort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of dirty count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 15K$ (crossover point), achieving significant speedups of 6--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
 \input{figures/all-algorithms}
 
 \subsection{Comparator Invocation Count}
 
-The following chart shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than Native Sort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma ~\ref{lem:confinement}).
+The following chart shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}).
 
 \input{figures/comparator-count}
 
 \subsection{Crossover Threshold Analysis}
 
-A key practical question is: at what delta size should one switch from DeltaSort to Native sort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
+A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage  narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should holdup much better than the emperical data seems to suggest.
+Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage  narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should hold up much better than the empirical data seems to suggest.
 
 \input{figures/crossover-ratio}
 
@@ -284,7 +284,7 @@ This work suggests several directions for future investigation:
 
 \begin{itemize}
   \item \textbf{Average-case movement bounds:}
-  Given that the emperical results suggest multi-fold speedsups over NativeSort for Rust implementation, it would be valuable to derive tighter average-case bounds on data movement $M$ in Theorem~\ref{thm:time}.
+  Given that the empirical results suggest multi-fold speedups over NativeSort for the Rust implementation, it would be valuable to derive tighter average-case bounds on data movement $M$ in Theorem~\ref{thm:time}.
 
   \item \textbf{Structured workload analysis:}
   The current evaluation relies on randomized updates, whereas many real

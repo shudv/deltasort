@@ -30,7 +30,7 @@
     (20000, 32.7) (50000, 33.4) (100000, 32.4) (200000, 33.2) 
     (500000, 30.6) (1000000, 20.4) (2000000, 11.9) (5000000, 3.7) (10000000, 1.8)
 };
-\path[name path=bottom] (axis cs:500,0) -- (axis cs:20000000,0);
+\path[name path=bottom] (axis cs:1000,0) -- (axis cs:10000000,0);
 \addplot[green!20, opacity=0.5] fill between[of=curve and bottom];
 
 % Vertical line at n=50K (the case evaluated in execution time chart)

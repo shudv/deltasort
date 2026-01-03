@@ -42,7 +42,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we present how we can do better than the traditional approaches. This paper also formulates an alternative model in which sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes for our Rust implementation. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable. 
+Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we present how we can do better than the traditional approaches. This paper also formulates an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes for our Rust implementation. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable. 
 \end{abstract}
 
 %==============================================================================
@@ -123,7 +123,7 @@ The key insight behind DeltaSort is that pre-sorting updated values induces a \e
 
 \begin{lemma}[Movement Confinement]
 \label{lem:confinement}
-Element movement during repair phase is bounded within each segment: no element crosses a segment boundary.
+Element movement during the repair phase is bounded within each segment: no element crosses a segment boundary.
 \end{lemma}
 
 \begin{proof}
@@ -211,7 +211,7 @@ Phase~1 stores $k$ dirty indices and $k$ dirty values. Phase~2 maintains a pendi
 \end{proof}
 
 \begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase 1 tends to reduce movement in practice in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much less than the worst case. We will analyze average-case movement more rigorously in future work.
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in practice in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much less than the worst case. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
 Here we compare algorithm complexity with other standard baseline approaches which we use in experiments
@@ -249,7 +249,7 @@ Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
 All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM).
 
 \subsection{Correctness}
-Correctness is formally-proven as Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $N$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original elements with updated values. All tests pass successfully.
+Correctness is formally proven in Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $N$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original elements with updated values. All tests pass successfully.
 
 \subsection{Execution Time}
 
@@ -275,7 +275,7 @@ The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of up
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
 %==============================================================================
 \section{Future Work}
@@ -293,7 +293,7 @@ This work suggests several directions for future investigation:
   workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.
 
   \item \textbf{Study managed environments:}
-  Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection, and JIT compilation will help in explaining the observed performance characteristics.
+  Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
 
   \item \textbf{Block-structured storage:}
   Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage as well. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.

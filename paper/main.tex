@@ -58,7 +58,7 @@ In many practical systems, this assumption is unnecessarily pessimistic. Sorted 
   We formulate an incremental sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge are standard baseline algorithms because they help maintain sorted order by processing incremental updates.
 
   \item \textbf{DeltaSort algorithm:}
-  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches updates and repairs them jointly, reducing redundant comparison work and overlapping element movement by exploiting update locality and batching. DeltaSort achieves multi-fold speed ups over traditional approaches and also beats Native-Sort for a wide range of update batch sizes.
+  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches updates and repairs them jointly, reducing redundant comparison work and overlapping element movement by exploiting update locality and batching. DeltaSort achieves multi-fold speedups over traditional approaches and also beats NativeSort for a wide range of update batch sizes.
 \end{enumerate}
 
 %==============================================================================
@@ -113,7 +113,7 @@ DeltaSort operates in two phases:
 
 \begin{enumerate}
   \item \textbf{Phase 1 (Preparation):} Extract updated values, sort them, and write back to updated indices in index order. This establishes directional segments in the array which are disjoint and can be repaired independently.
-  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. Flush and repair the RIGHT indices in stack in LIFO order. Then repair all LEFT indices left-to-right.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. Flush and repair the RIGHT indices on the stack in LIFO order. Then repair all LEFT indices left-to-right.
 \end{enumerate}
 
 \subsection{Key Insight: Directional segmentation enables localized repair}
@@ -150,7 +150,7 @@ Since no element exits its segment, segments can be repaired independently.
 
 \begin{lemma}[Initial Segment Boundary Order]
 \label{lem:initial-boundary}
-For any two consecutive segments induced after Phase~1, let $i$ be the index of the last updated element in first segment and $j$ be the index of the first updated element in the second segment. Then $\texttt{cmp}(A[i], A[j]) \le 0$ holds immediately after Phase~1.
+For any two consecutive segments induced after Phase~1, let $i$ be the index of the last updated element in the first segment and $j$ be the index of the first updated element in the second segment. Then $\texttt{cmp}(A[i], A[j]) \le 0$ holds immediately after Phase~1.
 \end{lemma}
 
 \begin{proof}
@@ -267,7 +267,7 @@ The following chart shows the number of comparator invocations for each algorith
 
 A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage  narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should hold up much better than the empirical data seems to suggest.
+Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should hold up much better than the empirical data seems to suggest.
 
 \input{figures/crossover-ratio}
 
@@ -311,7 +311,7 @@ DeltaSort leverages this segmentation through stack-based processing. LEFT-movin
 
 An experimental evaluation in Rust demonstrates that DeltaSort consistently outperforms both blind native sorting and repeated binary insertion across a wide range of array sizes and update volumes. In practice, DeltaSort remains advantageous until approximately 25\% of the array is updated, providing a clear and actionable decision boundary.
 
-More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation becomes possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
+More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
 
 %==============================================================================
 \bibliographystyle{plain}

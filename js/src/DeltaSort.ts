@@ -56,13 +56,11 @@ export function deltasort<T>(
                 // Fix all pending indices before fixing LEFT
                 let rightBound = i - 1;
                 while (stackTop > 0) {
-                    rightBound =
-                        fixRightViolation(
-                            arr,
-                            pendingRightViolations[--stackTop]!,
-                            rightBound,
-                            cmp,
-                        ) - 1;
+                    const ri = pendingRightViolations[--stackTop]!;
+                    // Fix RIGHT violation at ri if needed
+                    if (ri < arr.length - 1 && cmp(arr[ri]!, arr[ri + 1]!) > 0) {
+                        rightBound = fixRightViolation(arr, ri, rightBound, cmp) - 1;
+                    }
                 }
 
                 // Fix actual (non-sentinel) LEFT violations
@@ -110,10 +108,6 @@ function fixRightViolation<T>(
     rightBound: number,
     cmp: (a: T, b: T) => number,
 ): number {
-    if (!(i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0)) {
-        return i;
-    }
-
     const value = arr[i]!;
 
     // Binary search for target position on the right

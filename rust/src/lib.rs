@@ -106,7 +106,10 @@ where
                 // Fix all pending RIGHT violations before fixing LEFT
                 let mut right_bound = i.saturating_sub(1);
                 while let Some(idx) = pending_right_violations.pop() {
-                    right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
+                    // Fix RIGHT violation at idx if needed
+                    if idx < arr.len() - 1 && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater {
+                        right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
+                    }
                 }
 
                 // Fix actual (non-sentinel) LEFT violations
@@ -144,11 +147,6 @@ fn fix_right_violation<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    // Check if actually a RIGHT violation
-    if !(i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater) {
-        return i;
-    }
-
     // Binary search for target position on the right
     let mut lo = i + 1;
     let mut hi = right_bound as isize;

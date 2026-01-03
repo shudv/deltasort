@@ -6,24 +6,30 @@
 \Ensure $A$ is sorted
 \Statex
 \State \textbf{Phase 1: Prepare}
-\State $\texttt{updated} \gets \text{sort}(U)$; $\texttt{values} \gets \text{sort}([A[u] : u \in \texttt{updated}], \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}: $A[\texttt{updated}[i]] \gets \texttt{values}[i]$ \EndFor
+\State $\texttt{updated} \gets \text{sort}(U)$;
+\State $\texttt{values} \gets \text{sort}([A[u] : u \in \texttt{updated}], \texttt{cmp})$
+\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}:
+\State $A[\texttt{updated}[i]] \gets \texttt{values}[i]$
+\EndFor
 \State $\texttt{updated.push}(n)$; \Comment{Sentinel triggers final flush}
 \Statex
 \State \textbf{Phase 2: Repair}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
-    \State $i \gets \texttt{updated}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
+    \State $i \gets \texttt{updated}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$ \Comment Sentinel is LEFT
     \If{$\texttt{dir} = \textsc{Left}$}
         \State $\texttt{rightBound} \gets i - 1$
         \While{$\texttt{pendingRight} \neq \emptyset$}
-            \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, \texttt{pendingRight.pop}(), \texttt{rightBound}} - 1$
+            \State $j \gets \texttt{pendingRight.pop}()$
+            \If{$\texttt{cmp}(A[j], A[j+1]) > 0$}
+                \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, j, \texttt{rightBound}} - 1$
+            \EndIf
         \EndWhile
-        \If{$i < n$} \Comment{Skip sentinel}
+        \If{$i < n$} \Comment{Skip dummy LEFT sentinel}
             \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
         \EndIf
     \Else
-        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT}
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT violation}
     \EndIf
 \EndFor
 \end{algorithmic}
@@ -56,12 +62,9 @@
 \noindent\begin{minipage}{\linewidth}
 \begin{algorithmic}[1]
 \Function{FixRightViolation}{$A$, $i$, $\texttt{rightBound}$}
-    \If{$i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$} \Comment{Check if fixing is needed}
-        \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
-        \State \Call{Move}{A, i, t}
-        \State \Return $t$
-    \EndIf
-    \State \Return $i$ \Comment{No movement needed}
+    \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
+    \State \Call{Move}{A, i, t};
+    \State \Return $t$
 \EndFunction
 \end{algorithmic}
 \end{minipage}

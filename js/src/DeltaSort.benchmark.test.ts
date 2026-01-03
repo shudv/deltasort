@@ -270,6 +270,18 @@ function formatTableRows(headers: string[], rows: string[][]): string {
     return [separator, headerRow, separator, ...dataRows, separator].join("\n");
 }
 
+/**
+ * Generate k distinct random indices from [0, n-1] using Fisher-Yates partial shuffle.
+ */
+function sampleDistinctIndices(n: number, k: number): number[] {
+    const arr = Array.from({ length: n }, (_, i) => i);
+    for (let i = 0; i < k; i++) {
+        const j = i + Math.floor(Math.random() * (n - i));
+        [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    }
+    return arr.slice(0, k);
+}
+
 // ============================================================================
 // BENCHMARK TEST
 // ============================================================================
@@ -302,8 +314,9 @@ describe("DeltaSort Benchmark", () => {
                 const dirtyIndices = new Set<number>();
                 const mutations: { idx: number; newUser: User }[] = [];
 
-                for (let i = 0; i < deltaCount; i++) {
-                    const idx = Math.floor(Math.random() * N);
+                // Generate k distinct random indices
+                const indicesToMutate = sampleDistinctIndices(N, deltaCount);
+                for (const idx of indicesToMutate) {
                     const newUser = mutateUser(usersForNativeSort[idx]!);
                     mutations.push({ idx, newUser });
                     dirtyIndices.add(idx);

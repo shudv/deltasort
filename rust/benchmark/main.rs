@@ -93,6 +93,17 @@ fn generate_sorted_users(n: usize) -> Vec<User> {
     users
 }
 
+/// Generate k distinct random indices from [0, n-1] using Fisher-Yates partial shuffle.
+fn sample_distinct_indices(rng: &mut impl Rng, n: usize, k: usize) -> Vec<usize> {
+    let mut arr: Vec<usize> = (0..n).collect();
+    for i in 0..k {
+        let j = rng.gen_range(i..n);
+        arr.swap(i, j);
+    }
+    arr.truncate(k);
+    arr
+}
+
 // ============================================================================
 // ALGORITHMS
 // ============================================================================
@@ -612,7 +623,7 @@ fn print_summary(results: &[(usize, f64, f64, f64, f64)]) {
 fn main() {
     let n = 50_000;
     let delta_counts = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-    let iterations = 100;
+    let iterations = 500;
     let warmup = 5;
 
     print_header();
@@ -632,11 +643,11 @@ fn main() {
     for &k in &delta_counts {
         let mut rng = rand::thread_rng();
 
-        // Prepare test data with mutations
+        // Generate k distinct random indices, then mutate each
+        let indices_to_mutate = sample_distinct_indices(&mut rng, n, k);
         let mut mutated_users = base_users.clone();
-        let mut dirty_indices = HashSet::new();
-        for _ in 0..k {
-            let idx = rng.gen_range(0..n);
+        let mut dirty_indices = HashSet::with_capacity(k);
+        for idx in indices_to_mutate {
             mutated_users[idx].mutate(&mut rng);
             dirty_indices.insert(idx);
         }

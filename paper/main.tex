@@ -53,6 +53,7 @@ Sorting is among the most optimized primitives in modern systems, backed by deca
 
 In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or standard repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches do not serve us very well---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
 
+\clearpage
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
   We formulate an incremental sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge are standard baseline algorithms because they help maintain sorted order by processing incremental updates.

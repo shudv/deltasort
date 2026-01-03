@@ -211,8 +211,7 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much smaller than the worst case. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
-Here we compare algorithm complexity with other standard baseline approaches which we use in experiments
-to compare DeltaSort's performance:
+Here we compare algorithm complexity with other standard baseline approaches used in experiments to compare DeltaSort's performance:
 \begin{itemize}
   \item \textbf{NativeSort (NS)}: Re-sort the array using the natively available sort function. $O(n \log n)$ comparisons and movements.
   \item \textbf{Binary-Insertion-Sort (BIS)}: Extract updated values, then for each: binary search for correct position, reinsert. $O(k \log n)$ comparisons, $O(kn)$ worst-case movement. Searches the full array range for each insertion.

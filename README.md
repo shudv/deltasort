@@ -37,7 +37,7 @@ pnpm install && pnpm test
 
 ## Key Finding
 
-DeltaSort achieves **5–17× speedup** over native sort when fewer than ~25% of elements are dirty. Above this threshold, native sort wins.
+DeltaSort achieves **5–17× speedup** over native sort when fewer than ~25% of elements are updated. Above this threshold, native sort wins.
 
 ## License
 

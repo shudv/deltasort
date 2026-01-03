@@ -94,8 +94,9 @@ where
         match get_direction(arr, i, &cmp) {
             Violation::Left => {
                 // Fix all pending RIGHT violations before fixing LEFT
+                let mut right_bound = i.saturating_sub(1);
                 while let Some(idx) = pending_right_violations.pop() {
-                    fix_right_violation(arr, idx, i.saturating_sub(1), &cmp);
+                    right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
                 }
 
                 // Fix LEFT violation
@@ -108,9 +109,9 @@ where
     }
 
     // Fix remaining pending RIGHT violations
-    let right_bound = arr.len().saturating_sub(1);
+    let mut right_bound = arr.len().saturating_sub(1);
     while let Some(idx) = pending_right_violations.pop() {
-        fix_right_violation(arr, idx, right_bound, &cmp);
+        right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
     }
 }
 
@@ -131,13 +132,15 @@ where
 
 /// Fixes a RIGHT violation at i by moving it to the correct position
 /// between i and right_bound.
-fn fix_right_violation<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F)
+///
+/// Returns the new index of the moved element.
+fn fix_right_violation<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F) -> usize
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     // Check if actually a RIGHT violation
     if !(i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater) {
-        return;
+        return i;
     }
 
     // Binary search for target position on the right
@@ -155,7 +158,9 @@ where
         }
     }
 
-    move_element(arr, i, hi as usize);
+    let target = hi as usize;
+    move_element(arr, i, target);
+    target
 }
 
 /// Fixes a LEFT violation at i by moving it to the correct position

@@ -72,7 +72,7 @@ A separate line of work studies incremental computation and view maintenance in 
 
 Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2004insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
 
-In contrast, this work considers maintaining sorted order in arrays under \emph{batched} updates where the indices of modified elements since the previous sort are explicitly available. This update-aware model enables coordinated repair without auxiliary data structures, and distinguishes \emph{DeltaSort} from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
+In contrast, this work considers maintaining sorted order in arrays under \emph{batched} updates where the indices of udpated elements since the previous sort are explicitly available. This update-aware model enables coordinated repair without auxiliary data structures, and distinguishes \emph{DeltaSort} from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
 
 %==============================================================================
 \section{Problem Model}
@@ -81,7 +81,7 @@ In contrast, this work considers maintaining sorted order in arrays under \emph{
 
 \begin{definition}[Update-Aware Sorting]
 \label{def:problem}
-Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $D = \langle d_1, d_2, \dots, d_k \rangle$ be a sequence of indices such that \[ 0 \le d_1 < d_2 < \dots < d_k \le n-1, \] and the values at these indices may have been arbitrarily modified, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $D$.
+Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $U = \langle u_1, u_2, \dots, u_k \rangle$ be a sequence of indices such that \[ 0 \le u_1 < u_2 < \dots < u_k \le n-1, \] and the values at these indices may have been arbitrarily updated, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $U$.
 \end{definition}
 
 %==============================================================================
@@ -100,11 +100,11 @@ For an updated index $i$, we classify its \emph{violation} based on local order:
 \end{itemize}
 \end{definition}
 
-Every updated index is either a LEFT or RIGHT violation. Violation is only applicable to updated indices and has no meaning for clean indices.
+Every updated index is either a LEFT or RIGHT violation. Violation is only defined for updated indices and has no meaning for clean indices.
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a \textbf{maximal subarray} of $D$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or the empty suffix if the sequence ends.
+A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or the empty suffix if the sequence ends.
 \end{definition}
 
 \input{figures/segment-diagram}

@@ -18,8 +18,9 @@
 \For{$p \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
     \State $i \gets \texttt{updated}[p]$
     \If{$\Call{GetDirection}{A, i} = \textsc{Left}$}
-        \While{$\texttt{pendingRight} \neq \emptyset$} \Comment{Fix pending before LEFT}
-            \State \Call{FixRightViolation}{$A$, $\texttt{pendingRight.pop}()$, $i-1$}
+        \State $\texttt{rightBound} \gets i - 1$ \Comment{Fix pending before LEFT}
+        \While{$\texttt{pendingRight} \neq \emptyset$}
+            \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, \texttt{pendingRight.pop}(), \texttt{rightBound}} - 1$
         \EndWhile
         \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
     \Else
@@ -27,8 +28,9 @@
     \EndIf
 \EndFor
 \Statex
-\While{$\texttt{pendingRight} \neq \emptyset$} \Comment{Fix pending RIGHT violations}
-    \State \Call{FixRightViolation}{$A$, $\texttt{pendingRight.pop}()$, $n-1$}
+\State $\texttt{rightBound} \gets n - 1$ \Comment{Fix remaining pending RIGHT violations}
+\While{$\texttt{pendingRight} \neq \emptyset$}
+    \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, \texttt{pendingRight.pop}(), \texttt{rightBound}} - 1$
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
@@ -63,7 +65,9 @@
     \If{$i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$} \Comment{Check if fixing is needed}
         \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
         \State \Call{Move}{A, i, t}
+        \State \Return $t$
     \EndIf
+    \State \Return $i$ \Comment{No movement needed}
 \EndFunction
 \end{algorithmic}
 \end{minipage}

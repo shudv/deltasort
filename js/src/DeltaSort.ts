@@ -49,11 +49,17 @@ export function deltasort<T>(
         switch (direction) {
             case Violation.LEFT:
                 // Fix all pending indices before fixing LEFT
+                let rightBound = i - 1;
                 while (stackTop > 0) {
-                    fixRightViolation(arr, pendingRightViolations[--stackTop]!, i - 1, cmp);
+                    rightBound =
+                        fixRightViolation(
+                            arr,
+                            pendingRightViolations[--stackTop]!,
+                            rightBound,
+                            cmp,
+                        ) - 1;
                 }
 
-                // Fix LEFT i
                 leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
                 break;
             case Violation.RIGHT:
@@ -63,8 +69,10 @@ export function deltasort<T>(
     }
 
     // Fix any pending violations
+    let rightBound = arr.length - 1;
     while (stackTop > 0) {
-        fixRightViolation(arr, pendingRightViolations[--stackTop]!, arr.length - 1, cmp);
+        rightBound =
+            fixRightViolation(arr, pendingRightViolations[--stackTop]!, rightBound, cmp) - 1;
     }
 
     return arr;
@@ -100,9 +108,9 @@ function fixRightViolation<T>(
     i: number,
     rightBound: number,
     cmp: (a: T, b: T) => number,
-): void {
+): number {
     if (!(i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0)) {
-        return;
+        return i;
     }
 
     const value = arr[i]!;
@@ -118,6 +126,7 @@ function fixRightViolation<T>(
     }
 
     move(arr, i, hi);
+    return hi;
 }
 
 /**

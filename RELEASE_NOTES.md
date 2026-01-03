@@ -11,8 +11,12 @@ Tag created for Zenodo archival purposes.
 
 ## Tag Details
 
-The `zenodo-v1` tag points to the latest commit on the main branch, which contains:
+The `zenodo-v1` tag is an annotated tag that points to the latest commit on the main branch (3b97a3c), which contains:
 - Complete DeltaSort algorithm implementation in JavaScript/TypeScript and Rust
 - Comprehensive benchmark suite
 - Unit tests and correctness tests
 - Academic paper and documentation
+
+## Tag Message
+
+"Zenodo archival tag v1 - Complete DeltaSort implementation"

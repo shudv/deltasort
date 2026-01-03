@@ -35,7 +35,7 @@ A repository administrator needs to:
 1. Visit https://github.com/shudv/deltasort/releases/new
 2. Click "Choose a tag" and type `zenodo-v1`
 3. Click "Create new tag: zenodo-v1 on publish"
-4. Select target: `main` branch (commit `3b97a3c1`)
+4. Select target: `main` branch (commit `3b97a3c1e7c79321ade440282c585f3a71e97722`)
 5. Set title: "zenodo-v1"
 6. Set description: "Zenodo archival tag v1 - Complete DeltaSort implementation"
 7. Publish the release/tag

@@ -2,30 +2,34 @@
 \caption{DeltaSort}
 \label{alg:deltasort}
 \begin{algorithmic}[1]
-\Require Array $A[0..n-1]$, dirty indices $D$, comparator $\texttt{cmp}$
+\Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
 \Ensure $A$ is sorted
 \Statex
 \State \textbf{Phase 1: Prepare}
-\State $\texttt{dirty} \gets \text{sort}(D)$ \Comment{Sort indices ascending}
-\State $\texttt{values} \gets [A[d] : d \in \texttt{dirty}]$
+\State $\texttt{updated} \gets \text{sort}(U)$ \Comment{Sort indices ascending}
+\State $\texttt{values} \gets [A[u] : u \in \texttt{updated}]$
 \State $\texttt{values} \gets \text{sort}(\texttt{values}, \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
-    \State $A[\texttt{dirty}[i]] \gets \texttt{values}[i]$
+\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
+    \State $A[\texttt{updated}[i]] \gets \texttt{values}[i]$
 \EndFor
 \Statex
 \State \textbf{Phase 2: Repair}
-\State $\texttt{pending} \gets []$; $\texttt{leftBound} \gets 0$
-\For{$p \gets 0$ \textbf{to} $|\texttt{dirty}| - 1$}
-    \State $i \gets \texttt{dirty}[p]$
-    \If{$\Call{IsLeftViolation}{A, i}$}
-        \State \Call{FlushPending}{$\texttt{pending}, i-1$} \Comment{Fix pending before LEFT}
+\State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
+\For{$p \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
+    \State $i \gets \texttt{updated}[p]$
+    \If{$\Call{GetDirection}{A, i} = \textsc{Left}$}
+        \While{$\texttt{pendingRight} \neq \emptyset$} \Comment{Fix pending before LEFT}
+            \State \Call{FixRightViolation}{$A$, $\texttt{pendingRight.pop}()$, $i-1$}
+        \EndWhile
         \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
     \Else
-        \State $\texttt{pending.push}(i)$ \Comment{Defer RIGHT indices}
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT}
     \EndIf
 \EndFor
 \Statex
-\State \Call{FlushPending}{$\texttt{pending}, n-1$} \Comment{Fix remaining RIGHT violations}
+\While{$\texttt{pendingRight} \neq \emptyset$} \Comment{Fix pending RIGHT violations}
+    \State \Call{FixRightViolation}{$A$, $\texttt{pendingRight.pop}()$, $n-1$}
+\EndWhile
 \end{algorithmic}
 \end{algorithm}
 
@@ -33,12 +37,8 @@
 
 \noindent\begin{minipage}{\linewidth}
 \begin{algorithmic}[1]
-\Function{IsLeftViolation}{$A$, $i$}
-    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$
-\EndFunction
-\Statex
-\Function{IsRightViolation}{$A$, $i$}
-    \State \Return $i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$
+\Function{GetDirection}{$A$, $i$}
+    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$ ? \textsc{Left} : \textsc{Right}
 \EndFunction
 \end{algorithmic}
 \end{minipage}
@@ -59,30 +59,11 @@
 
 \noindent\begin{minipage}{\linewidth}
 \begin{algorithmic}[1]
-\Function{FlushPending}{$\texttt{pending}$, $\texttt{rightBound}$}
-    \While{$\texttt{pending} \neq \emptyset$}
-        \State $s \gets \texttt{pending.pop}()$ \Comment{Process in LIFO order}
-        \If{$\Call{IsRightViolation}{A, s}$}
-            \State $t \gets \Call{BinarySearchRight}{A, A[s], s+1, \texttt{rightBound}}$
-            \State \Call{Move}{A, s, t}
-        \EndIf
-    \EndWhile
-\EndFunction
-\end{algorithmic}
-\end{minipage}
-
-\vspace{0.5em}
-
-\noindent\begin{minipage}{\linewidth}
-\begin{algorithmic}[1]
-\Function{Move}{$A$, $from$, $to$}
-    \State $v \gets A[from]$
-    \If{$from < to$}
-        \State Shift $A[from+1..to]$ left by one
-    \ElsIf{$from > to$}
-        \State Shift $A[to..from-1]$ right by one
+\Function{FixRightViolation}{$A$, $i$, $\texttt{rightBound}$}
+    \If{$i < n-1 \land \texttt{cmp}(A[i], A[i+1]) > 0$} \Comment{Check if fixing is needed}
+        \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
+        \State \Call{Move}{A, i, t}
     \EndIf
-    \State $A[to] \gets v$
 \EndFunction
 \end{algorithmic}
 \end{minipage}

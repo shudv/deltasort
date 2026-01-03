@@ -23,6 +23,15 @@
 
 use std::collections::HashSet;
 
+/// Violation types for updated indices
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Violation {
+    /// Element must move left
+    Left,
+    /// Element may move right (or is stable)
+    Right,
+}
+
 /// Sorts an array that was previously sorted but has had some elements modified.
 ///
 /// This function efficiently restores sorted order by only moving the elements
@@ -73,67 +82,71 @@ where
         arr[idx] = values[i].clone();
     }
 
-    // Phase 2: Process dirty indices left-to-right
-    // Pending stack holds RIGHT and STABLE indices for deferred processing
-    let mut pending: Vec<usize> = Vec::with_capacity(dirty.len());
+    // Phase 2: Scan updated indices left to right
+    
+    // Stack for pending RIGHT violations
+    let mut pending_right_violations: Vec<usize> = Vec::with_capacity(dirty.len());
+    
+    // Left boundary for fixing LEFT violations
     let mut left_bound = 0;
 
     for &i in &dirty {
-        if is_left_violation(arr, i, &cmp) {
-            // Flush pending indices before fixing LEFT
-            while let Some(idx) = pending.pop() {
-                fix_pending_violation(arr, idx, i.saturating_sub(1), &cmp);
-            }
+        match get_direction(arr, i, &cmp) {
+            Violation::Left => {
+                // Fix all pending RIGHT violations before fixing LEFT
+                while let Some(idx) = pending_right_violations.pop() {
+                    fix_right_violation(arr, idx, i.saturating_sub(1), &cmp);
+                }
 
-            // Fix LEFT violation
-            left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
-        } else {
-            // RIGHT or STABLE - defer to pending stack
-            pending.push(i);
+                // Fix LEFT violation
+                left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
+            }
+            Violation::Right => {
+                pending_right_violations.push(i);
+            }
         }
     }
 
-    // Flush remaining pending indices
+    // Fix remaining pending RIGHT violations
     let right_bound = arr.len().saturating_sub(1);
-    while let Some(idx) = pending.pop() {
-        fix_pending_violation(arr, idx, right_bound, &cmp);
+    while let Some(idx) = pending_right_violations.pop() {
+        fix_right_violation(arr, idx, right_bound, &cmp);
     }
 }
 
-/// Checks if element at index `i` has a LEFT violation (smaller than left neighbor).
+/// Determines the violation direction at updated index i.
+///
+/// This should only be called for an updated index.
 #[inline]
-fn is_left_violation<T, F>(arr: &[T], i: usize, cmp: &F) -> bool
+fn get_direction<T, F>(arr: &[T], i: usize, cmp: &F) -> Violation
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater
+    if i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater {
+        Violation::Left
+    } else {
+        Violation::Right
+    }
 }
 
-/// Checks if element at index `i` has a RIGHT violation (larger than right neighbor).
-#[inline]
-fn is_right_violation<T, F>(arr: &[T], i: usize, cmp: &F) -> bool
+/// Fixes a RIGHT violation at i by moving it to the correct position
+/// between i and right_bound.
+fn fix_right_violation<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F)
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater
-}
-
-/// Fixes a pending violation if it's a RIGHT violation, otherwise no-op (STABLE).
-fn fix_pending_violation<T, F>(arr: &mut [T], index: usize, right_bound: usize, cmp: &F)
-where
-    F: Fn(&T, &T) -> std::cmp::Ordering,
-{
-    if !is_right_violation(arr, index, cmp) {
+    // Check if actually a RIGHT violation
+    if !(i < arr.len() - 1 && cmp(&arr[i], &arr[i + 1]) == std::cmp::Ordering::Greater) {
         return;
     }
 
     // Binary search for target position on the right
-    let mut lo = index + 1;
+    let mut lo = i + 1;
     let mut hi = right_bound as isize;
 
     while lo as isize <= hi {
         let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[mid], &arr[index]);
+        let c = cmp(&arr[mid], &arr[i]);
 
         if c != std::cmp::Ordering::Greater {
             lo = mid + 1;
@@ -142,22 +155,24 @@ where
         }
     }
 
-    move_element(arr, index, hi as usize);
+    move_element(arr, i, hi as usize);
 }
 
-/// Fixes a LEFT violation by moving element to its correct position.
+/// Fixes a LEFT violation at i by moving it to the correct position
+/// between left_bound and i.
+///
 /// Returns the target position.
-fn fix_left_violation<T, F>(arr: &mut [T], index: usize, left_bound: usize, cmp: &F) -> usize
+fn fix_left_violation<T, F>(arr: &mut [T], i: usize, left_bound: usize, cmp: &F) -> usize
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     // Binary search for target position on the left
     let mut lo = left_bound;
-    let mut hi = index.saturating_sub(1) as isize;
+    let mut hi = i.saturating_sub(1) as isize;
 
     while lo as isize <= hi {
         let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[index], &arr[mid]);
+        let c = cmp(&arr[i], &arr[mid]);
 
         if c == std::cmp::Ordering::Less {
             hi = mid as isize - 1;
@@ -166,7 +181,7 @@ where
         }
     }
 
-    move_element(arr, index, lo);
+    move_element(arr, i, lo);
     lo
 }
 

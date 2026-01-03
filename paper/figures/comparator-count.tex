@@ -52,13 +52,13 @@
     (1000, 20620) (2000, 41470) (5000, 106360) (10000, 221200) (20000, 364320)
 };
 
-\legend{Native, BI, ESM, DeltaSort}
+\legend{Native, BIS, ESM, DeltaSort}
 \end{axis}
 \end{tikzpicture}
-\caption{Comparator invocation count for $n = 50{,}000$ elements. DeltaSort and BI
+\caption{Comparator invocation count for $n = 50{,}000$ elements. DeltaSort and BIS
 both achieve $O(k \log n)$ comparisons, while Native uses $O(n \log n)$ regardless
 of $k$, and ESM uses $O(k \log k + n)$. The similar comparison counts for DeltaSort
-and BI confirm that DeltaSort's speedup derives from movement efficiency, not fewer
+and BIS confirm that DeltaSort's speedup derives from movement efficiency, not fewer
 comparisons.}
 \label{fig:comparisons}
 \end{figure}

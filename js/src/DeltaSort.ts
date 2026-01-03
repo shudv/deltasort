@@ -1,71 +1,114 @@
 /**
- * Sorts the array using the provided comparator, only re-sorting if there are dirty indices.
- * @param sortedArray
- * @param comparator
- * @param dirtyIndices
- * @returns
+ * Violation types
+ */
+const enum Violation {
+    /** Violation where the updated element must move left */
+    LEFT = 0,
+    /** Violation where the updated element may move right */
+    RIGHT = 1,
+}
+
+/**
+ * Repairs the sorted array using the provided comparator.
+ *
+ * @param sortedArray The array which was previously sorted and has some updated indices
+ * @param comparator The comparator function
+ * @param updatedIndices Set of indices in the array which have been updated
+ *
+ * @returns The repaired array
  */
 export function deltasort<T>(
     arr: T[],
     cmp: (a: T, b: T) => number,
-    dirtyIndices: Set<number>,
+    updatedIndices: Set<number>,
 ): T[] {
-    if (dirtyIndices.size === 0) {
+    if (updatedIndices.size === 0) {
         return arr;
     }
 
-    // Phase 1: Extract and sort dirty values
-    const dirty = Array.from(dirtyIndices).sort((a, b) => a - b);
-    const values = dirty.map((i) => arr[i]!).sort(cmp);
-    for (let i = 0; i < dirty.length; i++) {
-        arr[dirty[i]!] = values[i]!;
+    // Phase 1: Extract and sort updated values
+    const updated = Array.from(updatedIndices).sort((a, b) => a - b);
+    const values = updated.map((i) => arr[i]!).sort(cmp);
+    for (let i = 0; i < updated.length; i++) {
+        arr[updated[i]!] = values[i]!;
     }
 
-    // Stack for pending violations
-    const pending = new Array<number>(dirty.length);
+    // Phase 2: Scan updated indices left to right
+
+    // Stack for pending RIGHT violations
+    const pendingRightViolations = new Array<number>(updated.length);
     let stackTop = 0;
 
     // Left boundary for fixing LEFT violations, everything up to leftBound is already fixed
     let leftBound = 0;
 
-    // Phase 2: Scan dirty indices left to right
-    for (let p = 0; p < dirty.length; p++) {
-        const i = dirty[p]!;
-        if (isLeftViolation(arr, i, cmp)) {
-            // Fix all pending indices before fixing LEFT
-            while (stackTop > 0) {
-                fixPendingViolation(arr, pending[--stackTop]!, i - 1, cmp);
-            }
+    for (let p = 0; p < updated.length; p++) {
+        const i = updated[p]!;
 
-            // Fix LEFT index
-            leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
-        } else {
-            pending[stackTop++] = i;
+        const direction = getDirection(arr, i, cmp);
+        switch (direction) {
+            case Violation.LEFT:
+                // Fix all pending indices before fixing LEFT
+                while (stackTop > 0) {
+                    fixRightViolation(arr, pendingRightViolations[--stackTop]!, i - 1, cmp);
+                }
+
+                // Fix LEFT i
+                leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                break;
+            case Violation.RIGHT:
+                pendingRightViolations[stackTop++] = i;
+                break;
         }
     }
 
-    // Fix any remaining RIGHT violations
+    // Fix any pending violations
     while (stackTop > 0) {
-        fixPendingViolation(arr, pending[--stackTop]!, arr.length - 1, cmp);
+        fixRightViolation(arr, pendingRightViolations[--stackTop]!, arr.length - 1, cmp);
     }
 
     return arr;
 }
 
-function fixPendingViolation<T>(
+/**
+ * Determines the violation direction at updated index i
+ *
+ * @param arr The array
+ * @param i The updated index
+ * @param cmp The comparator function
+ * @returns The violation direction
+ *
+ * @comment This should only be called for an updated index (it does not have any meaning for non-updated indices)
+ */
+function getDirection<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Violation {
+    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0 ? Violation.LEFT : Violation.RIGHT;
+}
+
+/**
+ * Fixes a RIGHT violation at i by moving it to the correct position
+ * between index and rightBound.
+ *
+ * @param arr The array
+ * @param i The index of the RIGHT violation
+ * @param rightBound The right boundary for search
+ * @param cmp The comparator function
+ *
+ * @return The new index of the moved element
+ */
+function fixRightViolation<T>(
     arr: T[],
-    index: number,
+    i: number,
     rightBound: number,
     cmp: (a: T, b: T) => number,
 ): void {
-    if (!isRightViolation(arr, index, cmp)) {
+    if (!(i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0)) {
         return;
     }
 
-    const value = arr[index]!;
+    const value = arr[i]!;
 
     // Binary search for target position on the right
-    let lo = index + 1;
+    let lo = i + 1;
     let hi = rightBound;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
@@ -74,20 +117,31 @@ function fixPendingViolation<T>(
         else hi = mid - 1;
     }
 
-    move(arr, index, hi);
+    move(arr, i, hi);
 }
 
+/**
+ * Fixes a LEFT violation at i by moving it to the correct position
+ * between leftBound and i.
+ *
+ * @param arr The array
+ * @param i The index of the LEFT violation
+ * @param leftBound The left boundary for search
+ * @param cmp The comparator function
+ *
+ * @return The new index of the moved element
+ */
 function fixLeftViolation<T>(
     arr: T[],
-    index: number,
+    i: number,
     leftBound: number,
     cmp: (a: T, b: T) => number,
 ): number {
-    const value = arr[index]!;
+    const value = arr[i]!;
 
     // Binary search for target position on the left
     let lo = leftBound;
-    let hi = index - 1;
+    let hi = i - 1;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         const c = cmp(value, arr[mid]!);
@@ -95,20 +149,12 @@ function fixLeftViolation<T>(
         else lo = mid + 1;
     }
 
-    move(arr, index, lo);
+    move(arr, i, lo);
     return lo;
 }
 
-function isLeftViolation<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): boolean {
-    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0;
-}
-
-function isRightViolation<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): boolean {
-    return i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0;
-}
-
 /**
- * Moves element from index `from` to index `to` in the array.
+ * Moves element from i `from` to i `to` in the array.
  */
 function move<T>(arr: T[], from: number, to: number) {
     // splice-based move implementation (turns out to be faster than copyWithin)

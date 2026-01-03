@@ -263,7 +263,7 @@ The following chart shows the number of comparator invocations for each algorith
 
 A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should hold up much better than the empirical data seems to suggest.
+Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because average segment size does not scale linearly with array size. More study is needed to understand this trend fully.
 
 \input{figures/crossover-ratio}
 

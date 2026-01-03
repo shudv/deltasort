@@ -82,6 +82,9 @@ where
         arr[idx] = values[i].clone();
     }
 
+    // Add sentinel to trigger final flush
+    dirty.push(arr.len());
+
     // Phase 2: Scan updated indices left to right
     
     // Stack for pending RIGHT violations
@@ -91,7 +94,14 @@ where
     let mut left_bound = 0;
 
     for &i in &dirty {
-        match get_direction(arr, i, &cmp) {
+        // Determine violation direction (sentinel is treated as LEFT to trigger final flush)
+        let direction = if i == arr.len() {
+            Violation::Left
+        } else {
+            get_direction(arr, i, &cmp)
+        };
+
+        match direction {
             Violation::Left => {
                 // Fix all pending RIGHT violations before fixing LEFT
                 let mut right_bound = i.saturating_sub(1);
@@ -99,19 +109,15 @@ where
                     right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
                 }
 
-                // Fix LEFT violation
-                left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
+                // Fix actual (non-sentinel) LEFT violations
+                if i < arr.len() {
+                    left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
+                }
             }
             Violation::Right => {
                 pending_right_violations.push(i);
             }
         }
-    }
-
-    // Fix remaining pending RIGHT violations
-    let mut right_bound = arr.len().saturating_sub(1);
-    while let Some(idx) = pending_right_violations.pop() {
-        right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
     }
 }
 

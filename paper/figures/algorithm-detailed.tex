@@ -6,32 +6,26 @@
 \Ensure $A$ is sorted
 \Statex
 \State \textbf{Phase 1: Prepare}
-\State $\texttt{updated} \gets \text{sort}(U)$ \Comment{Sort indices ascending}
-\State $\texttt{values} \gets [A[u] : u \in \texttt{updated}]$
-\State $\texttt{values} \gets \text{sort}(\texttt{values}, \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
-    \State $A[\texttt{updated}[i]] \gets \texttt{values}[i]$
-\EndFor
+\State $\texttt{updated} \gets \text{sort}(U)$; $\texttt{values} \gets \text{sort}([A[u] : u \in \texttt{updated}], \texttt{cmp})$
+\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}: $A[\texttt{updated}[i]] \gets \texttt{values}[i]$ \EndFor
+\State $\texttt{updated.push}(n)$; \Comment{Sentinel triggers final flush}
 \Statex
 \State \textbf{Phase 2: Repair}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
-    \State $i \gets \texttt{updated}[p]$
-    \If{$\Call{GetDirection}{A, i} = \textsc{Left}$}
-        \State $\texttt{rightBound} \gets i - 1$ \Comment{Fix pending before LEFT}
+    \State $i \gets \texttt{updated}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
+    \If{$\texttt{dir} = \textsc{Left}$}
+        \State $\texttt{rightBound} \gets i - 1$
         \While{$\texttt{pendingRight} \neq \emptyset$}
             \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, \texttt{pendingRight.pop}(), \texttt{rightBound}} - 1$
         \EndWhile
-        \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+        \If{$i < n$} \Comment{Skip sentinel}
+            \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+        \EndIf
     \Else
         \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT}
     \EndIf
 \EndFor
-\Statex
-\State $\texttt{rightBound} \gets n - 1$ \Comment{Fix remaining pending RIGHT violations}
-\While{$\texttt{pendingRight} \neq \emptyset$}
-    \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, \texttt{pendingRight.pop}(), \texttt{rightBound}} - 1$
-\EndWhile
 \end{algorithmic}
 \end{algorithm}
 

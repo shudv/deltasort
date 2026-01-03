@@ -33,19 +33,24 @@ export function deltasort<T>(
         arr[updated[i]!] = values[i]!;
     }
 
+    // Add a sentinel at the end to trigger final flush
+    updated.push(arr.length);
+
     // Phase 2: Scan updated indices left to right
 
     // Stack for pending RIGHT violations
     const pendingRightViolations = new Array<number>(updated.length);
     let stackTop = 0;
 
-    // Left boundary for fixing LEFT violations, everything up to leftBound is already fixed
+    // Left boundary for fixing LEFT violations, everything before the leftBound is already fixed
     let leftBound = 0;
 
     for (let p = 0; p < updated.length; p++) {
         const i = updated[p]!;
 
-        const direction = getDirection(arr, i, cmp);
+        // Determine violation direction (sentinel is considered LEFT to trigger final flush)
+        const direction = i == arr.length ? Violation.LEFT : getDirection(arr, i, cmp);
+
         switch (direction) {
             case Violation.LEFT:
                 // Fix all pending indices before fixing LEFT
@@ -60,19 +65,15 @@ export function deltasort<T>(
                         ) - 1;
                 }
 
-                leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                // Fix actual (non-sentinel) LEFT violations
+                if (i < arr.length) {
+                    leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                }
                 break;
             case Violation.RIGHT:
                 pendingRightViolations[stackTop++] = i;
                 break;
         }
-    }
-
-    // Fix any pending violations
-    let rightBound = arr.length - 1;
-    while (stackTop > 0) {
-        rightBound =
-            fixRightViolation(arr, pendingRightViolations[--stackTop]!, rightBound, cmp) - 1;
     }
 
     return arr;

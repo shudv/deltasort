@@ -53,7 +53,7 @@
 % === ANNOTATIONS ===
 % Main segment brace (top)
 \draw[segbrace] (0.97, 0.47) -- (6.82, 0.47) 
-    node[midway, above=5pt, font=\small] {Segment $S_i$: $(\mathrm{R})^*(\mathrm{L}^+)$};
+    node[midway, above=5pt, font=\small] {Segment $S_i$: $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$};
 
 % Sub-braces (bottom)
 \draw[subbrace] (0.97, -0.32) -- (4.22, -0.32) 
@@ -76,6 +76,6 @@
 \node[font=\scriptsize, anchor=west] at (9.9, -0.55) {= clean};
 
 \end{tikzpicture}
-\caption{Segment structure after Phase~1. Each segment follows the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations.}
+\caption{Segment structure after Phase~1. Each segment follows the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations (or end of array).}
 \label{fig:segment-diagram}
 \end{figure}

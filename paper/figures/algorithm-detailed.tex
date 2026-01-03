@@ -8,7 +8,7 @@
 \State \textbf{Phase 1: Prepare}
 \State $\texttt{updated} \gets \text{sort}(U)$;
 \State $\texttt{values} \gets \text{sort}([A[u] : u \in \texttt{updated}], \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}:
+\For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
 \State $A[\texttt{updated}[i]] \gets \texttt{values}[i]$
 \EndFor
 \State $\texttt{updated.push}(n)$; \Comment{Sentinel triggers final flush}

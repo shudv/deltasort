@@ -80,7 +80,7 @@ fn generate_sorted_users(n: usize) -> Vec<User> {
 // MEASUREMENT
 // ============================================================================
 
-const ITERATIONS: usize = 5;
+const ITERATIONS: usize = 10;
 
 /// Measure mean time for native sort (in microseconds)
 fn measure_native(base_users: &[User], k: usize, n: usize) -> f64 {
@@ -212,7 +212,7 @@ fn main() {
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 
-    let test_sizes = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000, 5_000_000, 8_000_000, 10_000_000];
+    let test_sizes = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000];
     let mut results: Vec<(usize, usize, f64)> = Vec::new();
 
     for &n in &test_sizes {

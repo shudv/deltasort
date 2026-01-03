@@ -162,7 +162,7 @@ When a LEFT or RIGHT element is moved to its correct position via binary search,
 \begin{proof}
 \emph{LEFT fix}: Binary search finds position $t < i$ where the element belongs. Elements in $A[t..i-1]$ shift right by one. The shift preserves relative order. By binary search, the moved element satisfies $A[t-1] \leq A[t] < A[t+1]$.
 
-\emph{RIGHT fix}: Binary search finds position $t > s$ where the element belongs. Elements in $A[s+1..t]$ shift left by one. The shift preserves relative order. By binary search, the moved element satisfies $A[t-1] < A[t] \leq A[t+1]$.
+\emph{RIGHT fix}: Binary search finds position $t > i$ where the element belongs. Elements in $A[i+1..t]$ shift left by one. The shift preserves relative order. By binary search, the moved element satisfies $A[t-1] < A[t] \leq A[t+1]$.
 
 In both cases, no new violations are introduced.
 \end{proof}
@@ -248,7 +248,7 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.6K$ (crossover point), achieving significant speedups of 4--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of 4--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
 \input{figures/all-algorithms}
 
@@ -262,11 +262,11 @@ The following chart shows the number of comparator invocations for each algorith
 
 A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish more quickly at larger scales. More study is needed to understand this trend fully.
+Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ~33\% for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
 
 \input{figures/crossover-ratio}
 
-The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes, remaining a viable choice even when delta sizes are large. The exact threshold depends on the specific scenario (array size, data types, comparator cost, etc.), but the results suggest that a \textbf{25\% updated fraction} is a reasonable rule of thumb for the upper limit of delta size before which DeltaSort remains advantageous.
+The key takeaway is that DeltaSort offers best incremental sort performance for \textbf{large} ranges of update sizes (0--25\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 
 \subsection{Performance in managed execution environments}
 
@@ -300,9 +300,7 @@ This work suggests several directions for future investigation:
 \label{sec:conclusion}
 %==============================================================================
 
-This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The central insight is that pre-sorting updated values induces \emph{directional segmentation}: updated elements naturally partition into segments that can be repaired independently. DeltaSort leverages this segmentation through stack-based processing. LEFT-moving elements are repaired immediately with progressively narrowed search ranges, while RIGHT-moving elements are deferred and processed in reverse order to ensure stable target positions. This segmentation avoids redundant comparisons and overlapping element movement that arise from repeated binary insertion.
-
-An experimental evaluation in Rust demonstrates that DeltaSort consistently outperforms both blind native sorting and repeated binary insertion across a wide range of array sizes and update volumes. In practice, DeltaSort remains advantageous until approximately 25\% of the array is updated, providing a clear and actionable decision boundary.
+This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The key insight is that pre-sorting updated values induces \emph{directional segmentation}: updated elements naturally partition into segments that can be repaired independently. DeltaSort leverages this segmentation through stack-based processing. LEFT-moving elements are repaired immediately with progressively narrowed search ranges, while RIGHT-moving elements are deferred and processed in reverse order to ensure stable target positions. This segmentation avoids redundant comparisons and overlapping element movement that arise from repeated binary insertion. An experimental evaluation in Rust demonstrates that DeltaSort outperforms both blind native sorting and repeated binary insertion across a wide range of array sizes and update volumes.
 
 More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
 

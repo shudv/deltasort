@@ -36,7 +36,7 @@
 \small Independent Researcher \\
 \small \texttt{shubd3@gmail.com}
 }
-\date{2026}
+\date{January 2026}
 
 \begin{document}
 \maketitle
@@ -195,7 +195,7 @@ Writing the sorted values back requires $O(k)$ time.
 Each updated index is processed once. Direction checks cost $O(1)$ per index, and each repair performs a binary search over a sorted region in $O(\log n)$ time. Thus Phase~2 requires $O(k \log n)$ time. Let $M$ denote the total number of elements moved during repair. The movement cost is $O(M)$.
 
 \paragraph{Total.}
-The overall complexity is $O(k \log k + k \log n + M)$.
+The overall complexity is $O(k \log n)$ time and $O(M)$ data movement.
 \end{proof}
 
 \begin{theorem}[Space Complexity]
@@ -263,7 +263,7 @@ The following chart shows the number of comparator invocations for each algorith
 
 A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because average segment size does not scale linearly with array size. More study is needed to understand this trend fully.
+Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around 31\% for medium-sized arrays ($n \approx 50$K) and declines for very large arrays, suggesting that DeltaSort's advantage narrows as arrays grow very large. More study is needed to understand this trend fully, because intuitively the trend should hold up much better than the empirical data seems to suggest.
 
 \input{figures/crossover-ratio}
 
@@ -273,7 +273,6 @@ The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of up
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
-\clearpage
 %==============================================================================
 \section{Future Work}
 \label{sec:future}
@@ -283,7 +282,10 @@ This work suggests several directions for future investigation:
 
 \begin{itemize}
   \item \textbf{Average-case movement bounds:}
-  Given that the empirical results suggest multi-fold speedups over NativeSort for the Rust implementation, it would be valuable to derive tighter average-case bounds on data movement $M$ in Theorem~\ref{thm:time}.
+  Beyond worst-case correctness and empirical evaluation, establishing
+  average-case bounds on data movement under reasonable update distributions
+  may help explain observed crossover behavior and clarify when coordinated
+  repair is most effective.
 
   \item \textbf{Structured workload analysis:}
   The current evaluation relies on randomized updates, whereas many real
@@ -292,8 +294,11 @@ This work suggests several directions for future investigation:
   \item \textbf{Study managed environments:}
   Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
 
-  \item \textbf{Block-structured storage:}
-  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage as well. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
+  \item \textbf{Block-structured storage.}
+  Although this work focuses on in-memory arrays, the update-aware model
+  naturally extends to block-structured storage. Exploring how DeltaSort-style
+  coordination interacts with page- or block-based layouts may clarify its
+  applicability to database and external-memory settings.
 \end{itemize}
 
 %==============================================================================
@@ -309,7 +314,6 @@ An experimental evaluation in Rust demonstrates that DeltaSort consistently outp
 
 More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
 
-\clearpage
 %==============================================================================
 \bibliographystyle{plain}
 \bibliography{refs}

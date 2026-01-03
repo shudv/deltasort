@@ -36,7 +36,7 @@
 \small Independent Researcher \\
 \small \texttt{shubd3@gmail.com}
 }
-\date{January 2026}
+\date{2026}
 
 \begin{document}
 \maketitle
@@ -49,9 +49,9 @@ Reading sorted data is a fundamental requirement in almost all data processing s
 \section{Introduction}
 %==============================================================================
 
-Sorting is among the most optimized primitives in modern systems, backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they rediscover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
+Sorting is among the most optimized primitives in modern systems, backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
 
-In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or sub-optimal repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches do not serve us very well---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
+In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or standard repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches do not serve us very well---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
@@ -70,7 +70,7 @@ Adaptive sorting algorithms exploit existing order in the input to improve perfo
 
 A separate line of work studies incremental computation and view maintenance in database and streaming systems, where changes to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. While they demonstrate the practical value of update-aware computation, they do not specifically address the problem of efficiently restoring sorted order in arrays under batched point updates.
 
-Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1970organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2006insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2004insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
 
 In contrast, this work considers maintaining sorted order in arrays under \emph{batched} updates where the indices of modified elements since the previous sort are explicitly available. This update-aware model enables coordinated repair without auxiliary data structures, and distinguishes \emph{DeltaSort} from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
 
@@ -195,7 +195,7 @@ Writing the sorted values back requires $O(k)$ time.
 Each updated index is processed once. Direction checks cost $O(1)$ per index, and each repair performs a binary search over a sorted region in $O(\log n)$ time. Thus Phase~2 requires $O(k \log n)$ time. Let $M$ denote the total number of elements moved during repair. The movement cost is $O(M)$.
 
 \paragraph{Total.}
-The overall complexity is $O(k \log n)$ time and $O(M)$ data movement.
+The overall complexity is $O(k \log k + k \log n + M)$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]
@@ -273,6 +273,7 @@ The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of up
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
+\clearpage
 %==============================================================================
 \section{Future Work}
 \label{sec:future}
@@ -282,7 +283,10 @@ This work suggests several directions for future investigation:
 
 \begin{itemize}
   \item \textbf{Average-case movement bounds:}
-  Given that the empirical results suggest multi-fold speedups over NativeSort for the Rust implementation, it would be valuable to derive tighter average-case bounds on data movement $M$ in Theorem~\ref{thm:time}.
+  Beyond worst-case correctness and empirical evaluation, establishing
+  average-case bounds on data movement under reasonable update distributions
+  may help explain observed crossover behavior and clarify when coordinated
+  repair is most effective.
 
   \item \textbf{Structured workload analysis:}
   The current evaluation relies on randomized updates, whereas many real
@@ -292,7 +296,10 @@ This work suggests several directions for future investigation:
   Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
 
   \item \textbf{Block-structured storage:}
-  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage as well. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
+  Although this work focuses on in-memory arrays, the update-aware model
+  naturally extends to block-structured storage. Exploring how DeltaSort-style
+  coordination interacts with page- or block-based layouts may clarify its
+  applicability to database and external-memory settings.
 \end{itemize}
 
 %==============================================================================
@@ -308,6 +315,7 @@ An experimental evaluation in Rust demonstrates that DeltaSort consistently outp
 
 More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which elements changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight—segmentation combined with disciplined processing order—can yield substantial practical gains.
 
+\clearpage
 %==============================================================================
 \bibliographystyle{plain}
 \bibliography{refs}

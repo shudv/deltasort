@@ -49,7 +49,7 @@ Reading sorted data is a fundamental requirement in almost all data processing s
 \section{Introduction}
 %==============================================================================
 
-Sorting is among the most optimized primitives in modern systems backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they rediscover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
+Sorting is among the most optimized primitives in modern systems, backed by decades of deep research. Standard library implementations—TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they rediscover structure dynamically rather than being explicitly informed about which elements have changed since the previous sort.
 
 In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of elements and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or sub-optimal repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches do not serve us very well---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
 
@@ -183,7 +183,7 @@ Phase~2 processes each dirty index exactly once, fixing its violation if any. By
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}
-DeltaSort runs in $O(k \log k + k \log n + M)$ time, where $M$ is total movement.
+DeltaSort runs in $O(k \log k + k \log n + M)$ time, where $M$ is the total movement.
 \end{theorem}
 
 \begin{proof}
@@ -211,7 +211,7 @@ Phase~1 stores $k$ dirty indices and $k$ dirty values. Phase~2 maintains a pendi
 \end{proof}
 
 \begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in practice in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much less than the worst case. We will analyze average-case movement more rigorously in future work.
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much smaller than the worst case. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
 Here we compare algorithm complexity with other standard baseline approaches which we use in experiments
@@ -271,7 +271,7 @@ Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ va
 
 \input{figures/crossover-ratio}
 
-The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes. So DeltaSort remains a viable choice even when delta sizes are large. The exact threshold depends on the scenario specifics (array sizes, data types, comparator cost, etc.) but the results suggest that a \textbf{25\% dirty fraction} is a reasonable rule of thumb for the upper limit of delta size before which DeltaSort remains advantageous.
+The key takeaway is that DeltaSort is beneficial for \textbf{large} ranges of update sizes. So DeltaSort remains a viable choice even when delta sizes are large. The exact threshold depends on the specific scenario (array size, data types, comparator cost, etc.), but the results suggest that a \textbf{25\% dirty fraction} is a reasonable rule of thumb for the upper limit of delta size before which DeltaSort remains advantageous.
 
 \subsection{Performance in managed execution environments}
 
@@ -304,8 +304,7 @@ This work suggests several directions for future investigation:
 \label{sec:conclusion}
 %==============================================================================
 
-This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The central insight is that pre-sorting updated values
-induces \emph{directional segmentation}: dirty elements naturally partition into segments that can be repaired independently.
+This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The central insight is that pre-sorting updated values induces \emph{directional segmentation}: dirty elements naturally partition into segments that can be repaired independently.
 
 DeltaSort leverages this segmentation through stack-based processing. LEFT-moving elements are repaired immediately with progressively narrowed search ranges, while RIGHT-moving elements are deferred and processed in reverse order to ensure stable target positions. This segmentation avoids redundant comparisons and overlapping element movement that arise from repeated binary insertion.
 

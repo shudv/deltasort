@@ -181,7 +181,7 @@ Phase~2 processes each updated index exactly once, fixing its violation if any. 
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}
-DeltaSort runs in $O(k \log k + k \log n + M)$ time, where $M$ is the total movement.
+DeltaSort runs in $O(k \log n + M)$ time, where $M$ is the total movement.
 \end{theorem}
 
 \begin{proof}
@@ -195,7 +195,7 @@ Writing the sorted values back requires $O(k)$ time.
 Each updated index is processed once. Direction checks cost $O(1)$ per index, and each repair performs a binary search over a sorted region in $O(\log n)$ time. Thus Phase~2 requires $O(k \log n)$ time. Let $M$ denote the total number of elements moved during repair. The movement cost is $O(M)$.
 
 \paragraph{Total.}
-The overall complexity is $O(k \log n)$ time and $O(M)$ data movement.
+The overall complexity is $O(k \log k + k \log n + M)$ which is $O(k \log n + M)$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

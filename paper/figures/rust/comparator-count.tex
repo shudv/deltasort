@@ -55,9 +55,9 @@
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Comparator invocation count for $n = 50{,}000$ elements. DeltaSort and BIS
+\caption{Comparator invocation count for $n = 50$K elements. DeltaSort and BIS
 both achieve $O(k \log n)$ comparisons, while NativeSort uses $O(n \log n)$ regardless
 of $k$, and ESM uses $O(k \log k + n)$. The 10--40\% higher comparison counts for DeltaSort
 vs BIS confirm that movement confinement (Lemma~\ref{lem:confinement}) is the major factor in DeltaSort speedup.}
-\label{fig:comparisons}
+\label{fig:rust-comparator-count}
 \end{figure}

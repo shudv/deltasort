@@ -2,7 +2,7 @@
 
 An incremental repair algorithm for sorted arrays. When you know _which_ elements changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
-📄 **[Read the paper](paper/out/main.pdf)** — formal algorithm, proofs, and benchmarks
+📄 **[Read the paper](paper/main.pdf)** — formal algorithm, proofs, and benchmarks
 
 ## The Problem
 
@@ -32,16 +32,17 @@ cd js
 pnpm install && pnpm test
 ```
 
-## Key Results (n = 50,000, Rust)
+## Sample Benchmark Run (n = 50K, Rust)
 
 | #Updated (k) | DeltaSort | NativeSort | Speedup   |
 | ------------ | --------- | ---------- | --------- |
 | 100 (0.2%)   | 145 µs    | 1743 µs    | **12×**   |
-| 1,000 (2%)   | 759 µs    | 3803 µs    | **5×**    |
-| 5,000 (10%)  | 2073 µs   | 3972 µs    | **1.9×**  |
-| 15,000 (30%) | 4612 µs   | 4569 µs    | crossover |
+| 1K (2%)      | 759 µs    | 3803 µs    | **5×**    |
+| 5K (10%)     | 2073 µs   | 3972 µs    | **1.9×**  |
+| 10K (20%)    | 3621 µs   | 4438 µs    | **1.2×**  |
+| 16K (30%)    | 4812 µs   | 4769 µs    | crossover |
 
-_Results from Rust implementation on M3 Pro. The ~30% crossover threshold and speedup numbers are specific to this environment — results will vary in other runtimes (e.g., JavaScript shows much more modest gains due to highly optimized native sort)._
+_Results from Rust implementation on M3 Pro. The ~32% crossover threshold and speedup numbers are specific to this environment — results will vary in other runtimes (e.g., JavaScript shows much more modest gains due to highly optimized native sort)._
 
 ## How It Works
 

@@ -37,4 +37,4 @@ pnpm-debug.log*
 # Latex auxiliary files
 paper/out/**
 paper/main.*
-!paper/out/main.pdf
+!paper/main.pdf

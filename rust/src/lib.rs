@@ -1,6 +1,6 @@
 //! DeltaSort: Efficient incremental repair of sorted arrays.
 //!
-//! When a small number of elements in a sorted array change, DeltaSort
+//! When a small number of values in a sorted array change, DeltaSort
 //! restores sorted order more efficiently than a full re-sort by exploiting
 //! knowledge of which indices changed.
 //!
@@ -32,15 +32,15 @@ enum Violation {
     Right,
 }
 
-/// Sorts an array that was previously sorted but has had some elements modified.
+/// Sorts an array that was previously sorted but has had some values modified.
 ///
-/// This function efficiently restores sorted order by only moving the elements
+/// This function efficiently restores sorted order by only moving the values
 /// that need to be repositioned, rather than performing a full sort.
 ///
 /// # Arguments
 ///
-/// * `arr` - A mutable slice that was previously sorted but has had some elements changed
-/// * `dirty_indices` - Set of indices where elements were modified
+/// * `arr` - A mutable slice that was previously sorted but has had some values changed
+/// * `dirty_indices` - Set of indices where values were modified
 /// * `cmp` - Comparison function returning `Ordering`
 ///
 /// # Panics
@@ -194,7 +194,7 @@ where
     lo
 }
 
-/// Moves an element from index `from` to index `to`, shifting intermediate elements.
+/// Moves an element from index `from` to index `to`, shifting intermediate values.
 #[inline]
 fn move_element<T>(arr: &mut [T], from: usize, to: usize) {
     if from == to {
@@ -305,7 +305,7 @@ mod tests {
                     let mut arr: Vec<i32> = (0..size as i32).collect();
                     let mut dirty_indices = HashSet::new();
 
-                    // Randomly modify delta_count elements
+                    // Randomly modify delta_count values
                     for _ in 0..delta_count {
                         let idx = rng.gen_range(0..size);
                         arr[idx] = rng.gen_range(0..size as i32);

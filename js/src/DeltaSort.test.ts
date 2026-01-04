@@ -16,7 +16,7 @@ describe("DeltaSort", () => {
                     const array = Array.from({ length: size }, (_, i) => i);
                     const dirtyIndices = new Set<number>();
 
-                    // Edit random deltaCount elements
+                    // Edit random deltaCount values
                     for (let i = 0; i < deltaCount; i++) {
                         const indexToEdit = Math.floor(Math.random() * size);
                         array[indexToEdit] = Math.floor(Math.random() * size);

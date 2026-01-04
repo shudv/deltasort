@@ -30,19 +30,19 @@ function binaryInsertionSort<T>(
     cmp: (a: T, b: T) => number,
     dirtyIndices: Set<number>,
 ): T[] {
-    // Correct approach: Extract all dirty elements first (descending order to preserve indices)
+    // Correct approach: Extract all dirty values first (descending order to preserve indices)
     const sortedDesc = Array.from(dirtyIndices).sort((a, b) => b - a);
-    const elements: T[] = [];
+    const values: T[] = [];
 
     for (const idx of sortedDesc) {
-        elements.push(arr[idx]!);
+        values.push(arr[idx]!);
         arr.splice(idx, 1);
     }
 
     // Now insert each element at its correct position
-    // Elements were extracted in descending index order, so reverse to process in original order
+    // values were extracted in descending index order, so reverse to process in original order
     // Actually, order doesn't matter for correctness since we binary search each time
-    for (const value of elements) {
+    for (const value of values) {
         const insertIdx = binarySearchPosition(arr, value, cmp);
         arr.splice(insertIdx, 0, value);
     }
@@ -51,7 +51,7 @@ function binaryInsertionSort<T>(
 }
 
 /**
- * Extract-Sort-Merge: Extract dirty elements, sort them separately,
+ * Extract-Sort-Merge: Extract dirty values, sort them separately,
  * then merge with the clean portion of the array.
  */
 function extractSortMerge<T>(
@@ -59,29 +59,29 @@ function extractSortMerge<T>(
     cmp: (a: T, b: T) => number,
     dirtyIndices: Set<number>,
 ): T[] {
-    // Extract dirty elements (descending order to preserve indices during removal)
+    // Extract dirty values (descending order to preserve indices during removal)
     const sortedIndices = Array.from(dirtyIndices).sort((a, b) => b - a);
-    const dirtyElements: T[] = [];
+    const dirtyvalues: T[] = [];
 
     for (const idx of sortedIndices) {
-        dirtyElements.push(arr[idx]!);
+        dirtyvalues.push(arr[idx]!);
         arr.splice(idx, 1);
     }
 
-    // Sort the dirty elements
-    dirtyElements.sort(cmp);
+    // Sort the dirty values
+    dirtyvalues.sort(cmp);
 
-    // Merge: arr is already sorted (clean elements), dirtyElements is sorted
+    // Merge: arr is already sorted (clean values), dirtyvalues is sorted
     const result: T[] = [];
     let i = 0;
     let j = 0;
 
-    while (i < arr.length && j < dirtyElements.length) {
-        if (cmp(arr[i]!, dirtyElements[j]!) <= 0) {
+    while (i < arr.length && j < dirtyvalues.length) {
+        if (cmp(arr[i]!, dirtyvalues[j]!) <= 0) {
             result.push(arr[i]!);
             i++;
         } else {
-            result.push(dirtyElements[j]!);
+            result.push(dirtyvalues[j]!);
             j++;
         }
     }
@@ -91,8 +91,8 @@ function extractSortMerge<T>(
         i++;
     }
 
-    while (j < dirtyElements.length) {
-        result.push(dirtyElements[j]!);
+    while (j < dirtyvalues.length) {
+        result.push(dirtyvalues[j]!);
         j++;
     }
 

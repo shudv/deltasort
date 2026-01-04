@@ -50,7 +50,7 @@ fn run_correctness_tests(scale: u32) {
             let mut arr: Vec<i32> = (0..size as i32).collect();
             let mut dirty_indices = HashSet::new();
 
-            // Randomly modify delta_count elements
+            // Randomly modify delta_count values
             for _ in 0..delta_count {
                 let idx = rng.gen_range(0..size);
                 arr[idx] = rng.gen_range(0..size as i32);

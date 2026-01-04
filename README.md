@@ -1,19 +1,19 @@
 # DeltaSort
 
-An incremental repair algorithm for sorted arrays. When you know _which_ elements changed, DeltaSort restores order multi-fold faster than a full re-sort.
+An incremental repair algorithm for sorted arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
 📄 **[Read the paper](paper/main.pdf)** — formal algorithm, proofs, and benchmarks
 
 ## The Problem
 
-You have a sorted array. A few elements get updated. How do you re-sort efficiently?
+You have a sorted array. A few values get updated. How do you re-sort efficiently?
 
-| Approach      | Time                     | When to use              |
-| ------------- | ------------------------ | ------------------------ |
-| Full re-sort  | O(n log n)               | Many elements changed    |
-| **DeltaSort** | O(k log k + k log n + M) | **Few elements changed** |
+| Approach      | Time                     | When to use            |
+| ------------- | ------------------------ | ---------------------- |
+| Full re-sort  | O(n log n)               | Many values changed    |
+| **DeltaSort** | O(k log k + k log n + M) | **Few values changed** |
 
-_k = number of changed elements, M = total movement (empirically small). The exact crossover threshold varies by environment — see benchmarks below._
+_k = number of changed values, M = total movement (empirically small). The exact crossover threshold varies by environment — see benchmarks below._
 
 ## Quick Start
 

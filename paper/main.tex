@@ -105,7 +105,7 @@ Every updated index is either a LEFT or RIGHT violation. Violation is only defin
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array.
+A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array. Figure~\ref{fig:segment-diagram} illustrates this structure.
 \end{definition}
 
 \input{figures/segment-diagram}
@@ -140,6 +140,8 @@ Since no element exits its segment, segments can be repaired independently.
 \end{proof}
 
 \subsection{Pseudocode}
+
+Algorithm~\ref{alg:deltasort} presents the complete pseudocode for DeltaSort.
 
 \input{figures/algorithm-detailed}
 
@@ -203,7 +205,7 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that segmentation (Lemma~\ref{lem:confinement}) effectively reduces movement in practice. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
-Here we compare algorithm complexity with other standard baseline approaches used in experiments to compare DeltaSort's performance:
+Table~\ref{tab:complexity} compares algorithm complexity with the standard baseline approaches used in the experiments:
 \begin{itemize}
   \item \textbf{NativeSort (NS)}: Re-sort the array using the natively available sort function. $O(n \log n)$ comparisons and movements.
   \item \textbf{Binary-Insertion-Sort (BIS)}: Extract updated values, then for each: binary search for correct position, reinsert. $O(k \log n)$ comparisons, $O(kn)$ worst-case movement. Searches the full array range for each insertion.
@@ -241,13 +243,13 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50$K elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+Figure~\ref{fig:all-algorithms} shows execution time (in microseconds) for $n = 50$K elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
 \input{figures/all-algorithms}
 
 \subsection{Comparator Invocation Count}
 
-The following chart shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort will be even greater.
+Figure~\ref{fig:comparisons} shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort will be even greater.
 
 \input{figures/comparator-count}
 

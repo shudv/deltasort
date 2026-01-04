@@ -5,7 +5,7 @@
 \Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
 \Ensure $A$ is sorted
 \Statex
-\State \textbf{Phase 1: Prepare}
+\State \textbf{Phase 1: Segment}
 \State $\texttt{updated} \gets \text{sort}(U)$;
 \State $\texttt{values} \gets \text{sort}([A[u] : u \in \texttt{updated}], \texttt{cmp})$
 \For{$i \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}

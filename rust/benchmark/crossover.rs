@@ -80,7 +80,7 @@ fn generate_sorted_users(n: usize) -> Vec<User> {
 // MEASUREMENT
 // ============================================================================
 
-const ITERATIONS: usize = 5;
+const ITERATIONS: usize = 10;
 
 /// Measure mean time for native sort (in microseconds)
 fn measure_native(base_users: &[User], k: usize, n: usize) -> f64 {
@@ -171,8 +171,8 @@ fn find_crossover(n: usize) -> usize {
 
     // Binary search for the crossover point
     // We want the largest k where DeltaSort is still faster
-    // Stop early when range size drops below 1% of n
-    let min_range = (n as f64 * 0.01) as usize;
+    // Stop early when range size drops below 0.1% of n
+    let min_range = (n as f64 * 0.001) as usize;
     
     while lo < hi {
         // Early termination: if range is small enough, we have a good approximation

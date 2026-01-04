@@ -33,38 +33,45 @@ export function deltasort<T>(
         arr[updated[i]!] = values[i]!;
     }
 
+    // Add a sentinel at the end to trigger final flush
+    updated.push(arr.length);
+
     // Phase 2: Scan updated indices left to right
 
     // Stack for pending RIGHT violations
     const pendingRightViolations = new Array<number>(updated.length);
     let stackTop = 0;
 
-    // Left boundary for fixing LEFT violations, everything up to leftBound is already fixed
+    // Left boundary for fixing LEFT violations, everything before the leftBound is already fixed
     let leftBound = 0;
 
     for (let p = 0; p < updated.length; p++) {
         const i = updated[p]!;
 
-        const direction = getDirection(arr, i, cmp);
+        // Determine violation direction (sentinel is considered LEFT to trigger final flush)
+        const direction = i == arr.length ? Violation.LEFT : getDirection(arr, i, cmp);
+
         switch (direction) {
             case Violation.LEFT:
                 // Fix all pending indices before fixing LEFT
+                let rightBound = i - 1;
                 while (stackTop > 0) {
-                    fixRightViolation(arr, pendingRightViolations[--stackTop]!, i - 1, cmp);
+                    const ri = pendingRightViolations[--stackTop]!;
+                    // Fix RIGHT violation at ri if needed
+                    if (ri < arr.length - 1 && cmp(arr[ri]!, arr[ri + 1]!) > 0) {
+                        rightBound = fixRightViolation(arr, ri, rightBound, cmp) - 1;
+                    }
                 }
 
-                // Fix LEFT i
-                leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                // Fix actual (non-sentinel) LEFT violations
+                if (i < arr.length) {
+                    leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                }
                 break;
             case Violation.RIGHT:
                 pendingRightViolations[stackTop++] = i;
                 break;
         }
-    }
-
-    // Fix any pending violations
-    while (stackTop > 0) {
-        fixRightViolation(arr, pendingRightViolations[--stackTop]!, arr.length - 1, cmp);
     }
 
     return arr;
@@ -100,11 +107,7 @@ function fixRightViolation<T>(
     i: number,
     rightBound: number,
     cmp: (a: T, b: T) => number,
-): void {
-    if (!(i < arr.length - 1 && cmp(arr[i]!, arr[i + 1]!) > 0)) {
-        return;
-    }
-
+): number {
     const value = arr[i]!;
 
     // Binary search for target position on the right
@@ -118,6 +121,7 @@ function fixRightViolation<T>(
     }
 
     move(arr, i, hi);
+    return hi;
 }
 
 /**

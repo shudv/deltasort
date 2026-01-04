@@ -25,40 +25,40 @@
 
 % NativeSort (horizontal-ish baseline)
 \addplot[color=gray!70, mark=square*, thick, mark size=2pt] coordinates {
-    (1, 439) (5, 749) (10, 747) (20, 962) (50, 1350) (100, 1867) 
-    (200, 2560) (500, 3703) (1000, 4253) (2000, 4158) 
-    (5000, 4223) (10000, 4539) (20000, 5042)
+    (1, 439) (2, 486) (5, 695) (10, 812) (20, 1299) (50, 1657) (100, 2078) 
+    (200, 3325) (500, 4141) (1000, 4091) (2000, 3997) 
+    (5000, 4153) (10000, 5263) (20000, 5381)
 };
 
 % Binary Insertion (steep slope)
 \addplot[color=orange!80, mark=triangle*, thick, mark size=2pt] coordinates {
-    (1, 40) (5, 217) (10, 525) (20, 782) (50, 1994) (100, 4818) 
-    (200, 9022) (500, 22112) (1000, 44481) (2000, 87827) 
-    (5000, 211016) (10000, 377981) (20000, 615645)
+    (1, 68.8) (2, 99.2) (5, 234) (10, 566) (20, 1033) (50, 2711) (100, 5017) 
+    (200, 10761) (500, 25466) (1000, 45533) (2000, 93122) 
+    (5000, 233095) (10000, 445561) (20000, 723562)
 };
 
 % Extract-Sort-Merge
 \addplot[color=purple!70, mark=diamond*, thick, mark size=2pt] coordinates {
-    (1, 188) (5, 293) (10, 494) (20, 655) (50, 1307) (100, 2673) 
-    (200, 4785) (500, 11655) (1000, 22480) (2000, 43627) 
-    (5000, 102198) (10000, 176373) (20000, 259835)
+    (1, 203) (2, 245) (5, 341) (10, 581) (20, 781) (50, 2018) (100, 3155) 
+    (200, 5678) (500, 12619) (1000, 22366) (2000, 45576) 
+    (5000, 118745) (10000, 193000) (20000, 282410)
 };
 
 % DeltaSort (our algorithm - emphasized)
 \addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] coordinates {
-    (1, 1) (5, 27) (10, 44) (20, 49) (50, 98) (100, 109) 
-    (200, 178) (500, 782) (1000, 465) (2000, 837) 
-    (5000, 1751) (10000, 3326) (20000, 6914)
+    (1, 4) (2, 2.9) (5, 12.8) (10, 38.5) (20, 76.3) (50, 117) (100, 174) 
+    (200, 166) (500, 381) (1000, 724) (2000, 927) 
+    (5000, 2875) (10000, 3259) (20000, 6780)
 };
 
 % Crossover point: bold marker + dashed drop line + label
-\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:15000, 5000) {};
-\draw[red!70!black, thick, dashed] (axis cs:15000, 5000) -- (axis cs:15000, 1);
-\node[font=\scriptsize\bfseries, text=red!70!black, anchor=north east] at (axis cs:14000, 4) {crossover at $\sim$15K (30\%)};
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:16500, 5000) {};
+\draw[red!70!black, thick, dashed] (axis cs:16500, 5000) -- (axis cs:16500, 1);
+\node[font=\scriptsize\bfseries, text=red!70!black, anchor=north east] at (axis cs:14000, 4) {crossover at $\sim$16.5K (33\%)};
 
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 50{,}000$ elements (log-log scale). The vertical dashed line marks the crossover point ($k \approx 15$K) where DeltaSort's advantage over NativeSort diminishes. The shaded region indicates where DeltaSort outperforms all alternatives.}
+\caption{Execution time comparison for $n = 50{,}000$ elements (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
 \label{fig:all-algorithms}
 \end{figure}

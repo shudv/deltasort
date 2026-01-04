@@ -13,7 +13,7 @@ You have a sorted array. A few values get updated. How do you re-sort efficientl
 | Full re-sort  | O(n log n)               | Many values changed    |
 | **DeltaSort** | O(k log k + k log n + M) | **Few values changed** |
 
-_k = number of changed values, M = total movement (empirically small). The exact crossover threshold varies by environment — see benchmarks below._
+_k = number of changed values, M = total movement (empirically mesure to be much smaller than O(n\*k)). The exact crossover threshold varies by environment — see benchmarks below._
 
 ## Quick Start
 

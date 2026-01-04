@@ -16,7 +16,7 @@
 \State \textbf{Phase 2: Repair}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updated}| - 1$}
-    \State $i \gets \texttt{updated}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$ \Comment Sentinel is LEFT
+    \State $i \gets \texttt{updated}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$ \Comment{Sentinel is LEFT}
     \If{$\texttt{dir} = \textsc{Left}$}
         \State $\texttt{rightBound} \gets i - 1$
         \While{$\texttt{pendingRight} \neq \emptyset$}

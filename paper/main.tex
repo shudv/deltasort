@@ -59,7 +59,7 @@ In many practical systems, this assumption is unnecessarily pessimistic. Sorted 
   We formulate an incremental sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge are standard baseline algorithms because they help maintain sorted order by processing incremental updates.
 
   \item \textbf{DeltaSort algorithm:}
-  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches updates and repairs them jointly, reducing redundant comparison work and overlapping element movement by exploiting update locality and batching. DeltaSort achieves multi-fold speedups over traditional approaches and also beats NativeSort for a wide range of update batch sizes.
+  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches multiple updates and achieves multi-fold speedups over traditional approaches for a wide range of update batch sizes.
 \end{enumerate}
 
 %==============================================================================
@@ -73,7 +73,7 @@ A separate line of work studies incremental computation and view maintenance in 
 
 Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2004insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
 
-In contrast, this work considers maintaining sorted order in arrays under \emph{batched} updates where the indices of updated elements since the previous sort are explicitly available. This update-aware model enables coordinated repair without auxiliary data structures, and distinguishes \emph{DeltaSort} from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
+In contrast, this work considers maintaining sorted order in arrays where the indices of updated elements since the previous sort are explicitly available. \emph{DeltaSort} performs segmented repair without auxiliary data structures, which distinguishes it from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
 
 %==============================================================================
 \section{Problem Model}
@@ -145,13 +145,13 @@ Since no element exits its segment, segments can be repaired independently.
 
 \subsection{Correctness Proof}
 
-\begin{lemma}[Fix Invariant]
+\begin{lemma}[Violation Fix Invariant]
 \label{lem:fix-invariant}
 Each fix operation during Phase~2 resolves a violation without introducing new ones.
 \end{lemma}
 
 \begin{proof}
-By Lemma~\ref{lem:confinement}, search ranges are bounded within the segment. Binary search works correctly if its range is sorted—i.e., contains no violations.
+We fix each violation using binary search. For binary search to find the correct insertion point, the search range must contain no violations.
 
 \emph{LEFT fix at index $i$}: The search range $[leftBound, i-1]$ contains no LEFT violations because LEFTs are processed left-to-right, and no RIGHT violations because all pending RIGHTs are flushed before any LEFT is fixed.
 
@@ -198,7 +198,7 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 \end{proof}
 
 \begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much smaller than the worst case. We will analyze average-case movement more rigorously in future work.
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much smaller than the worst case (Lemma~\ref{lem:confinement}). We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
 Here we compare algorithm complexity with other standard baseline approaches used in experiments to compare DeltaSort's performance:
@@ -261,7 +261,7 @@ The key takeaway is that DeltaSort offers best incremental sort performance for 
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of coordinated repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of segmented repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
 \clearpage
 %==============================================================================
@@ -269,21 +269,20 @@ DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmark
 \label{sec:future}
 %==============================================================================
 
-This work suggests several directions for future investigation:
+This work opens up several directions for future investigations/improvements:
 
 \begin{itemize}
-  \item \textbf{Average-case movement bounds:}
-  Beyond worst-case correctness and empirical evaluation, establishing average-case bounds on data movement under reasonable update distributions may help explain observed crossover behavior and clarify when coordinated repair is most effective.
+  \item \textbf{Establish average-case movement bounds:}
+  We established the efficiency gains because of segmentation empirically, but the theoretical worst-case is still $O(nk)$. We need to establish average-case bounds for data moement under typical update distributions. It will also help explain observed crossover behavior a large scales and clarify when segmented repair is most effective.
 
-  \item \textbf{Structured workload analysis:}
-  The current evaluation relies on randomized updates, whereas many real
-  workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.
+  \item \textbf{Analyse structured workloads:}
+  The current evaluation tests randomized updates, whereas many real workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.
 
   \item \textbf{Study managed environments:}
   Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
 
-  \item \textbf{Block-structured storage:}
-  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage. Exploring how DeltaSort-style coordination interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
+  \item \textbf{Analyse block-structured storage:}
+  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
 \end{itemize}
 
 %==============================================================================

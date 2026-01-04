@@ -108,7 +108,7 @@ Every updated index is either a LEFT or RIGHT violation. Violation is only defin
 A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or the empty suffix if the sequence ends.
 \end{definition}
 
-\input{figures/segment-diagram}
+\input{figures/segment-structure}
 
 DeltaSort operates in two phases:
 
@@ -141,7 +141,7 @@ Since no element exits its segment, segments can be repaired independently.
 
 \subsection{Detailed Algorithm}
 
-\input{figures/algorithm-detailed}
+\input{figures/pseudocode}
 
 \subsection{Correctness Proof}
 
@@ -248,23 +248,23 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of 4--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+The graph below shows execution time (in microseconds) for $n = 50K$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of 4--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
-\input{figures/all-algorithms}
+\input{figures/rust/execution-time}
 
 \subsection{Comparator Invocation Count}
 
 The following chart shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort will be even greater.
 
-\input{figures/comparator-count}
+\input{figures/rust/comparator-count}
 
 \subsection{Crossover Threshold Analysis}
 
 A key practical question is: at what delta size should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M elements.
 
-Figure~\ref{fig:crossover-ratio} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ~33\% for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
+Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ~33\% for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
 
-\input{figures/crossover-ratio}
+\input{figures/rust/crossover-threshold}
 
 The key takeaway is that DeltaSort offers best incremental sort performance for \textbf{large} ranges of update sizes (0--25\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 

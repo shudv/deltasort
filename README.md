@@ -32,7 +32,7 @@ cd js
 pnpm install && pnpm test
 ```
 
-## Key Results (n = 50,000, Rust)
+## Key Results (n = 50K, Rust)
 
 | #Updated (k) | DeltaSort | NativeSort | Speedup   |
 | ------------ | --------- | ---------- | --------- |

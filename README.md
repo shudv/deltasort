@@ -40,7 +40,7 @@ pnpm install && pnpm test
 | 1K (2%)      | 759 µs    | 3803 µs    | **5×**    |
 | 5K (10%)     | 2073 µs   | 3972 µs    | **1.9×**  |
 | 10K (20%)    | 3621 µs   | 4438 µs    | **1.2×**  |
-| 16K (30%)    | 4812 µs   | 4769 µs    | crossover |
+| 16K (32%)    | 4812 µs   | 4769 µs    | crossover |
 
 _Results from Rust implementation on M3 Pro. The ~32% crossover threshold and speedup numbers are specific to this environment — results will vary in other runtimes (e.g., JavaScript shows much more modest gains due to highly optimized native sort)._
 

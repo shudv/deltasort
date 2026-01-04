@@ -200,7 +200,7 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 \end{proof}
 
 \begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that segmentation (Lemma~\ref{lem:confinement}) effectively bounds movement in practice. We will analyze average-case movement more rigorously in future work.
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that segmentation (Lemma~\ref{lem:confinement}) effectively reduces movement in practice. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
 Here we compare algorithm complexity with other standard baseline approaches used in experiments to compare DeltaSort's performance:
@@ -241,7 +241,7 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+The graph below shows execution time (in microseconds) for $n = 50$K elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
 \input{figures/all-algorithms}
 

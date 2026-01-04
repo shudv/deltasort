@@ -118,7 +118,7 @@ fn native_sort_counting(arr: &mut Vec<User>) {
 
 /// Binary Insertion Sort
 /// 
-/// Algorithm: Extract dirty elements (preserving array order), then insert each 
+/// Algorithm: Extract dirty values (preserving array order), then insert each 
 /// at correct position via binary search.
 /// 
 /// Complexity: O(k) extractions × O(n) shift each + O(k) insertions × O(n) shift each
@@ -131,7 +131,7 @@ fn binary_insertion_sort(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
         return;
     }
 
-    // Extract dirty elements in descending index order (so indices stay valid)
+    // Extract dirty values in descending index order (so indices stay valid)
     let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
     sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
 
@@ -169,7 +169,7 @@ fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<u
 
 /// Extract-Sort-Merge
 /// 
-/// Algorithm: Extract dirty elements, sort them, merge back with clean portion.
+/// Algorithm: Extract dirty values, sort them, merge back with clean portion.
 /// 
 /// Complexity: O(k*n) extraction + O(k log k) sort + O(n) merge = O(k*n + n) overall
 /// 
@@ -181,21 +181,21 @@ fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
         return;
     }
 
-    // Extract dirty elements in descending index order
+    // Extract dirty values in descending index order
     let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
     sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
 
-    let mut dirty_elements: Vec<User> = Vec::with_capacity(sorted_desc.len());
+    let mut dirty_values: Vec<User> = Vec::with_capacity(sorted_desc.len());
     for &idx in &sorted_desc {
-        dirty_elements.push(arr.remove(idx));  // O(n) shift each
+        dirty_values.push(arr.remove(idx));  // O(n) shift each
     }
 
-    // Sort the extracted dirty elements
-    dirty_elements.sort_by(user_comparator);
+    // Sort the extracted dirty values
+    dirty_values.sort_by(user_comparator);
 
     // Merge: both arrays are now sorted
     let clean_len = arr.len();
-    let dirty_len = dirty_elements.len();
+    let dirty_len = dirty_values.len();
     let mut result: Vec<User> = Vec::with_capacity(clean_len + dirty_len);
     
     let mut i = 0;
@@ -204,11 +204,11 @@ fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     // Standard merge of two sorted arrays
     while i < clean_len && j < dirty_len {
         // Move rather than clone for efficiency
-        if user_comparator(&arr[i], &dirty_elements[j]) != std::cmp::Ordering::Greater {
+        if user_comparator(&arr[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
             result.push(std::mem::take(&mut arr[i]));
             i += 1;
         } else {
-            result.push(std::mem::take(&mut dirty_elements[j]));
+            result.push(std::mem::take(&mut dirty_values[j]));
             j += 1;
         }
     }
@@ -217,7 +217,7 @@ fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     for item in arr.drain(i..) {
         result.push(item);
     }
-    for item in dirty_elements.drain(j..) {
+    for item in dirty_values.drain(j..) {
         result.push(item);
     }
 
@@ -233,26 +233,26 @@ fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usiz
     let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
     sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
 
-    let mut dirty_elements: Vec<User> = Vec::with_capacity(sorted_desc.len());
+    let mut dirty_values: Vec<User> = Vec::with_capacity(sorted_desc.len());
     for &idx in &sorted_desc {
-        dirty_elements.push(arr.remove(idx));
+        dirty_values.push(arr.remove(idx));
     }
 
-    dirty_elements.sort_by(counting_comparator);
+    dirty_values.sort_by(counting_comparator);
 
     let clean_len = arr.len();
-    let dirty_len = dirty_elements.len();
+    let dirty_len = dirty_values.len();
     let mut result: Vec<User> = Vec::with_capacity(clean_len + dirty_len);
     
     let mut i = 0;
     let mut j = 0;
 
     while i < clean_len && j < dirty_len {
-        if counting_comparator(&arr[i], &dirty_elements[j]) != std::cmp::Ordering::Greater {
+        if counting_comparator(&arr[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
             result.push(std::mem::take(&mut arr[i]));
             i += 1;
         } else {
-            result.push(std::mem::take(&mut dirty_elements[j]));
+            result.push(std::mem::take(&mut dirty_values[j]));
             j += 1;
         }
     }
@@ -260,7 +260,7 @@ fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usiz
     for item in arr.drain(i..) {
         result.push(item);
     }
-    for item in dirty_elements.drain(j..) {
+    for item in dirty_values.drain(j..) {
         result.push(item);
     }
 
@@ -415,7 +415,7 @@ fn print_header() {
     println!("╔══════════════════════════════════════════════════════════════════════════════╗");
     println!("║                     DeltaSort Performance Comparison                         ║");
     println!("╠══════════════════════════════════════════════════════════════════════════════╣");
-    println!("║  n = 50,000 elements  │  100 iterations per config  │  Times in microseconds ║");
+    println!("║  n = 50,000 values  │  100 iterations per config  │  Times in microseconds ║");
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 }
@@ -469,7 +469,7 @@ fn print_comparison_header() {
     println!("╔══════════════════════════════════════════════════════════════════════════════╗");
     println!("║                      Comparator Invocation Count                             ║");
     println!("╠══════════════════════════════════════════════════════════════════════════════╣");
-    println!("║  n = 50,000 elements  │  Exact counts (no variance)                          ║");
+    println!("║  n = 50,000 values  │  Exact counts (no variance)                          ║");
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 }

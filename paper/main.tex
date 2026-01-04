@@ -105,7 +105,7 @@ Every updated index is either a LEFT or RIGHT violation. Violation is only defin
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or the empty suffix if the sequence ends.
+A \emph{segment} is a \textbf{maximal subarray} of $U$ whose elements follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array.
 \end{definition}
 
 \input{figures/segment-diagram}

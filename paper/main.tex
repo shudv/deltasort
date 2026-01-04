@@ -139,7 +139,7 @@ Let $S$ be a segment with RIGHT indices $R_1, \ldots, R_m$ followed by LEFT indi
 Since no element exits its segment, segments can be repaired independently.
 \end{proof}
 
-\subsection{Detailed Algorithm}
+\subsection{Pseudocode}
 
 \input{figures/algorithm-detailed}
 
@@ -169,7 +169,7 @@ DeltaSort produces a correctly sorted array.
 The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By Lemma~\ref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
 \end{proof}
 
-\subsection{Algorithm Analysis}
+\subsection{Complexity Analysis}
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}
@@ -241,7 +241,7 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of 4--20$\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+The graph below shows execution time (in microseconds) for $n = 50,000$ elements as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5K$ (crossover point), achieving significant speedups of $4$-$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
 \input{figures/all-algorithms}
 
@@ -271,19 +271,19 @@ DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmark
 \label{sec:future}
 %==============================================================================
 
-This work opens up several directions for future investigations/improvements:
+This work opens up several directions for future investigation:
 
 \begin{itemize}
   \item \textbf{Establish average-case movement bounds:}
-  We established the efficiency gains because of segmentation empirically, but the theoretical worst-case is still $O(nk)$. We need to establish average-case bounds for data moement under typical update distributions. It will also help explain observed crossover behavior a large scales and clarify when segmented repair is most effective.
+  We established the efficiency gains because of segmentation empirically, but the theoretical worst-case is still $O(nk)$. We need to establish average-case bounds for data movement under typical update distributions. It will also help explain observed crossover behavior at large scales and clarify when segmented repair is most effective.
 
-  \item \textbf{Analyse structured workloads:}
+  \item \textbf{Analyze structured workloads:}
   The current evaluation tests randomized updates, whereas many real workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.
 
   \item \textbf{Study managed environments:}
   Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
 
-  \item \textbf{Analyse block-structured storage:}
+  \item \textbf{Analyze block-structured storage:}
   Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
 \end{itemize}
 

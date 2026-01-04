@@ -275,7 +275,7 @@ This work opens up several directions for future investigation:
 
 \begin{itemize}
   \item \textbf{Establish average-case movement bounds:}
-  We established the efficiency gains because of segmentation empirically, but the theoretical worst-case is still $O(nk)$. We need to establish average-case bounds for data movement under typical update distributions. It will also help explain observed crossover behavior at large scales and clarify when segmented repair is most effective.
+  We established the efficiency gains from segmentation empirically, but the theoretical worst-case is still $O(nk)$. We need to establish average-case bounds for data movement under typical update distributions. It will also help explain observed crossover behavior at large scales and clarify when segmented repair is most effective.
 
   \item \textbf{Analyze structured workloads:}
   The current evaluation tests randomized updates, whereas many real workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.

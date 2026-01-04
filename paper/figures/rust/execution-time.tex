@@ -5,7 +5,7 @@
 \begin{axis}[
     width=0.92\textwidth,
     height=7.5cm,
-    xlabel={Number of updated elements ($k$)},
+    xlabel={Number of updated values ($k$)},
     ylabel={Execution time (\textmu s)},
     xmode=log,
     ymode=log,
@@ -59,6 +59,6 @@
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 50$K elements (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
+\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
 \label{fig:rust-execution-time}
 \end{figure}

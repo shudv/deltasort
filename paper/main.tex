@@ -200,7 +200,7 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 \end{proof}
 
 \begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that movement is typically much smaller than the worst case (Lemma~\ref{lem:confinement}). We will analyze average-case movement more rigorously in future work.
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that segmentation (Lemma~\ref{lem:confinement}) effectively bounds movement in practice. We will analyze average-case movement more rigorously in future work.
 \end{remark}
 
 Here we compare algorithm complexity with other standard baseline approaches used in experiments to compare DeltaSort's performance:

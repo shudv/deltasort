@@ -17,7 +17,7 @@ const enum Violation {
  *
  * @returns The repaired array
  */
-export function deltasort<T>(
+export function deltaSort<T>(
     arr: T[],
     cmp: (a: T, b: T) => number,
     updatedIndices: Set<number>,

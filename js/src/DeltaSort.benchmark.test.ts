@@ -1,5 +1,5 @@
 import { User, generateSortedUsers, mutateUser, userComparator } from "./BenchmarkData";
-import { deltasort } from "./DeltaSort";
+import { deltaSort } from "./DeltaSort";
 
 // ============================================================================
 // BENCHMARK CONFIGURATION
@@ -18,7 +18,7 @@ const ITERATIONS = 100;
 // SORTING ALGORITHMS
 // ============================================================================
 
-type Algorithm = "native" | "binaryInsertion" | "extractSortMerge" | "deltasort";
+type Algorithm = "native" | "binaryInsertion" | "extractSortMerge" | "deltaSort";
 
 /**
  * Binary Insertion: For each dirty index, remove the element,
@@ -140,7 +140,7 @@ interface BenchmarkResult {
     native: AlgorithmStats;
     binaryInsertion: AlgorithmStats;
     extractSortMerge: AlgorithmStats;
-    deltasort: AlgorithmStats;
+    deltaSort: AlgorithmStats;
 }
 
 function calculateStats(values: number[]): { mean: number; variancePercent: number } {
@@ -176,8 +176,8 @@ function runAlgorithm<T>(
         case "extractSortMerge":
             extractSortMerge(arr, countingCmp, dirtyIndices);
             break;
-        case "deltasort":
-            deltasort(arr, countingCmp, dirtyIndices);
+        case "deltaSort":
+            deltaSort(arr, countingCmp, dirtyIndices);
             break;
     }
 
@@ -213,7 +213,7 @@ function formatTimeTable(results: BenchmarkResult[]): string {
         formatTimeWithVariance(r.native.timeMean, r.native.timeVariance),
         formatTimeWithVariance(r.binaryInsertion.timeMean, r.binaryInsertion.timeVariance),
         formatTimeWithVariance(r.extractSortMerge.timeMean, r.extractSortMerge.timeVariance),
-        formatTimeWithVariance(r.deltasort.timeMean, r.deltasort.timeVariance),
+        formatTimeWithVariance(r.deltaSort.timeMean, r.deltaSort.timeVariance),
     ]);
 
     return formatTableRows(headers, rows);
@@ -226,7 +226,7 @@ function formatComparisonTable(results: BenchmarkResult[]): string {
         r.native.comparisons.toLocaleString(),
         r.binaryInsertion.comparisons.toLocaleString(),
         r.extractSortMerge.comparisons.toLocaleString(),
-        r.deltasort.comparisons.toLocaleString(),
+        r.deltaSort.comparisons.toLocaleString(),
     ]);
 
     return formatTableRows(headers, rows);
@@ -237,13 +237,13 @@ function formatSpeedupTable(results: BenchmarkResult[]): string {
     const rows = results.map((r) => {
         const binIns = r.native.timeMean / r.binaryInsertion.timeMean;
         const extSort = r.native.timeMean / r.extractSortMerge.timeMean;
-        const delta = r.native.timeMean / r.deltasort.timeMean;
+        const delta = r.native.timeMean / r.deltaSort.timeMean;
 
         const times = [
             { name: "NativeSort", time: r.native.timeMean },
             { name: "BinaryInsertion", time: r.binaryInsertion.timeMean },
             { name: "ExtractSortMerge", time: r.extractSortMerge.timeMean },
-            { name: "DeltaSort", time: r.deltasort.timeMean },
+            { name: "DeltaSort", time: r.deltaSort.timeMean },
         ];
         const best = times.reduce((a, b) => (a.time < b.time ? a : b));
 
@@ -303,7 +303,7 @@ describe("DeltaSort Benchmark", () => {
             const nativeResults: AlgorithmResult[] = [];
             const binInsResults: AlgorithmResult[] = [];
             const extSortResults: AlgorithmResult[] = [];
-            const deltasortResults: AlgorithmResult[] = [];
+            const deltaSortResults: AlgorithmResult[] = [];
 
             for (let iter = 0; iter < ITERATIONS; iter++) {
                 const usersForNativeSort = baseUsers.map((u) => ({ ...u }));
@@ -338,8 +338,8 @@ describe("DeltaSort Benchmark", () => {
                 extSortResults.push(
                     runAlgorithm(usersForExtSort, userComparator, dirtyIndices, "extractSortMerge"),
                 );
-                deltasortResults.push(
-                    runAlgorithm(usersForDeltasort, userComparator, dirtyIndices, "deltasort"),
+                deltaSortResults.push(
+                    runAlgorithm(usersForDeltasort, userComparator, dirtyIndices, "deltaSort"),
                 );
 
                 if (iter === 0) {
@@ -367,7 +367,7 @@ describe("DeltaSort Benchmark", () => {
                 native: aggregate(nativeResults),
                 binaryInsertion: aggregate(binInsResults),
                 extractSortMerge: aggregate(extSortResults),
-                deltasort: aggregate(deltasortResults),
+                deltaSort: aggregate(deltaSortResults),
             });
         }
 

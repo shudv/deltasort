@@ -32,7 +32,7 @@ enum Violation {
     Right,
 }
 
-/// Sorts an array that was previously sorted but has had some values modified.
+/// Sorts an array that was previously sorted but has had some values updated.
 ///
 /// This function efficiently restores sorted order by only moving the values
 /// that need to be repositioned, rather than performing a full sort.
@@ -40,12 +40,12 @@ enum Violation {
 /// # Arguments
 ///
 /// * `arr` - A mutable slice that was previously sorted but has had some values changed
-/// * `dirty_indices` - Set of indices where values were modified
+/// * `updated_indices` - Set of indices where values were updated
 /// * `cmp` - Comparison function returning `Ordering`
 ///
 /// # Panics
 ///
-/// Panics if any index in `dirty_indices` is out of bounds for `arr`.
+/// Panics if any index in `updated_indices` is out of bounds for `arr`.
 ///
 /// # Example
 ///
@@ -62,17 +62,17 @@ enum Violation {
 ///
 /// assert_eq!(arr, vec![1, 2, 5, 8, 9]);
 /// ```
-pub fn deltasort<T, F>(arr: &mut [T], dirty_indices: &HashSet<usize>, cmp: F)
+pub fn deltasort<T, F>(arr: &mut [T], updated_indices: &HashSet<usize>, cmp: F)
 where
     T: Clone,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    if dirty_indices.is_empty() {
+    if updated_indices.is_empty() {
         return;
     }
 
     // Phase 1: Extract and sort dirty values, write back in index order
-    let mut dirty: Vec<usize> = dirty_indices.iter().copied().collect();
+    let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
     dirty.sort_unstable();
 
     let mut values: Vec<T> = dirty.iter().map(|&i| arr[i].clone()).collect();
@@ -223,7 +223,7 @@ mod tests {
     const ITERATIONS: usize = 10;
 
     #[test]
-    fn test_empty_dirty_indices() {
+    fn test_empty_updated_indices() {
         let mut arr = vec![1, 2, 3, 2, 1];
         let dirty: HashSet<usize> = HashSet::new();
         deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
@@ -303,13 +303,13 @@ mod tests {
 
                     // Create sorted array
                     let mut arr: Vec<i32> = (0..size as i32).collect();
-                    let mut dirty_indices = HashSet::new();
+                    let mut updated_indices = HashSet::new();
 
                     // Randomly modify delta_count values
                     for _ in 0..delta_count {
                         let idx = rng.gen_range(0..size);
                         arr[idx] = rng.gen_range(0..size as i32);
-                        dirty_indices.insert(idx);
+                        updated_indices.insert(idx);
                     }
 
                     // Create expected result via native sort
@@ -317,7 +317,7 @@ mod tests {
                     expected.sort();
 
                     // Sort with DeltaSort
-                    deltasort(&mut arr, &dirty_indices, |a, b| a.cmp(b));
+                    deltasort(&mut arr, &updated_indices, |a, b| a.cmp(b));
 
                     assert_eq!(arr, expected, "Failed at scale={}, delta_volume={}", scale, delta_volume);
                 }

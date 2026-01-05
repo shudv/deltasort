@@ -1,7 +1,7 @@
 {
     "name": "deltasort",
-    "version": "0.0.0",
-    "description": "Delta-aware sort function for fast incremental sorting",
+    "version": "0.1.0",
+    "description": "Efficient incremental repair of sorted arrays",
     "type": "module",
     "sideEffects": false,
     "exports": {
@@ -37,7 +37,9 @@
     "keywords": [
         "delta",
         "sort",
-        "fast"
+        "incremental",
+        "fast",
+        "repair"
     ],
     "author": "Shubham Dwivedi <shudv@users.noreply.github.com>",
     "license": "MIT",
@@ -50,7 +52,6 @@
     },
     "homepage": "https://github.com/shudv/deltasort#readme",
     "devDependencies": {
-        "@changesets/cli": "^2.29.8",
         "@eslint/js": "^9.39.2",
         "@size-limit/preset-small-lib": "^11.2.0",
         "@testing-library/react": "^14.3.1",

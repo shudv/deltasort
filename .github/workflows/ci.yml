@@ -1,0 +1,74 @@
+name: CI
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+    checks: write
+    pull-requests: write
+
+jobs:
+    js:
+        name: JavaScript
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: js
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Lint
+              run: pnpm lint
+
+            - name: Format check
+              run: pnpm format:check
+
+            - name: Type check
+              run: pnpm typecheck
+
+            - name: Run tests
+              run: pnpm test
+
+            - name: Build
+              run: pnpm build
+
+    rust:
+        name: Rust
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: rust
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Rust
+              uses: dtolnay/rust-action@stable
+
+            - name: Check formatting
+              run: cargo fmt --check
+
+            - name: Clippy
+              run: cargo clippy -- -D warnings
+
+            - name: Run tests
+              run: cargo test

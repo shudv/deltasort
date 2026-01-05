@@ -19,12 +19,14 @@ use std::time::Instant;
 const N: usize = 50_000;
 
 /// Delta counts to test
-const DELTA_COUNTS: &[usize] = &[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+const DELTA_COUNTS: &[usize] = &[
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000,
+];
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
-    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000,
-    1_000_000, 2_000_000, 5_000_000, 10_000_000,
+    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000,
+    5_000_000, 10_000_000,
 ];
 
 /// Number of iterations per benchmark
@@ -41,18 +43,43 @@ const Z_95: f64 = 1.96;
 // ============================================================================
 
 const COUNTRIES: &[&str] = &[
-    "USA", "Canada", "UK", "Germany", "France", "Spain", "Italy", "Japan",
-    "Australia", "Brazil", "India", "China", "Mexico", "Argentina", "Sweden",
+    "USA",
+    "Canada",
+    "UK",
+    "Germany",
+    "France",
+    "Spain",
+    "Italy",
+    "Japan",
+    "Australia",
+    "Brazil",
+    "India",
+    "China",
+    "Mexico",
+    "Argentina",
+    "Sweden",
 ];
 
 const FIRST_NAMES: &[&str] = &[
-    "Vijay", "Meera", "Akash", "Kashish", "Sunita", "Aviral", "Saumya",
-    "Aman", "Sanjay", "Kavitha", "Radhika", "Meenakshi", "Suresh", "Krishna",
+    "Vijay",
+    "Meera",
+    "Akash",
+    "Kashish",
+    "Sunita",
+    "Aviral",
+    "Saumya",
+    "Aman",
+    "Sanjay",
+    "Kavitha",
+    "Radhika",
+    "Meenakshi",
+    "Suresh",
+    "Krishna",
 ];
 
 const LAST_NAMES: &[&str] = &[
-    "Sharma", "Patel", "Dwivedi", "Kumar", "Singh", "Gupta", "Nair",
-    "Iyer", "Rao", "Menon", "Pillai", "Joshi", "Verma",
+    "Sharma", "Patel", "Dwivedi", "Kumar", "Singh", "Gupta", "Nair", "Iyer", "Rao", "Menon",
+    "Pillai", "Joshi", "Verma",
 ];
 
 #[derive(Clone, Debug, Default)]
@@ -210,7 +237,8 @@ fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<u
         extracted.push(arr.remove(idx));
     }
     for value in extracted {
-        let pos = arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
+        let pos =
+            arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
         arr.insert(pos, value);
     }
 }
@@ -393,7 +421,7 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
 
 fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
     let mut rng = rand::thread_rng();
-    
+
     let mut native_time = 0.0;
     let mut ds_time = 0.0;
 
@@ -516,7 +544,7 @@ fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
 
 fn print_execution_time_table(results: &BenchmarkResults) {
     const COL_WIDTH: usize = 17;
-    
+
     println!();
     println!("Execution Time (µs) - n={}", format_number(N));
     println!("┌────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┐");
@@ -526,10 +554,18 @@ fn print_execution_time_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_with_ci(results.native[i].time_us, results.native[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.native[i].time_us,
+                results.native[i].time_ci,
+                COL_WIDTH
+            ),
             format_with_ci(results.bis[i].time_us, results.bis[i].time_ci, COL_WIDTH),
             format_with_ci(results.esm[i].time_us, results.esm[i].time_ci, COL_WIDTH),
-            format_with_ci(results.deltasort[i].time_us, results.deltasort[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.deltasort[i].time_us,
+                results.deltasort[i].time_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┘");
@@ -537,7 +573,7 @@ fn print_execution_time_table(results: &BenchmarkResults) {
 
 fn print_comparator_count_table(results: &BenchmarkResults) {
     const COL_WIDTH: usize = 17;
-    
+
     println!();
     println!("Comparator Invocations - n={}", format_number(N));
     println!("┌────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┐");
@@ -547,10 +583,26 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_int_with_ci(results.native[i].comparisons, results.native[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.bis[i].comparisons, results.bis[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.esm[i].comparisons, results.esm[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.deltasort[i].comparisons, results.deltasort[i].comparisons_ci, COL_WIDTH),
+            format_int_with_ci(
+                results.native[i].comparisons,
+                results.native[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.bis[i].comparisons,
+                results.bis[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.esm[i].comparisons,
+                results.esm[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.deltasort[i].comparisons,
+                results.deltasort[i].comparisons_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┘");
@@ -563,7 +615,11 @@ fn print_crossover_table(results: &[CrossoverResult]) {
     println!("│     n      │  k_c/n (%)   │");
     println!("├────────────┼──────────────┤");
     for r in results {
-        println!("│ {:>10} │ {:>11.1}% │", format_number(r.n), r.crossover_ratio);
+        println!(
+            "│ {:>10} │ {:>11.1}% │",
+            format_number(r.n),
+            r.crossover_ratio
+        );
     }
     println!("└────────────┴──────────────┘");
 }
@@ -656,8 +712,10 @@ fn main() {
         });
 
         let bis = run_benchmark(
-            &base_users, k,
-            binary_insertion_sort, binary_insertion_sort_counting
+            &base_users,
+            k,
+            binary_insertion_sort,
+            binary_insertion_sort_counting,
         );
         results.bis.push(AlgorithmResult {
             k,
@@ -668,8 +726,10 @@ fn main() {
         });
 
         let esm = run_benchmark(
-            &base_users, k,
-            extract_sort_merge, extract_sort_merge_counting
+            &base_users,
+            k,
+            extract_sort_merge,
+            extract_sort_merge_counting,
         );
         results.esm.push(AlgorithmResult {
             k,
@@ -680,8 +740,10 @@ fn main() {
         });
 
         let ds = run_benchmark(
-            &base_users, k,
-            deltasort_wrapper, deltasort_wrapper_counting
+            &base_users,
+            k,
+            deltasort_wrapper,
+            deltasort_wrapper_counting,
         );
         results.deltasort.push(AlgorithmResult {
             k,
@@ -707,7 +769,10 @@ fn main() {
         io::stdout().flush().unwrap();
         let k_c = find_crossover(size);
         let crossover_ratio = (k_c as f64 / size as f64) * 100.0;
-        crossover_results.push(CrossoverResult { n: size, crossover_ratio });
+        crossover_results.push(CrossoverResult {
+            n: size,
+            crossover_ratio,
+        });
         println!(" k_c={} ({:.1}%)", k_c, crossover_ratio);
     }
 
@@ -721,7 +786,10 @@ fn main() {
         fs::create_dir_all(base_path).ok();
         export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
         export_comparator_count_csv(&results, &format!("{}/comparator-count.csv", base_path));
-        export_crossover_csv(&crossover_results, &format!("{}/crossover-threshold.csv", base_path));
+        export_crossover_csv(
+            &crossover_results,
+            &format!("{}/crossover-threshold.csv", base_path),
+        );
     }
 
     println!();

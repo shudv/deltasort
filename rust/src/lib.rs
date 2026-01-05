@@ -122,10 +122,10 @@ where
     dirty.push(arr.len());
 
     // Phase 2: Scan updated indices left to right
-    
+
     // Stack for pending RIGHT violations
     let mut pending_right_violations: Vec<usize> = Vec::with_capacity(dirty.len());
-    
+
     // Left boundary for fixing LEFT violations
     let mut left_bound = 0;
 
@@ -143,8 +143,11 @@ where
                 let mut right_bound = i.saturating_sub(1);
                 while let Some(idx) = pending_right_violations.pop() {
                     // Fix RIGHT violation at idx if needed
-                    if idx < arr.len() - 1 && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater {
-                        right_bound = fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
+                    if idx < arr.len() - 1
+                        && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
+                    {
+                        right_bound =
+                            fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
                     }
                 }
 
@@ -355,7 +358,11 @@ mod tests {
                     // Sort with DeltaSort
                     delta_sort(&mut arr, &updated_indices);
 
-                    assert_eq!(arr, expected, "Failed at scale={}, delta_volume={}", scale, delta_volume);
+                    assert_eq!(
+                        arr, expected,
+                        "Failed at scale={}, delta_volume={}",
+                        scale, delta_volume
+                    );
                 }
             }
         }
@@ -370,9 +377,18 @@ mod tests {
         }
 
         let mut users = vec![
-            User { name: "Alice".into(), age: 30 },
-            User { name: "Bob".into(), age: 25 },
-            User { name: "Charlie".into(), age: 35 },
+            User {
+                name: "Alice".into(),
+                age: 30,
+            },
+            User {
+                name: "Bob".into(),
+                age: 25,
+            },
+            User {
+                name: "Charlie".into(),
+                age: 35,
+            },
         ];
 
         // Modify Bob's age

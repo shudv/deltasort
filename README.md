@@ -1,8 +1,9 @@
 # DeltaSort
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18132075.svg)](https://doi.org/10.5281/zenodo.18132075)
 
 An incremental repair algorithm for sorted arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
-📄 **[Read the pre-print (OpenReview)](https://openreview.net/attachment?id=AlMKtDfJvy&name=pdf)**
+📄 **Read the pre-print: [OpenReview](https://openreview.net/attachment?id=AlMKtDfJvy&name=pdf) | [Zenodo](https://doi.org/10.5281/zenodo.18132075)**
 
 ## The Problem
 

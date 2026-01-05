@@ -2,7 +2,7 @@
 
 all: main.pdf
 
-main.pdf: main.tex refs.bib figures/*.tex
+main.pdf: main.tex refs.bib benchmarks/*
 	pdflatex -interaction=nonstopmode main.tex
 	bibtex main
 	pdflatex -interaction=nonstopmode main.tex

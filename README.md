@@ -36,11 +36,11 @@ pnpm install && pnpm test
 
 | #Updated (k) | DeltaSort | NativeSort | Speedup   |
 | ------------ | --------- | ---------- | --------- |
-| 100 (0.2%)   | 145 µs    | 1743 µs    | **12×**   |
-| 1K (2%)      | 759 µs    | 3803 µs    | **5×**    |
-| 5K (10%)     | 2073 µs   | 3972 µs    | **1.9×**  |
-| 10K (20%)    | 3621 µs   | 4438 µs    | **1.2×**  |
-| 16K (32%)    | 4812 µs   | 4769 µs    | crossover |
+| 100 (0.2%)   | 151.5 µs  | 1879.6 µs  | **12×**   |
+| 1K (2%)      | 694.8 µs  | 4202.3 µs  | **6×**    |
+| 5K (10%)     | 2387.1 µs | 4320.2 µs  | **1.4×**  |
+| 10K (20%)    | 3550.8 µs | 4421.6 µs  | **1.8×**  |
+| 20K (40%)    | 6343.8 µs | 5233.9 µs  | **0.8x**  |
 
 _Results from Rust implementation on M3 Pro. The ~32% crossover threshold and speedup numbers are specific to this environment — results will vary in other runtimes (e.g., JavaScript shows much more modest gains due to highly optimized native sort)._
 

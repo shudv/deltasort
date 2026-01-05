@@ -12,9 +12,20 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage{pgfplots}
+\usepackage{pgfplotstable}
 \usepackage{placeins}
 \usepackage{float}
 \pgfplotsset{compat=1.18}
+
+% Load benchmark metadata from CSV
+\pgfplotstableread[col sep=comma]{benchmarks/rust/metadata.csv}\rustmetadata
+\pgfplotstablegetelem{0}{value}\of\rustmetadata \let\benchmarkDate\pgfplotsretval
+\pgfplotstablegetelem{1}{value}\of\rustmetadata \let\benchmarkMachine\pgfplotsretval
+\pgfplotstablegetelem{2}{value}\of\rustmetadata \let\benchmarkN\pgfplotsretval
+\pgfplotstablegetelem{3}{value}\of\rustmetadata \let\benchmarkIterations\pgfplotsretval
+
+% Command to add benchmark note to figures
+\newcommand{\benchmarknote}{\par\vspace{2pt}\noindent{\scriptsize\textit{Benchmarked on \benchmarkMachine\ (\benchmarkDate), $n=\benchmarkN$, \benchmarkIterations\ iterations.}}}
 \usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing,pgfplots.fillbetween}
 
 \geometry{margin=1in}
@@ -449,7 +460,7 @@ Figure~\ref{fig:rust-execution-time} shows execution time (in microseconds) for 
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
+\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.\benchmarknote}
 \label{fig:rust-execution-time}
 \end{figure}
 
@@ -501,7 +512,7 @@ Figure~\ref{fig:rust-comparator-count} shows the number of comparator invocation
 \caption{Comparator invocation count for $n = 50$K. DeltaSort and BIS
 both achieve $O(k \log n)$ comparisons, while NativeSort uses $O(n \log n)$ regardless
 of $k$, and ESM uses $O(k \log k + n)$. The 10--40\% higher comparison counts for DeltaSort
-vs BIS confirm that movement confinement (Lemma~\ref{lem:confinement}) is the major factor in DeltaSort speedup.}
+vs BIS confirm that movement confinement (Lemma~\ref{lem:confinement}) is the major factor in DeltaSort speedup.\benchmarknote}
 \label{fig:rust-comparator-count}
 \end{figure}
 
@@ -554,7 +565,7 @@ Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_
 
 % Benchmark metadata (right margin, rotated)
 \end{tikzpicture}
-\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms NativeSort when the updated fraction is below the curve (shaded region).}
+\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms NativeSort when the updated fraction is below the curve (shaded region).\benchmarknote}
 \label{fig:rust-crossover-threshold}
 \end{figure}
 

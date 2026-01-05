@@ -669,6 +669,49 @@ fn export_crossover_csv(results: &[CrossoverResult], path: &str) {
     println!("Exported: {}", path);
 }
 
+fn export_metadata_csv(path: &str) {
+    use std::process::Command;
+
+    // Get current date
+    let date = chrono_lite_date();
+
+    // Get OS info
+    let os = std::env::consts::OS;
+    let arch = std::env::consts::ARCH;
+
+    // Try to get more detailed system info on macOS
+    let machine = if os == "macos" {
+        Command::new("sysctl")
+            .args(["-n", "machdep.cpu.brand_string"])
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| format!("{}/{}", os, arch))
+    } else {
+        format!("{}/{}", os, arch)
+    };
+
+    let csv = format!(
+        "key,value\ndate,{}\nmachine,{}\nn,{}\niterations,{}\n",
+        date, machine, N, ITERATIONS
+    );
+    fs::write(path, csv).expect("Failed to write metadata.csv");
+    println!("Exported: {}", path);
+}
+
+/// Simple date formatter (avoids chrono dependency)
+fn chrono_lite_date() -> String {
+    use std::process::Command;
+    Command::new("date")
+        .arg("+%B %Y")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "Unknown".to_string())
+}
+
 // ============================================================================
 // MAIN
 // ============================================================================
@@ -790,6 +833,7 @@ fn main() {
             &crossover_results,
             &format!("{}/crossover-threshold.csv", base_path),
         );
+        export_metadata_csv(&format!("{}/metadata.csv", base_path));
     }
 
     println!();

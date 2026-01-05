@@ -483,6 +483,21 @@ function exportCrossoverCsv(results: CrossoverResult[], filePath: string): void 
     console.log(`Exported: ${filePath}`);
 }
 
+function exportMetadataCsv(filePath: string): void {
+    const date = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const platform = `${process.platform}/${process.arch}`;
+    const nodeVersion = process.version;
+
+    let csv = "key,value\n";
+    csv += `date,${date}\n`;
+    csv += `platform,${platform}\n`;
+    csv += `runtime,Node.js ${nodeVersion}\n`;
+    csv += `n,${N}\n`;
+    csv += `iterations,${ITERATIONS}\n`;
+    fs.writeFileSync(filePath, csv);
+    console.log(`Exported: ${filePath}`);
+}
+
 // ============================================================================
 // MAIN
 // ============================================================================
@@ -554,12 +569,12 @@ async function main(): Promise<void> {
     if (shouldExport) {
         console.log();
         console.log("Exporting CSV files...");
-        const currentDir = path.dirname(new URL(import.meta.url).pathname);
-        const basePath = path.join(currentDir, "../../paper/benchmarks/js");
+        const basePath = path.join(process.cwd(), "../paper/benchmarks/js");
         fs.mkdirSync(basePath, { recursive: true });
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
         exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverCsv(crossoverResults, path.join(basePath, "crossover-threshold.csv"));
+        exportMetadataCsv(path.join(basePath, "metadata.csv"));
     }
 
     console.log();

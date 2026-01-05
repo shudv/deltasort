@@ -11,16 +11,16 @@ const enum Violation {
 /**
  * Repairs the sorted array using the provided comparator.
  *
- * @param sortedArray The array which was previously sorted and has some updated indices
- * @param comparator The comparator function
+ * @param arr The array which was previously sorted and has some updated indices
  * @param updatedIndices Set of indices in the array which have been updated
+ * @param cmp The comparator function
  *
  * @returns The repaired array
  */
-export function deltasort<T>(
+export function deltaSort<T>(
     arr: T[],
-    cmp: (a: T, b: T) => number,
     updatedIndices: Set<number>,
+    cmp: (a: T, b: T) => number,
 ): T[] {
     if (updatedIndices.size === 0) {
         return arr;
@@ -52,7 +52,7 @@ export function deltasort<T>(
         const direction = i == arr.length ? Violation.LEFT : getDirection(arr, i, cmp);
 
         switch (direction) {
-            case Violation.LEFT:
+            case Violation.LEFT: {
                 // Fix all pending indices before fixing LEFT
                 let rightBound = i - 1;
                 while (stackTop > 0) {
@@ -68,6 +68,7 @@ export function deltasort<T>(
                     leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
                 }
                 break;
+            }
             case Violation.RIGHT:
                 pendingRightViolations[stackTop++] = i;
                 break;

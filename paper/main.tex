@@ -12,9 +12,20 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage{pgfplots}
+\usepackage{pgfplotstable}
 \usepackage{placeins}
 \usepackage{float}
 \pgfplotsset{compat=1.18}
+
+% Load benchmark metadata from CSV
+\pgfplotstableread[col sep=comma]{benchmarks/rust/metadata.csv}\rustmetadata
+\pgfplotstablegetelem{0}{value}\of\rustmetadata \let\benchmarkDate\pgfplotsretval
+\pgfplotstablegetelem{1}{value}\of\rustmetadata \let\benchmarkMachine\pgfplotsretval
+\pgfplotstablegetelem{2}{value}\of\rustmetadata \let\benchmarkN\pgfplotsretval
+\pgfplotstablegetelem{3}{value}\of\rustmetadata \let\benchmarkIterations\pgfplotsretval
+
+% Command to add benchmark note to figures
+\newcommand{\benchmarknote}{\par\vspace{2pt}\noindent{\scriptsize\textit{Benchmarked on \benchmarkMachine\ (\benchmarkDate), $n=\benchmarkN$, \benchmarkIterations\ iterations.}}}
 \usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing,pgfplots.fillbetween}
 
 \geometry{margin=1in}
@@ -105,10 +116,102 @@ Every updated index is either a LEFT or RIGHT violation. Violation is only defin
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a \textbf{maximal subarray} of $U$ whose values follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array. Figure~\ref{fig:segment-diagram} illustrates this structure.
+A \emph{segment} is a \textbf{maximal subarray} of $U$ whose values follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array. Figure~\ref{fig:segment-structure} illustrates this structure.
 \end{definition}
 
-\input{figures/segment-diagram}
+% Figure: Segment structure diagram
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    cell/.style={minimum width=0.55cm, minimum height=0.45cm, draw, font=\scriptsize},
+    dotcell/.style={minimum width=0.45cm, minimum height=0.45cm, font=\scriptsize},
+    right/.style={cell, fill=red!20},
+    left/.style={cell, fill=blue!20},
+    clean/.style={cell, fill=gray!8},
+    boundary/.style={very thick, black!60},
+    segbrace/.style={decorate, decoration={brace, amplitude=4pt}},
+    subbrace/.style={decorate, decoration={brace, amplitude=2.5pt, mirror}},
+    seglabel/.style={font=\footnotesize, text=black!80},
+    faded/.style={opacity=0.5}
+]
+
+% === PREVIOUS SEGMENT (faded) ===
+\begin{scope}[faded]
+  \node[dotcell] at (-1.3, 0) {$\cdots$};
+  \node[right] (pr1) at (-0.65, 0) {R};
+  \node[clean] at (0, 0) {$\cdots$};
+  \node[left] (pl1) at (0.65, 0) {L};
+\end{scope}
+
+% Boundary: previous segment | inter-segment clean
+\draw[boundary] (0.97, 0.5) -- (0.97, -0.35);
+
+% Inter-segment clean values
+\node[clean] at (1.3, 0) {$\cdots$};
+
+% Boundary: inter-segment clean | current segment
+\draw[boundary] (1.63, 0.5) -- (1.63, -0.35);
+
+% === CURRENT SEGMENT (main focus) ===
+% RIGHT region: R [...] R [...] R
+\node[right] (r1) at (1.95, 0) {R};
+\node[clean] at (2.6, 0) {$\cdots$};
+\node[right] (r2) at (3.25, 0) {R};
+\node[clean] at (3.9, 0) {$\cdots$};
+\node[right] (r3) at (4.55, 0) {R};
+
+% LEFT region: [...] L [...] L
+\node[clean] at (5.2, 0) {$\cdots$};
+\node[left] (l1) at (5.85, 0) {L};
+\node[clean] at (6.5, 0) {$\cdots$};
+\node[left] (l2) at (7.15, 0) {L};
+
+% Boundary: current segment | inter-segment clean
+\draw[boundary] (7.47, 0.5) -- (7.47, -0.35);
+
+% Inter-segment clean values
+\node[clean] at (7.8, 0) {$\cdots$};
+
+% Boundary: inter-segment clean | next segment
+\draw[boundary] (8.13, 0.5) -- (8.13, -0.35);
+
+% === NEXT SEGMENT (faded) ===
+\begin{scope}[faded]
+  \node[right] (nr1) at (8.45, 0) {R};
+  \node[clean] at (9.1, 0) {$\cdots$};
+  \node[right] (nr2) at (9.75, 0) {R};
+  \node[dotcell] at (10.3, 0) {$\cdots$};
+\end{scope}
+
+% === ANNOTATIONS ===
+% Main segment brace (top)
+\draw[segbrace] (1.63, 0.47) -- (7.47, 0.47) 
+    node[midway, above=5pt, font=\small] {Segment $S_i$: $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$};
+
+% Sub-braces (bottom)
+\draw[subbrace] (1.63, -0.32) -- (4.87, -0.32) 
+    node[midway, below=4pt, seglabel, align=center] {$(\mathrm{R})^*$};
+\draw[subbrace] (4.87, -0.32) -- (7.47, -0.32) 
+    node[midway, below=4pt, seglabel, align=center] {$\mathrm{L}^+$};
+
+% Adjacent segment labels (above, smaller)
+\draw[segbrace, faded] (-1.0, 0.47) -- (0.97, 0.47) 
+    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i-1}$};
+\draw[segbrace, faded] (8.13, 0.47) -- (10.1, 0.47) 
+    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i+1}$};
+
+% Legend
+\node[right, scale=0.75] at (10.7, 0.25) {R};
+\node[font=\scriptsize, anchor=west] at (11.1, 0.25) {= RIGHT};
+\node[left, scale=0.75] at (10.7, -0.15) {L};
+\node[font=\scriptsize, anchor=west] at (11.1, -0.15) {= LEFT};
+\node[clean, scale=0.75] at (10.7, -0.55) {$\cdots$};
+\node[font=\scriptsize, anchor=west] at (11.1, -0.55) {= clean};
+
+\end{tikzpicture}
+\caption{Segment structure after Phase~1. Each segment follows the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations (or end of array).}
+\label{fig:segment-structure}
+\end{figure}
 
 DeltaSort operates in two phases:
 
@@ -141,7 +244,76 @@ Since no value exits its segment, segments can be repaired independently.
 
 \subsection{Pseudocode}
 
-\input{figures/pseudocode}
+\begin{algorithm}[H]
+\caption{DeltaSort}
+\label{alg:deltasort}
+\begin{algorithmic}[1]
+\Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
+\Ensure $A$ is sorted
+\Statex
+\State \textbf{Phase 1: Segment}
+\State $\texttt{updatedIndices} \gets \text{sort}(U)$;
+\State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
+\For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
+\State $A[\texttt{updatedIndices}[i]] \gets \texttt{updatedValues}[i]$
+\EndFor
+\State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
+\Statex
+\State \textbf{Phase 2: Repair}
+\State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
+\For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
+    \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
+    \If{$\texttt{dir} = \textsc{Left}$}
+        \State $\texttt{rightBound} \gets i - 1$
+        \While{$\texttt{pendingRight} \neq \emptyset$}
+            \State $j \gets \texttt{pendingRight.pop}()$
+            \If{$\texttt{cmp}(A[j], A[j+1]) > 0$}
+                \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, j, \texttt{rightBound}} - 1$
+            \EndIf
+        \EndWhile
+        \If{$i < n$} \Comment{Skip dummy LEFT sentinel}
+            \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+        \EndIf
+    \Else
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT violation}
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{GetDirection}{$A$, $i$}
+    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$ ? \textsc{Left} : \textsc{Right}
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FixLeftViolation}{$A$, $i$, $\texttt{leftBound}$}
+    \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
+    \State \Call{Move}{A, i, t}
+    \State \Return $t$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FixRightViolation}{$A$, $i$, $\texttt{rightBound}$}
+    \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
+    \State \Call{Move}{A, i, t};
+    \State \Return $t$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
 
 \subsection{Correctness Proof}
 
@@ -243,13 +415,106 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 Figure~\ref{fig:rust-execution-time} shows execution time (in microseconds) for $n = 50$K values as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
 
-\input{figures/rust/execution-time}
+% Figure: All algorithms comparison (log-log scale)
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=7.5cm,
+    xlabel={Number of updated values ($k$)},
+    ylabel={Execution time (\textmu s)},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=1, xmax=30000,
+    ymin=1, ymax=700000,
+    xtick={1, 10, 100, 1000, 10000},
+    xticklabels={1, 10, 100, 1K, 10K},
+    legend pos=north west,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=major,
+    major grid style={line width=0.3pt, draw=gray!30},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% NativeSort (horizontal-ish baseline)
+\addplot[color=gray!70, mark=square*, thick, mark size=2pt] table[col sep=comma, x=k, y=native] {benchmarks/rust/execution-time.csv};
+
+% Binary Insertion (steep slope)
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2pt] table[col sep=comma, x=k, y=bis] {benchmarks/rust/execution-time.csv};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt] table[col sep=comma, x=k, y=esm] {benchmarks/rust/execution-time.csv};
+
+% DeltaSort (our algorithm - emphasized)
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {benchmarks/rust/execution-time.csv};
+
+% Crossover point: bold marker + dashed drop line + label
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:16500, 5000) {};
+\draw[red!70!black, thick, dashed] (axis cs:16500, 5000) -- (axis cs:16500, 1);
+\node[font=\scriptsize\bfseries, text=red!70!black, anchor=north east] at (axis cs:14000, 4) {crossover at ${\sim}16.5$K (33\%)};
+
+\legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
+\end{axis}
+\end{tikzpicture}
+\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.\benchmarknote}
+\label{fig:rust-execution-time}
+\end{figure}
 
 \subsection{Comparator Invocation Count}
 
 Figure~\ref{fig:rust-comparator-count} shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort may be even greater.
 
-\input{figures/rust/comparator-count}
+% Figure: Comparator invocation count comparison
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6cm,
+    xlabel={Number of updated values ($k$)},
+    ylabel={Comparator invocations},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=0.8, xmax=25000,
+    ymin=10, ymax=1000000,
+    xtick={1, 10, 100, 1000, 10000},
+    xticklabels={1, 10, 100, 1K, 10K},
+    ytick={10, 100, 1000, 10000, 100000, 1000000},
+    yticklabels={10, 100, 1K, 10K, 100K, 1M},
+    legend pos=south east,
+    legend style={font=\small},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+]
+
+% Native Sort
+\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=native] {benchmarks/rust/comparator-count.csv};
+
+% Binary Insertion
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=bis] {benchmarks/rust/comparator-count.csv};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=esm] {benchmarks/rust/comparator-count.csv};
+
+% DeltaSort
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {benchmarks/rust/comparator-count.csv};
+
+\legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
+\end{axis}
+\end{tikzpicture}
+\caption{Comparator invocation count for $n = 50$K. DeltaSort and BIS
+both achieve $O(k \log n)$ comparisons, while NativeSort uses $O(n \log n)$ regardless
+of $k$, and ESM uses $O(k \log k + n)$. The 10--40\% higher comparison counts for DeltaSort
+vs BIS confirm that movement confinement (Lemma~\ref{lem:confinement}) is the major factor in DeltaSort speedup.\benchmarknote}
+\label{fig:rust-comparator-count}
+\end{figure}
 
 \subsection{Crossover Threshold Analysis}
 
@@ -257,7 +522,52 @@ A key practical question is: at what update count should one switch from DeltaSo
 
 Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ${\sim}33\%$ for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
 
-\input{figures/rust/crossover-threshold}
+% Figure: Crossover ratio vs array size
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6.5cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=500, xmax=20000000,
+    ymin=0, ymax=40,
+    ytick={0, 10, 20, 30, 40},
+    yticklabels={0, 10, 20, 30, 40},
+    xtick={1000, 10000, 100000, 1000000, 10000000},
+    xticklabels={1K, 10K, 100K, 1M, 10M},
+    legend pos=north east,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% Shaded region below the curve (DeltaSort wins)
+\addplot[name path=curve, color=blue!70!black, mark=*, thick, mark size=2.5pt, line width=1.2pt] table[col sep=comma, x index=0, y index=1] {benchmarks/rust/crossover-threshold.csv};
+\path[name path=bottom] (axis cs:1000,0) -- (axis cs:10000000,0);
+\addplot[green!20, opacity=0.5] fill between[of=curve and bottom];
+
+% Vertical line at n=50K (the case evaluated in execution time chart)
+\draw[purple!70!black, thick, dashed] (axis cs:50000, 0) -- (axis cs:50000, 40);
+\node[circle, fill=purple!70!black, inner sep=3pt] at (axis cs:50000, 33.4) {};
+\node[font=\scriptsize\bfseries, text=purple!70!black, anchor=south west] at (axis cs:55000, 34) {$n{=}50$K (Fig.~\ref{fig:rust-execution-time})};
+
+% Annotation for the region
+\node[font=\footnotesize, text=green!50!black] at (axis cs:5000, 12) {DeltaSort faster};
+
+\end{axis}
+
+% Benchmark metadata (right margin, rotated)
+\end{tikzpicture}
+\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms NativeSort when the updated fraction is below the curve (shaded region).\benchmarknote}
+\label{fig:rust-crossover-threshold}
+\end{figure}
 
 The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 

@@ -3,7 +3,7 @@
 //! These tests verify that DeltaSort produces correct results across
 //! various array sizes and delta volumes using randomized testing.
 
-use deltasort::deltasort;
+use deltasort::delta_sort_by;
 use rand::Rng;
 use std::collections::HashSet;
 
@@ -62,7 +62,7 @@ fn run_correctness_tests(scale: u32) {
             expected.sort();
 
             // Sort with DeltaSort
-            deltasort(&mut arr, &dirty_indices, |a, b| a.cmp(b));
+            delta_sort_by(&mut arr, &dirty_indices, |a, b| a.cmp(b));
 
             // Verify correctness
             assert_eq!(
@@ -79,9 +79,9 @@ fn test_no_dirty_indices_is_noop() {
     // DeltaSort should not modify array when no dirty indices are provided
     let mut arr = vec![1, 2, 3, 2, 1];
     let dirty: HashSet<usize> = HashSet::new();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 2, 3, 2, 1]);
 }
 
@@ -89,26 +89,26 @@ fn test_no_dirty_indices_is_noop() {
 fn test_single_dirty_index() {
     let mut arr = vec![1, 2, 3, 4, 5];
     arr[2] = 10; // Change middle element
-    
+
     let dirty: HashSet<usize> = [2].into_iter().collect();
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 2, 4, 5, 10]);
 }
 
 #[test]
 fn test_all_indices_dirty() {
     let mut rng = rand::thread_rng();
-    
+
     for size in [5, 10, 50, 100] {
         let mut arr: Vec<i32> = (0..size).map(|_| rng.gen_range(0..1000)).collect();
         let dirty: HashSet<usize> = (0..size as usize).collect();
-        
+
         let mut expected = arr.clone();
         expected.sort();
-        
-        deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-        
+
+        delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
         assert_eq!(arr, expected, "Failed with all {} indices dirty", size);
     }
 }
@@ -117,9 +117,9 @@ fn test_all_indices_dirty() {
 fn test_adjacent_dirty_indices() {
     let mut arr = vec![1, 5, 4, 3, 2, 6];
     let dirty: HashSet<usize> = [1, 2, 3, 4].into_iter().collect();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 2, 3, 4, 5, 6]);
 }
 
@@ -127,9 +127,9 @@ fn test_adjacent_dirty_indices() {
 fn test_edges_dirty() {
     let mut arr = vec![10, 2, 3, 4, 1];
     let dirty: HashSet<usize> = [0, 4].into_iter().collect();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 2, 3, 4, 10]);
 }
 
@@ -137,9 +137,9 @@ fn test_edges_dirty() {
 fn test_with_duplicates() {
     let mut arr = vec![1, 3, 3, 5, 3];
     let dirty: HashSet<usize> = [4].into_iter().collect();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 3, 3, 3, 5]);
 }
 
@@ -147,10 +147,10 @@ fn test_with_duplicates() {
 fn test_descending_comparator() {
     let mut arr = vec![1, 2, 3, 4, 5];
     let dirty: HashSet<usize> = [0, 1, 2, 3, 4].into_iter().collect();
-    
+
     // Sort in descending order
-    deltasort(&mut arr, &dirty, |a, b| b.cmp(a));
-    
+    delta_sort_by(&mut arr, &dirty, |a, b| b.cmp(a));
+
     assert_eq!(arr, vec![5, 4, 3, 2, 1]);
 }
 
@@ -158,9 +158,9 @@ fn test_descending_comparator() {
 fn test_string_sorting() {
     let mut arr = vec!["banana", "apple", "cherry", "date"];
     let dirty: HashSet<usize> = [0, 1].into_iter().collect();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec!["apple", "banana", "cherry", "date"]);
 }
 
@@ -173,10 +173,22 @@ fn test_struct_with_complex_comparator() {
     }
 
     let mut people = vec![
-        Person { name: "Alice".into(), age: 30 },
-        Person { name: "Bob".into(), age: 25 },
-        Person { name: "Charlie".into(), age: 35 },
-        Person { name: "Diana".into(), age: 28 },
+        Person {
+            name: "Alice".into(),
+            age: 30,
+        },
+        Person {
+            name: "Bob".into(),
+            age: 25,
+        },
+        Person {
+            name: "Charlie".into(),
+            age: 35,
+        },
+        Person {
+            name: "Diana".into(),
+            age: 28,
+        },
     ];
 
     // Modify Bob and Diana
@@ -184,9 +196,9 @@ fn test_struct_with_complex_comparator() {
     people[3].age = 20;
 
     let dirty: HashSet<usize> = [1, 3].into_iter().collect();
-    
+
     // Sort by age ascending
-    deltasort(&mut people, &dirty, |a, b| a.age.cmp(&b.age));
+    delta_sort_by(&mut people, &dirty, |a, b| a.age.cmp(&b.age));
 
     let ages: Vec<u32> = people.iter().map(|p| p.age).collect();
     assert_eq!(ages, vec![20, 30, 35, 40]);
@@ -197,8 +209,8 @@ fn test_movement_cancellation_example() {
     // This is the example from the paper where pre-sorting eliminates movement
     let mut arr = vec![1, 8, 5, 2, 9];
     let dirty: HashSet<usize> = [1, 3].into_iter().collect();
-    
-    deltasort(&mut arr, &dirty, |a, b| a.cmp(b));
-    
+
+    delta_sort_by(&mut arr, &dirty, |a, b| a.cmp(b));
+
     assert_eq!(arr, vec![1, 2, 5, 8, 9]);
 }

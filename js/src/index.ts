@@ -1,1 +1,1 @@
-export { deltasort } from "./DeltaSort";
+export { deltaSort } from "./DeltaSort";

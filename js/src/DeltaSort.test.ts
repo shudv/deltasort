@@ -1,4 +1,4 @@
-import { deltasort } from "./DeltaSort";
+import { deltaSort } from "./DeltaSort";
 
 // Test various scales and delta volumes
 const SCALE = [1, 2, 3, 4];
@@ -27,7 +27,7 @@ describe("DeltaSort", () => {
                     const expected = [...array].sort((a, b) => a - b);
 
                     // Sort using DeltaSort - ensure that it does not fallaback to native sort by setting high thresholds
-                    deltasort(array, (a, b) => a - b, dirtyIndices);
+                    deltaSort(array, dirtyIndices, (a, b) => a - b);
 
                     // Verify that the array is correctly sorted
                     for (let i = 1; i < array.length; i++) {
@@ -39,7 +39,7 @@ describe("DeltaSort", () => {
     });
 
     test("no dirty indices - should be no-op", () => {
-        // deltasort bails out if no dirty indices are provided
-        expect(deltasort([1, 2, 3, 2, 1], (a, b) => a - b, new Set())).toEqual([1, 2, 3, 2, 1]);
+        // deltaSort bails out if no dirty indices are provided
+        expect(deltaSort([1, 2, 3, 2, 1], new Set(), (a, b) => a - b)).toEqual([1, 2, 3, 2, 1]);
     });
 }, 200000);

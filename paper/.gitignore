@@ -1,0 +1,6 @@
+# Latex auxiliary files
+out/**
+main.*
+
+# Keep the primary TeX file
+!main.tex

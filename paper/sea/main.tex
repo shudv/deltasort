@@ -1,0 +1,635 @@
+\documentclass[a4paper,UKenglish,cleveref,autoref,thm-restate]{lipics-v2021}
+
+%% Bibliography style
+\bibliographystyle{plainurl}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing,pgfplots.fillbetween}
+
+% Load benchmark metadata from CSV
+\pgfplotstableread[col sep=comma]{../benchmarks/rust/metadata.csv}\rustmetadata
+\pgfplotstablegetelem{0}{value}\of\rustmetadata \let\benchmarkDate\pgfplotsretval
+\pgfplotstablegetelem{1}{value}\of\rustmetadata \let\benchmarkMachine\pgfplotsretval
+\pgfplotstablegetelem{2}{value}\of\rustmetadata \let\benchmarkN\pgfplotsretval
+\pgfplotstablegetelem{3}{value}\of\rustmetadata \let\benchmarkIterations\pgfplotsretval
+
+% Command to add benchmark note to figures
+\newcommand{\benchmarknote}{\par\vspace{2pt}\noindent{\scriptsize\textit{Benchmarked on \benchmarkMachine\ (\benchmarkDate), $n=\benchmarkN$, \benchmarkIterations\ iterations.}}}
+
+%% Title information
+\title{DeltaSort: Incremental Repair of Sorted Arrays with Known Updates}
+
+%% Author information
+\author{Shubham Dwivedi}{Independent Researcher, India \and \url{https://shubhamdwivedi.in}}{shubd3@gmail.com}{https://orcid.org/0000-0000-0000-0000}{}
+
+\authorrunning{S. Dwivedi}
+
+\Copyright{Shubham Dwivedi}
+
+%% ACM Computing Classification System (CCS)
+\ccsdesc[500]{Theory of computation~Sorting and searching}
+\ccsdesc[300]{Theory of computation~Data structures design and analysis}
+
+\keywords{Incremental sorting, Update-aware algorithms, Array repair, Experimental algorithms}
+
+%% Related version (arXiv, tech report, etc.)
+\relatedversion{Full version with appendices: \url{https://arxiv.org/abs/XXXX.XXXXX}}
+\relatedversiondetails[linktext={Source code}]{Repository}{https://github.com/shubd3/deltasort}
+
+%% Acknowledgements
+\acknowledgements{The author thanks the anonymous reviewers for their valuable feedback.}
+
+%% Funding information (if applicable)
+%\funding{This work was supported by ...}
+
+%% Data availability statement
+\supplement{Source code and benchmark data are available at \url{https://github.com/shubd3/deltasort} under the MIT license. Benchmark results are reproducible using the instructions in the repository README.}
+
+\nolinenumbers
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we show that these traditional approaches can be significantly improved for certain workloads. This paper also formulates an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes for our Rust implementation. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable.
+\end{abstract}
+
+%==============================================================================
+\section{Introduction}
+\label{sec:intro}
+%==============================================================================
+
+Sorting is among the most optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort}---deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have changed since the previous sort.
+
+In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of values and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or standard repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches fall short---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
+
+\begin{enumerate}
+  \item \textbf{Update-aware sorting model:}
+  We formulate an incremental sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as natural baseline algorithms for maintaining sorted order through incremental updates.
+
+  \item \textbf{DeltaSort algorithm:}
+  We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches multiple updates and achieves multi-fold speedups over traditional approaches for a wide range of update batch sizes.
+\end{enumerate}
+
+%==============================================================================
+\section{Related Work}
+\label{sec:related}
+%==============================================================================
+
+Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, operate under a blind model: partial order must be rediscovered through full-array scans, and no external information about which values have changed is assumed.
+
+A separate line of work studies incremental computation and view maintenance in database and streaming systems, where changes to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. While they demonstrate the practical value of update-aware computation, they do not specifically address the problem of efficiently restoring sorted order in arrays under batched point updates.
+
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2004insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
+
+In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. \emph{DeltaSort} performs segmented repair without auxiliary data structures, which distinguishes it from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
+
+%==============================================================================
+\section{Problem Model}
+\label{sec:model}
+%==============================================================================
+
+\begin{definition}[Update-Aware Sorting]
+\label{def:problem}
+Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $U = \langle u_1, u_2, \dots, u_k \rangle$ be a sequence of indices such that \[ 0 \le u_1 < u_2 < \dots < u_k \le n-1, \] and the values at these indices may have been arbitrarily updated, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $U$.
+\end{definition}
+
+%==============================================================================
+\section{DeltaSort Algorithm}
+\label{sec:algorithm}
+%==============================================================================
+
+\subsection{Overview}
+
+\begin{definition}[Violation]
+\label{def:violation}
+For an updated index $i$, we classify its \emph{violation} based on local order:
+\begin{itemize}
+  \item \textbf{LEFT (L)}: Value \textbf{must} move left---$\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$).
+  \item \textbf{RIGHT (R)}: Value \textbf{may} move right and \textbf{cannot} move left.
+\end{itemize}
+\end{definition}
+
+Every updated index is either a LEFT or RIGHT violation. Violation is only defined for updated indices and has no meaning for clean indices.
+
+\begin{definition}[Segment]
+\label{def:segment}
+A \emph{segment} is a \textbf{maximal subarray} of $U$ whose values follow the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations, or end of array. Figure~\ref{fig:segment-structure} illustrates this structure.
+\end{definition}
+
+% Figure: Segment structure diagram
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    cell/.style={minimum width=0.55cm, minimum height=0.45cm, draw, font=\scriptsize},
+    dotcell/.style={minimum width=0.45cm, minimum height=0.45cm, font=\scriptsize},
+    right/.style={cell, fill=red!20},
+    left/.style={cell, fill=blue!20},
+    clean/.style={cell, fill=gray!8},
+    boundary/.style={very thick, black!60},
+    segbrace/.style={decorate, decoration={brace, amplitude=4pt}},
+    subbrace/.style={decorate, decoration={brace, amplitude=2.5pt, mirror}},
+    seglabel/.style={font=\footnotesize, text=black!80},
+    faded/.style={opacity=0.5}
+]
+
+% === PREVIOUS SEGMENT (faded) ===
+\begin{scope}[faded]
+  \node[dotcell] at (-1.3, 0) {$\cdots$};
+  \node[right] (pr1) at (-0.65, 0) {R};
+  \node[clean] at (0, 0) {$\cdots$};
+  \node[left] (pl1) at (0.65, 0) {L};
+\end{scope}
+
+% Boundary: previous segment | inter-segment clean
+\draw[boundary] (0.97, 0.5) -- (0.97, -0.35);
+
+% Inter-segment clean values
+\node[clean] at (1.3, 0) {$\cdots$};
+
+% Boundary: inter-segment clean | current segment
+\draw[boundary] (1.63, 0.5) -- (1.63, -0.35);
+
+% === CURRENT SEGMENT (main focus) ===
+% RIGHT region: R [...] R [...] R
+\node[right] (r1) at (1.95, 0) {R};
+\node[clean] at (2.6, 0) {$\cdots$};
+\node[right] (r2) at (3.25, 0) {R};
+\node[clean] at (3.9, 0) {$\cdots$};
+\node[right] (r3) at (4.55, 0) {R};
+
+% LEFT region: [...] L [...] L
+\node[clean] at (5.2, 0) {$\cdots$};
+\node[left] (l1) at (5.85, 0) {L};
+\node[clean] at (6.5, 0) {$\cdots$};
+\node[left] (l2) at (7.15, 0) {L};
+
+% Boundary: current segment | inter-segment clean
+\draw[boundary] (7.47, 0.5) -- (7.47, -0.35);
+
+% Inter-segment clean values
+\node[clean] at (7.8, 0) {$\cdots$};
+
+% Boundary: inter-segment clean | next segment
+\draw[boundary] (8.13, 0.5) -- (8.13, -0.35);
+
+% === NEXT SEGMENT (faded) ===
+\begin{scope}[faded]
+  \node[right] (nr1) at (8.45, 0) {R};
+  \node[clean] at (9.1, 0) {$\cdots$};
+  \node[right] (nr2) at (9.75, 0) {R};
+  \node[dotcell] at (10.3, 0) {$\cdots$};
+\end{scope}
+
+% === ANNOTATIONS ===
+% Main segment brace (top)
+\draw[segbrace] (1.63, 0.47) -- (7.47, 0.47) 
+    node[midway, above=5pt, font=\small] {Segment $S_i$: $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$};
+
+% Sub-braces (bottom)
+\draw[subbrace] (1.63, -0.32) -- (4.87, -0.32) 
+    node[midway, below=4pt, seglabel, align=center] {$(\mathrm{R})^*$};
+\draw[subbrace] (4.87, -0.32) -- (7.47, -0.32) 
+    node[midway, below=4pt, seglabel, align=center] {$\mathrm{L}^+$};
+
+% Adjacent segment labels (above, smaller)
+\draw[segbrace, faded] (-1.0, 0.47) -- (0.97, 0.47) 
+    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i-1}$};
+\draw[segbrace, faded] (8.13, 0.47) -- (10.1, 0.47) 
+    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i+1}$};
+
+% Legend
+\node[right, scale=0.75] at (10.7, 0.25) {R};
+\node[font=\scriptsize, anchor=west] at (11.1, 0.25) {= RIGHT};
+\node[left, scale=0.75] at (10.7, -0.15) {L};
+\node[font=\scriptsize, anchor=west] at (11.1, -0.15) {= LEFT};
+\node[clean, scale=0.75] at (10.7, -0.55) {$\cdots$};
+\node[font=\scriptsize, anchor=west] at (11.1, -0.55) {= clean};
+
+\end{tikzpicture}
+\caption{Segment structure after Phase~1. Each segment follows the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations (or end of array).}
+\label{fig:segment-structure}
+\end{figure}
+
+DeltaSort operates in two phases:
+
+\begin{enumerate}
+  \item \textbf{Phase 1 (Segment):} Extract updated values, sort them, and write back to updated indices in index order. This establishes segments in the array that are disjoint and can be repaired independently.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. When a LEFT is encountered, first flush and repair all pending RIGHTs in LIFO order, then repair the LEFT. Continue left-to-right.
+\end{enumerate}
+
+\subsection{Key Insight: Segmentation Enables Localized Repair}
+\label{sec:insight}
+
+The key insight behind DeltaSort is that pre-sorting updated values induces a \emph{segmentation} of updates. After Phase~1, updated indices partition into disjoint segments of the form $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$.
+
+\begin{lemma}[Movement Confinement]
+\label{lem:confinement}
+Value movement during the repair phase is bounded within each segment: no value needs to cross a segment boundary.
+\end{lemma}
+
+\begin{proof}
+Let $S$ be a segment with RIGHT indices $R_1, \ldots, R_m$ followed by LEFT indices $L_1, \ldots, L_p$ (where $m \ge 0$ and $p \ge 0$, with $m + p \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_1] < \cdots < A[R_m] < A[L_1] < \cdots < A[L_p]$.
+
+\begin{enumerate}
+  \item RIGHT values move rightward but cannot pass the first LEFT index $L_1$ (if it exists) or the segment boundary, since $A[R_i] < A[L_1]$ for all $i$.
+
+  \item LEFT values move leftward but cannot pass the last RIGHT index $R_m$ (if it exists) or the segment boundary, since $A[R_m] < A[L_j]$ for all $j$.
+\end{enumerate}
+
+Since no value exits its segment, segments can be repaired independently.
+\end{proof}
+
+\subsection{Pseudocode}
+
+\begin{algorithm}[t]
+\caption{DeltaSort}
+\label{alg:deltasort}
+\begin{algorithmic}[1]
+\Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
+\Ensure $A$ is sorted
+\Statex
+\State \textbf{Phase 1: Segment}
+\State $\texttt{updatedIndices} \gets \text{sort}(U)$;
+\State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
+\For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
+\State $A[\texttt{updatedIndices}[i]] \gets \texttt{updatedValues}[i]$
+\EndFor
+\State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
+\Statex
+\State \textbf{Phase 2: Repair}
+\State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
+\For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
+    \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
+    \If{$\texttt{dir} = \textsc{Left}$}
+        \State $\texttt{rightBound} \gets i - 1$
+        \While{$\texttt{pendingRight} \neq \emptyset$}
+            \State $j \gets \texttt{pendingRight.pop}()$
+            \If{$\texttt{cmp}(A[j], A[j+1]) > 0$}
+                \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, j, \texttt{rightBound}} - 1$
+            \EndIf
+        \EndWhile
+        \If{$i < n$} \Comment{Skip dummy LEFT sentinel}
+            \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+        \EndIf
+    \Else
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT violation}
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{GetDirection}{$A$, $i$}
+    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$ ? \textsc{Left} : \textsc{Right}
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FixLeftViolation}{$A$, $i$, $\texttt{leftBound}$}
+    \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
+    \State \Call{Move}{A, i, t}
+    \State \Return $t$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\vspace{0.5em}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{algorithmic}[1]
+\Function{FixRightViolation}{$A$, $i$, $\texttt{rightBound}$}
+    \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
+    \State \Call{Move}{A, i, t};
+    \State \Return $t$
+\EndFunction
+\end{algorithmic}
+\end{minipage}
+
+\subsection{Correctness Proof}
+
+\begin{lemma}[Violation Fix Invariant]
+\label{lem:fix-invariant}
+Each fix operation during Phase~2 resolves a violation without introducing new ones.
+\end{lemma}
+
+\begin{proof}
+We fix each violation using binary search. For binary search to find the correct insertion point, the search range must contain no violations.
+
+\begin{itemize}
+    \item \emph{LEFT fix at index $i$}: The search range $[leftBound, i-1]$ contains no LEFT violations because LEFTs are processed left-to-right, and no RIGHT violations because all pending RIGHTs are flushed before any LEFT is fixed.
+    \item \emph{RIGHT fix at index $i$}: The search range $[i+1, rightBound]$ contains no RIGHT violations because RIGHTs are processed in LIFO order with $rightBound$ narrowing after each fix, and no LEFT violations because $rightBound$ never extends past the first LEFT in the segment.
+\end{itemize}
+\end{proof}
+
+\begin{theorem}[Correctness]
+\label{thm:correctness}
+DeltaSort produces a correctly sorted array.
+\end{theorem}
+
+\begin{proof}
+The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \cref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
+\end{proof}
+
+\subsection{Complexity Analysis}
+
+\begin{theorem}[Time Complexity]
+\label{thm:time}
+DeltaSort runs in $O(k \log k + k \log n + M)$ time, where $M$ is the total movement.
+\end{theorem}
+
+\begin{proof}
+We analyze the two phases separately.
+
+\paragraph{Phase 1.}
+Sorting the $k$ updated indices and their corresponding values costs $O(k \log k)$ time.
+Writing the sorted values back requires $O(k)$ time.
+
+\paragraph{Phase 2.}
+Each updated index is processed once. Violation checks cost $O(1)$ per index, and each repair performs a binary search over a sorted region in $O(\log n)$ time. Thus Phase~2 requires $O(k \log n)$ time. Let $M$ denote the total number of values moved during repair. The movement cost is $O(M)$.
+
+\paragraph{Total.}
+The overall complexity is $O(k \log k + k \log n + M)$.
+\end{proof}
+
+\begin{theorem}[Space Complexity]
+\label{thm:space}
+DeltaSort uses $O(k)$ auxiliary space.
+\end{theorem}
+
+\begin{proof}
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. No $O(n)$ auxiliary structures are required.
+\end{proof}
+
+\begin{remark}[Movement Efficiency]
+While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \cref{sec:experiments} demonstrate substantial speedups, validating that segmentation (\cref{lem:confinement}) effectively reduces movement in practice. We will analyze average-case movement more rigorously in future work.
+\end{remark}
+
+\cref{tab:complexity} compares algorithm complexity with the standard baseline approaches used in the experiments:
+\begin{itemize}
+  \item \textbf{NativeSort (NS)}: Re-sort the array using the natively available sort function. $O(n \log n)$ comparisons and movements.
+  \item \textbf{Binary-Insertion-Sort (BIS)}: Extract updated values, then for each: binary search for correct position, reinsert. $O(k \log n)$ comparisons, $O(kn)$ worst-case movement. Searches the full array range for each insertion.
+  \item \textbf{Extract-Sort-Merge (ESM)}: Extract updated values, sort them, merge with clean values. $O(k \log k + n)$ comparisons, $O(n)$ movement. Requires $O(n)$ auxiliary space.
+\end{itemize}
+
+\begin{table}[t]
+\centering
+\caption{Algorithm complexity comparison. *DeltaSort worst-case movement is $O(kn)$; average case is empirically much smaller.}
+\label{tab:complexity}
+\begin{tabular}{l c c c}
+\toprule
+Algorithm & Comparisons & Movement & Space \\
+\midrule
+NativeSort & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ \\
+Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ \\
+Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
+\textbf{DeltaSort} & $O(k \log n)$ & $O(kn)$* & $O(k)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Experimental Evaluation}
+\label{sec:experiments}
+%==============================================================================
+
+\subsection{Experimental Setup}
+\label{sec:setup}
+
+All experiments were conducted using a Rust implementation of DeltaSort~\cite{deltasort-repo} compiled with \texttt{rustc 1.83.0} using release mode optimizations (\texttt{-{}-release}). Benchmarks were run on an Apple M3 Pro MacBook Pro with 18GB RAM running macOS 15.1 (Sequoia). The machine was kept idle during benchmarks to minimize interference from background processes. CPU frequency scaling was disabled for consistent measurements.
+
+\paragraph{Dataset.} We use a synthetic dataset of user objects with composite keys consisting of (country, age, name) fields, sorted lexicographically. This simulates real-world sorted data with multi-field comparators. For each benchmark configuration, we:
+\begin{enumerate}
+    \item Generate a sorted base array of size $n$
+    \item Randomly select $k$ distinct indices to update
+    \item Mutate the selected elements with random values
+    \item Run the sorting algorithm and measure execution time and comparator invocations
+\end{enumerate}
+
+\paragraph{Methodology.} Each measurement consists of 100 iterations with fresh random mutations per iteration to capture variance. We report mean values with 95\% confidence intervals computed using $\bar{x} \pm 1.96 \cdot \sigma/\sqrt{n}$. Warm-up runs (5 iterations) precede each benchmark to stabilize JIT and cache behavior.
+
+\paragraph{Baselines.} DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}, which uses PDQSort~\cite{peters2021pdqsort}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM).
+
+\subsection{Correctness}
+Correctness is formally proven in \cref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values. All tests pass successfully.
+
+\subsection{Execution Time}
+
+\cref{fig:rust-execution-time} shows execution time (in microseconds) for $n = 50$K values as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+
+% Figure: All algorithms comparison (log-log scale)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=7cm,
+    xlabel={Number of updated values ($k$)},
+    ylabel={Execution time (\textmu s)},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=1, xmax=30000,
+    ymin=1, ymax=700000,
+    xtick={1, 10, 100, 1000, 10000},
+    xticklabels={1, 10, 100, 1K, 10K},
+    legend pos=north west,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=major,
+    major grid style={line width=0.3pt, draw=gray!30},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% NativeSort (horizontal-ish baseline)
+\addplot[color=gray!70, mark=square*, thick, mark size=2pt] table[col sep=comma, x=k, y=native] {../benchmarks/rust/execution-time.csv};
+
+% Binary Insertion (steep slope)
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2pt] table[col sep=comma, x=k, y=bis] {../benchmarks/rust/execution-time.csv};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt] table[col sep=comma, x=k, y=esm] {../benchmarks/rust/execution-time.csv};
+
+% DeltaSort (our algorithm - emphasized)
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {../benchmarks/rust/execution-time.csv};
+
+% Crossover point: bold marker + dashed drop line + label
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:16500, 5000) {};
+\draw[red!70!black, thick, dashed] (axis cs:16500, 5000) -- (axis cs:16500, 1);
+\node[font=\scriptsize\bfseries, text=red!70!black, anchor=north east] at (axis cs:14000, 4) {crossover at ${\sim}16.5$K (33\%)};
+
+\legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
+\end{axis}
+\end{tikzpicture}
+\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.\benchmarknote}
+\label{fig:rust-execution-time}
+\end{figure}
+
+\subsection{Comparator Invocation Count}
+
+\cref{fig:rust-comparator-count} shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (\cref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort may be even greater.
+
+% Figure: Comparator invocation count comparison
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=5.5cm,
+    xlabel={Number of updated values ($k$)},
+    ylabel={Comparator invocations},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=0.8, xmax=25000,
+    ymin=10, ymax=1000000,
+    xtick={1, 10, 100, 1000, 10000},
+    xticklabels={1, 10, 100, 1K, 10K},
+    ytick={10, 100, 1000, 10000, 100000, 1000000},
+    yticklabels={10, 100, 1K, 10K, 100K, 1M},
+    legend pos=south east,
+    legend style={font=\small},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+]
+
+% Native Sort
+\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=native] {../benchmarks/rust/comparator-count.csv};
+
+% Binary Insertion
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=bis] {../benchmarks/rust/comparator-count.csv};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=esm] {../benchmarks/rust/comparator-count.csv};
+
+% DeltaSort
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {../benchmarks/rust/comparator-count.csv};
+
+\legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
+\end{axis}
+\end{tikzpicture}
+\caption{Comparator invocation count for $n = 50$K. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, while NativeSort uses $O(n \log n)$ regardless of $k$, and ESM uses $O(k \log k + n)$. The 10--40\% higher comparison counts for DeltaSort vs BIS confirm that movement confinement (\cref{lem:confinement}) is the major factor in DeltaSort speedup.\benchmarknote}
+\label{fig:rust-comparator-count}
+\end{figure}
+
+\subsection{Crossover Threshold Analysis}
+
+A key practical question is: at what update count should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M values.
+
+\cref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ${\sim}33\%$ for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
+
+% Figure: Crossover ratio vs array size
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=500, xmax=20000000,
+    ymin=0, ymax=40,
+    ytick={0, 10, 20, 30, 40},
+    yticklabels={0, 10, 20, 30, 40},
+    xtick={1000, 10000, 100000, 1000000, 10000000},
+    xticklabels={1K, 10K, 100K, 1M, 10M},
+    legend pos=north east,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% Shaded region below the curve (DeltaSort wins)
+\addplot[name path=curve, color=blue!70!black, mark=*, thick, mark size=2.5pt, line width=1.2pt] table[col sep=comma, x index=0, y index=1] {../benchmarks/rust/crossover-threshold.csv};
+\path[name path=bottom] (axis cs:1000,0) -- (axis cs:10000000,0);
+\addplot[green!20, opacity=0.5] fill between[of=curve and bottom];
+
+% Vertical line at n=50K (the case evaluated in execution time chart)
+\draw[purple!70!black, thick, dashed] (axis cs:50000, 0) -- (axis cs:50000, 40);
+\node[circle, fill=purple!70!black, inner sep=3pt] at (axis cs:50000, 33.4) {};
+\node[font=\scriptsize\bfseries, text=purple!70!black, anchor=south west] at (axis cs:55000, 34) {$n{=}50$K (\cref{fig:rust-execution-time})};
+
+% Annotation for the region
+\node[font=\footnotesize, text=green!50!black] at (axis cs:5000, 12) {DeltaSort faster};
+
+\end{axis}
+\end{tikzpicture}
+\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms NativeSort when the updated fraction is below the curve (shaded region).\benchmarknote}
+\label{fig:rust-crossover-threshold}
+\end{figure}
+
+The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
+
+\subsection{Threats to Validity}
+
+Our evaluation has several limitations that may affect generalizability:
+
+\begin{itemize}
+    \item \textbf{Synthetic data:} We use synthetic user objects with composite keys. Real-world data may have different value distributions and comparator costs.
+    \item \textbf{Random updates:} Updates are uniformly distributed across indices. Workloads with clustered or localized updates may behave differently.
+    \item \textbf{Single platform:} Results are from Apple Silicon (M3 Pro). Performance characteristics may differ on x86-64 or other architectures due to cache hierarchy and branch prediction differences.
+    \item \textbf{Single language:} The Rust implementation benefits from zero-cost abstractions. Implementations in garbage-collected languages may show different behavior (see \cref{sec:managed}).
+\end{itemize}
+
+\subsection{Performance in Managed Execution Environments}
+\label{sec:managed}
+
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of segmented repair is reduced in this environment compared to the Rust implementation.
+
+%==============================================================================
+\section{Future Work}
+\label{sec:future}
+%==============================================================================
+
+This work opens up several directions for future investigation:
+
+\begin{itemize}
+  \item \textbf{Establish average-case movement bounds:}
+  The efficiency gains from segmentation have been demonstrated empirically, but the theoretical worst-case remains $O(kn)$. Establishing average-case bounds for data movement under typical update distributions would help explain the observed crossover behavior at large scales and clarify when segmented repair is most effective.
+
+  \item \textbf{Analyze structured workloads:}
+  The current evaluation tests randomized updates, whereas many real workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort's advantages are amplified or diminished.
+
+  \item \textbf{Study managed environments:}
+  Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
+
+  \item \textbf{Analyze block-structured storage:}
+  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
+\end{itemize}
+
+%==============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%==============================================================================
+
+This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The key insight is that pre-sorting updated values induces segmentation: updated values naturally partition into segments that can be repaired independently. DeltaSort leverages this segmentation through stack-based processing. LEFT-moving values are repaired immediately with progressively narrowed search ranges, while RIGHT-moving values are deferred and processed in reverse order to ensure stable target positions. This segmentation avoids redundant comparisons and overlapping value movement that arise from repeated binary insertion. An experimental evaluation in Rust demonstrates that DeltaSort outperforms both blind native sorting and repeated binary insertion across a wide range of array sizes and update volumes.
+
+More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which values changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight---segmentation combined with disciplined processing order---can yield substantial practical gains.
+
+%==============================================================================
+\bibliography{../refs}
+
+\end{document}

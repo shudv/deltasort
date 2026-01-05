@@ -1,6 +1,9 @@
 # Latex auxiliary files
 out/**
-main.*
-
-# Keep the primary TeX file
-!main.tex
+*.aux
+*.log
+*.bbl
+*.blg
+*.out
+*.vtc
+main.pdf

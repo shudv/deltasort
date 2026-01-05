@@ -29,7 +29,7 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "typecheck": "tsc --noEmit",
-        "size": "pnpm build && pnpm size-limit && node measure-size.ts deltasort && pnpm size:mangle",
+        "size": "pnpm build && pnpm size-limit && pnpm size:mangle",
         "size:mangle": "npx esbuild src/index.ts --bundle --minify --mangle-props='^_' --outfile=dist/mangled.js && brotli -c dist/mangled.js | wc -c",
         "benchmark": "npx tsx src/benchmark.ts",
         "benchmark:export": "npx tsx src/benchmark.ts --export",

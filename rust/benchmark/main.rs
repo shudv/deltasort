@@ -160,7 +160,7 @@ fn sample_distinct_indices(rng: &mut impl Rng, n: usize, k: usize) -> Vec<usize>
 // ALGORITHMS (non-counting versions for timing)
 // ============================================================================
 
-fn native_sort(arr: &mut Vec<User>) {
+fn native_sort(arr: &mut [User]) {
     arr.sort_by(user_comparator);
 }
 
@@ -222,7 +222,7 @@ fn deltasort_wrapper(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
 // ALGORITHMS (counting versions for comparison counts)
 // ============================================================================
 
-fn native_sort_counting(arr: &mut Vec<User>) {
+fn native_sort_counting(arr: &mut [User]) {
     arr.sort_by(counting_comparator);
 }
 
@@ -476,7 +476,7 @@ fn find_crossover(n: usize) -> usize {
             break;
         }
 
-        let mid = lo + (hi - lo + 1) / 2;
+        let mid = lo + (hi - lo).div_ceil(2);
 
         if deltasort_is_faster(&base_users, mid, n) {
             lo = mid;

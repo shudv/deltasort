@@ -610,7 +610,7 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
 
 fn print_crossover_table(results: &[CrossoverResult]) {
     println!();
-    println!("Crossover Threshold Analysis");
+    println!("Crossover Threshold");
     println!("┌────────────┬──────────────┐");
     println!("│     n      │  k_c/n (%)   │");
     println!("├────────────┼──────────────┤");

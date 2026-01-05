@@ -432,7 +432,7 @@ function printComparatorCountTable(results: BenchmarkResults): void {
 
 function printCrossoverTable(results: CrossoverResult[]): void {
     console.log();
-    console.log("Crossover Threshold Analysis");
+    console.log("Crossover Threshold");
     console.log("┌────────────┬──────────────┐");
     console.log("│     n      │  k_c/n (%)   │");
     console.log("├────────────┼──────────────┤");

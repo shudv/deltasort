@@ -177,7 +177,7 @@ function runAlgorithm<T>(
             extractSortMerge(arr, countingCmp, dirtyIndices);
             break;
         case "deltaSort":
-            deltaSort(arr, countingCmp, dirtyIndices);
+            deltaSort(arr, dirtyIndices, countingCmp);
             break;
     }
 

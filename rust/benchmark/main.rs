@@ -4,7 +4,7 @@
 //!
 //! This outputs a formatted comparison table showing speedups.
 
-use deltasort::deltasort;
+use deltasort::delta_sort_by;
 use rand::Rng;
 use std::cell::Cell;
 use std::collections::HashSet;
@@ -268,11 +268,11 @@ fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usiz
 }
 
 fn deltasort_wrapper(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    deltasort(arr.as_mut_slice(), dirty_indices, user_comparator);
+    delta_sort_by(arr.as_mut_slice(), dirty_indices, user_comparator);
 }
 
 fn deltasort_wrapper_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    deltasort(arr.as_mut_slice(), dirty_indices, counting_comparator);
+    delta_sort_by(arr.as_mut_slice(), dirty_indices, counting_comparator);
 }
 
 // ============================================================================

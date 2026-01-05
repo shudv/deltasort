@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --bin crossover --release`
 
-use deltasort::deltasort;
+use deltasort::delta_sort_by;
 use rand::Rng;
 use std::collections::HashSet;
 use std::time::Instant;
@@ -121,7 +121,7 @@ fn measure_deltasort(base_users: &[User], k: usize, n: usize) -> f64 {
         }
 
         let start = Instant::now();
-        deltasort(&mut users, &dirty_indices, user_comparator);
+        delta_sort_by(&mut users, &dirty_indices, user_comparator);
         let elapsed = start.elapsed();
 
         times.push(elapsed.as_secs_f64() * 1_000_000.0);

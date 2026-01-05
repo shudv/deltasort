@@ -11,16 +11,16 @@ const enum Violation {
 /**
  * Repairs the sorted array using the provided comparator.
  *
- * @param sortedArray The array which was previously sorted and has some updated indices
- * @param comparator The comparator function
+ * @param arr The array which was previously sorted and has some updated indices
  * @param updatedIndices Set of indices in the array which have been updated
+ * @param cmp The comparator function
  *
  * @returns The repaired array
  */
 export function deltaSort<T>(
     arr: T[],
-    cmp: (a: T, b: T) => number,
     updatedIndices: Set<number>,
+    cmp: (a: T, b: T) => number,
 ): T[] {
     if (updatedIndices.size === 0) {
         return arr;

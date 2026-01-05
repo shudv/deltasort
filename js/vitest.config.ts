@@ -27,6 +27,7 @@ export default defineConfig({
                 "**/contracts/**",
                 "**/index.{ts,tsx}",
                 "**/BenchmarkData.ts",
+                "**/benchmark.ts",
             ],
         },
 

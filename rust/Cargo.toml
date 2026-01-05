@@ -21,7 +21,3 @@ rand = "0.8"
 [[bin]]
 name = "benchmark"
 path = "benchmark/main.rs"
-
-[[bin]]
-name = "crossover"
-path = "benchmark/crossover.rs"

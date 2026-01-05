@@ -7,13 +7,23 @@ import * as path from "path";
 // BENCHMARK CONFIGURATION
 // ============================================================================
 
+/** Array size for main benchmarks */
 const N = 50_000;
+
+/** Delta counts to test */
 const DELTA_COUNTS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+
+/** Array sizes for crossover analysis */
 const CROSSOVER_SIZES = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000];
 
-// For managed environments we need higher iterations to reduce variance
-const ITERATIONS = 500;
-const CROSSOVER_ITERATIONS = 50;
+/** Number of iterations per benchmark (higher for JS due to JIT variance) */
+const ITERATIONS = 200;
+
+/** Number of iterations for crossover measurements */
+const CROSSOVER_ITERATIONS = 20;
+
+/** Z-score for 95% confidence interval */
+const Z_95 = 1.96;
 
 const shouldExport = process.argv.includes("--export");
 
@@ -105,23 +115,48 @@ function binarySearchPosition<T>(arr: T[], value: T, cmp: (a: T, b: T) => number
 }
 
 // ============================================================================
+// STATISTICS
+// ============================================================================
+
+interface Stats {
+    mean: number;
+    ci95: number;
+}
+
+function calculateStats(values: number[]): Stats {
+    const n = values.length;
+    const mean = values.reduce((sum, v) => sum + v, 0) / n;
+    const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (n - 1);
+    const stdDev = Math.sqrt(variance);
+    const stdError = stdDev / Math.sqrt(n);
+    const ci95 = Z_95 * stdError;
+    return { mean, ci95 };
+}
+
+// ============================================================================
 // BENCHMARK INFRASTRUCTURE
 // ============================================================================
 
-interface ExecutionTimeResult {
-    k: number;
-    native: number;
-    bis: number;
-    esm: number;
-    deltasort: number;
+interface BenchmarkResult {
+    timeUs: number;
+    timeCi: number;
+    comparisons: number;
+    comparisonsCi: number;
 }
 
-interface ComparatorCountResult {
+interface AlgorithmResult {
     k: number;
-    native: number;
-    bis: number;
-    esm: number;
-    deltasort: number;
+    timeUs: number;
+    timeCi: number;
+    comparisons: number;
+    comparisonsCi: number;
+}
+
+interface BenchmarkResults {
+    native: AlgorithmResult[];
+    bis: AlgorithmResult[];
+    esm: AlgorithmResult[];
+    deltaSort: AlgorithmResult[];
 }
 
 interface CrossoverResult {
@@ -138,17 +173,119 @@ function sampleDistinctIndices(n: number, k: number): number[] {
     return arr.slice(0, k);
 }
 
-function measureTime(fn: () => void): number {
-    const start = performance.now();
-    fn();
-    return (performance.now() - start) * 1000; // Convert to µs
+/**
+ * Run benchmark with separate timing and counting phases.
+ * Each iteration generates fresh random mutations for proper variance measurement.
+ * Phase 1: Measure time with base comparator (no counting overhead)
+ * Phase 2: Measure comparison counts (separate runs to get variance)
+ */
+function runBenchmark(
+    baseUsers: User[],
+    k: number,
+    sortFn: (arr: User[], cmp: (a: User, b: User) => number, dirty: Set<number>) => void,
+): BenchmarkResult {
+    const n = baseUsers.length;
+
+    // Phase 1: Timing (no counting overhead, fresh mutations each iteration)
+    const times: number[] = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+        const users = baseUsers.map((u) => ({ ...u }));
+        const indices = sampleDistinctIndices(n, k);
+        const dirtyIndices = new Set<number>();
+        for (const idx of indices) {
+            users[idx] = mutateUser(users[idx]!);
+            dirtyIndices.add(idx);
+        }
+        const start = performance.now();
+        sortFn(users, userComparator, dirtyIndices);
+        times.push((performance.now() - start) * 1000); // µs
+    }
+
+    // Phase 2: Comparison counts (fresh mutations each iteration)
+    const compCounts: number[] = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+        const users = baseUsers.map((u) => ({ ...u }));
+        const indices = sampleDistinctIndices(n, k);
+        const dirtyIndices = new Set<number>();
+        for (const idx of indices) {
+            users[idx] = mutateUser(users[idx]!);
+            dirtyIndices.add(idx);
+        }
+        const counter = { count: 0 };
+        const countingCmp = (a: User, b: User): number => {
+            counter.count++;
+            return userComparator(a, b);
+        };
+        sortFn(users, countingCmp, dirtyIndices);
+        compCounts.push(counter.count);
+    }
+
+    const timeStats = calculateStats(times);
+    const compStats = calculateStats(compCounts);
+
+    return {
+        timeUs: timeStats.mean,
+        timeCi: timeStats.ci95,
+        comparisons: compStats.mean,
+        comparisonsCi: compStats.ci95,
+    };
+}
+
+function runNativeBenchmark(baseUsers: User[], k: number): BenchmarkResult {
+    const n = baseUsers.length;
+
+    // Phase 1: Timing with fresh mutations each iteration
+    const times: number[] = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+        const users = baseUsers.map((u) => ({ ...u }));
+        const indices = sampleDistinctIndices(n, k);
+        for (const idx of indices) {
+            users[idx] = mutateUser(users[idx]!);
+        }
+        const start = performance.now();
+        users.sort(userComparator);
+        times.push((performance.now() - start) * 1000);
+    }
+
+    // Phase 2: Comparison counts with fresh mutations
+    const compCounts: number[] = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+        const users = baseUsers.map((u) => ({ ...u }));
+        const indices = sampleDistinctIndices(n, k);
+        for (const idx of indices) {
+            users[idx] = mutateUser(users[idx]!);
+        }
+        const counter = { count: 0 };
+        const countingCmp = (a: User, b: User): number => {
+            counter.count++;
+            return userComparator(a, b);
+        };
+        users.sort(countingCmp);
+        compCounts.push(counter.count);
+    }
+
+    const timeStats = calculateStats(times);
+    const compStats = calculateStats(compCounts);
+
+    return {
+        timeUs: timeStats.mean,
+        timeCi: timeStats.ci95,
+        comparisons: compStats.mean,
+        comparisonsCi: compStats.ci95,
+    };
 }
 
 // ============================================================================
 // CROSSOVER ANALYSIS
 // ============================================================================
 
-function deltasortIsFaster(baseUsers: User[], k: number, n: number): boolean {
+function measureTime(fn: () => void): number {
+    const start = performance.now();
+    fn();
+    return (performance.now() - start) * 1000;
+}
+
+function deltaSortIsFaster(baseUsers: User[], k: number, n: number): boolean {
     let nativeTime = 0;
     let dsTime = 0;
 
@@ -184,15 +321,15 @@ function findCrossover(n: number): number {
     let lo = 1;
     let hi = Math.floor((n * 2) / 5);
 
-    if (!deltasortIsFaster(baseUsers, 1, n)) {
+    if (!deltaSortIsFaster(baseUsers, 1, n)) {
         return 0;
     }
 
-    if (deltasortIsFaster(baseUsers, n, n)) {
+    if (deltaSortIsFaster(baseUsers, n, n)) {
         return n;
     }
 
-    const minRange = Math.floor(n * 0.0001);
+    const minRange = Math.floor(n * 0.001);
 
     while (lo < hi) {
         if (hi - lo < minRange) {
@@ -201,7 +338,7 @@ function findCrossover(n: number): number {
 
         const mid = lo + Math.floor((hi - lo + 1) / 2);
 
-        if (deltasortIsFaster(baseUsers, mid, n)) {
+        if (deltaSortIsFaster(baseUsers, mid, n)) {
             lo = mid;
         } else {
             hi = mid - 1;
@@ -221,32 +358,76 @@ function formatNumber(n: number): string {
     return `${n}`;
 }
 
-function printExecutionTimeTable(results: ExecutionTimeResult[]): void {
-    console.log();
-    console.log("Execution Time (µs) - n=50,000");
-    console.log("┌────────┬──────────┬──────────┬──────────┬──────────┐");
-    console.log("│   k    │  Native  │   BIS    │   ESM    │ DeltaSort│");
-    console.log("├────────┼──────────┼──────────┼──────────┼──────────┤");
-    for (const r of results) {
-        console.log(
-            `│ ${r.k.toString().padStart(6)} │ ${r.native.toFixed(1).padStart(8)} │ ${r.bis.toFixed(1).padStart(8)} │ ${r.esm.toFixed(1).padStart(8)} │ ${r.deltasort.toFixed(1).padStart(8)} │`,
-        );
-    }
-    console.log("└────────┴──────────┴──────────┴──────────┴──────────┘");
+/** Format value ± ci with consistent total width */
+function formatWithCi(value: number, ci: number, totalWidth: number): string {
+    const valStr = value.toFixed(1);
+    const ciStr = ci.toFixed(1);
+    const content = `${valStr} ± ${ciStr}`;
+    return content.padStart(totalWidth);
 }
 
-function printComparatorCountTable(results: ComparatorCountResult[]): void {
+/** Format integer value ± ci with consistent total width */
+function formatIntWithCi(value: number, ci: number, totalWidth: number): string {
+    const valStr = Math.round(value).toString();
+    const ciStr = Math.round(ci).toString();
+    const content = `${valStr} ± ${ciStr}`;
+    return content.padStart(totalWidth);
+}
+
+function printExecutionTimeTable(results: BenchmarkResults): void {
+    const COL_WIDTH = 17;
+
     console.log();
-    console.log("Comparator Invocations - n=50,000");
-    console.log("┌────────┬──────────┬──────────┬──────────┬──────────┐");
-    console.log("│   k    │  Native  │   BIS    │   ESM    │ DeltaSort│");
-    console.log("├────────┼──────────┼──────────┼──────────┼──────────┤");
-    for (const r of results) {
+    console.log(`Execution Time (µs) - n=${formatNumber(N)}`);
+    console.log(
+        "┌────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┐",
+    );
+    console.log(
+        "│   k    │      Native       │        BIS        │        ESM        │     DeltaSort     │",
+    );
+    console.log(
+        "├────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────┤",
+    );
+    for (let i = 0; i < results.native.length; i++) {
+        const n = results.native[i]!;
+        const b = results.bis[i]!;
+        const e = results.esm[i]!;
+        const d = results.deltaSort[i]!;
         console.log(
-            `│ ${r.k.toString().padStart(6)} │ ${r.native.toString().padStart(8)} │ ${r.bis.toString().padStart(8)} │ ${r.esm.toString().padStart(8)} │ ${r.deltasort.toString().padStart(8)} │`,
+            `│ ${n.k.toString().padStart(6)} │ ${formatWithCi(n.timeUs, n.timeCi, COL_WIDTH)} │ ${formatWithCi(b.timeUs, b.timeCi, COL_WIDTH)} │ ${formatWithCi(e.timeUs, e.timeCi, COL_WIDTH)} │ ${formatWithCi(d.timeUs, d.timeCi, COL_WIDTH)} │`,
         );
     }
-    console.log("└────────┴──────────┴──────────┴──────────┴──────────┘");
+    console.log(
+        "└────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┘",
+    );
+}
+
+function printComparatorCountTable(results: BenchmarkResults): void {
+    const COL_WIDTH = 17;
+
+    console.log();
+    console.log(`Comparator Invocations - n=${formatNumber(N)}`);
+    console.log(
+        "┌────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┐",
+    );
+    console.log(
+        "│   k    │      Native       │        BIS        │        ESM        │     DeltaSort     │",
+    );
+    console.log(
+        "├────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────┤",
+    );
+    for (let i = 0; i < results.native.length; i++) {
+        const n = results.native[i]!;
+        const b = results.bis[i]!;
+        const e = results.esm[i]!;
+        const d = results.deltaSort[i]!;
+        console.log(
+            `│ ${n.k.toString().padStart(6)} │ ${formatIntWithCi(n.comparisons, n.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(b.comparisons, b.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(e.comparisons, e.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(d.comparisons, d.comparisonsCi, COL_WIDTH)} │`,
+        );
+    }
+    console.log(
+        "└────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┘",
+    );
 }
 
 function printCrossoverTable(results: CrossoverResult[]): void {
@@ -264,22 +445,30 @@ function printCrossoverTable(results: CrossoverResult[]): void {
 }
 
 // ============================================================================
-// CSV EXPORT
+// CSV EXPORT (values only, no CI)
 // ============================================================================
 
-function exportExecutionTimeCsv(results: ExecutionTimeResult[], filePath: string): void {
-    let csv = "k,native,bis,esm,deltasort\n";
-    for (const r of results) {
-        csv += `${r.k},${r.native.toFixed(1)},${r.bis.toFixed(1)},${r.esm.toFixed(1)},${r.deltasort.toFixed(1)}\n`;
+function exportExecutionTimeCsv(results: BenchmarkResults, filePath: string): void {
+    let csv = "k,native,bis,esm,deltaSort\n";
+    for (let i = 0; i < results.native.length; i++) {
+        const n = results.native[i]!;
+        const b = results.bis[i]!;
+        const e = results.esm[i]!;
+        const d = results.deltaSort[i]!;
+        csv += `${n.k},${n.timeUs.toFixed(1)},${b.timeUs.toFixed(1)},${e.timeUs.toFixed(1)},${d.timeUs.toFixed(1)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
 }
 
-function exportComparatorCountCsv(results: ComparatorCountResult[], filePath: string): void {
-    let csv = "k,native,bis,esm,deltasort\n";
-    for (const r of results) {
-        csv += `${r.k},${r.native},${r.bis},${r.esm},${r.deltasort}\n`;
+function exportComparatorCountCsv(results: BenchmarkResults, filePath: string): void {
+    let csv = "k,native,bis,esm,deltaSort\n";
+    for (let i = 0; i < results.native.length; i++) {
+        const n = results.native[i]!;
+        const b = results.bis[i]!;
+        const e = results.esm[i]!;
+        const d = results.deltaSort[i]!;
+        csv += `${n.k},${Math.round(n.comparisons)},${Math.round(b.comparisons)},${Math.round(e.comparisons)},${Math.round(d.comparisons)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -311,116 +500,40 @@ async function main(): Promise<void> {
         users.sort(userComparator);
     }
 
-    // --- Execution Time ---
+    // --- Combined Execution Time & Comparator Count ---
     console.log();
-    console.log("Running execution time benchmarks...");
-    const execResults: ExecutionTimeResult[] = [];
+    console.log("Running benchmarks (time + comparisons)...");
+    const results: BenchmarkResults = {
+        native: [],
+        bis: [],
+        esm: [],
+        deltaSort: [],
+    };
 
     for (const k of DELTA_COUNTS) {
         process.stdout.write(`  k=${k.toString().padStart(5)}...`);
 
-        const indices = sampleDistinctIndices(N, k);
-        const mutatedUsers = baseUsers.map((u) => ({ ...u }));
-        const dirtyIndices = new Set<number>();
+        const native = runNativeBenchmark(baseUsers, k);
+        results.native.push({ k, ...native });
 
-        for (const idx of indices) {
-            mutatedUsers[idx] = mutateUser(mutatedUsers[idx]!);
-            dirtyIndices.add(idx);
-        }
+        const bis = runBenchmark(baseUsers, k, (arr, cmp, dirty) =>
+            binaryInsertionSort(arr, cmp, dirty),
+        );
+        results.bis.push({ k, ...bis });
 
-        let nativeTotal = 0,
-            bisTotal = 0,
-            esmTotal = 0,
-            dsTotal = 0;
+        const esm = runBenchmark(baseUsers, k, (arr, cmp, dirty) =>
+            extractSortMerge(arr, cmp, dirty),
+        );
+        results.esm.push({ k, ...esm });
 
-        for (let i = 0; i < ITERATIONS; i++) {
-            const usersNative = mutatedUsers.map((u) => ({ ...u }));
-            const usersBis = mutatedUsers.map((u) => ({ ...u }));
-            const usersEsm = mutatedUsers.map((u) => ({ ...u }));
-            const usersDs = mutatedUsers.map((u) => ({ ...u }));
-            const dirty = new Set(dirtyIndices);
+        const ds = runBenchmark(baseUsers, k, (arr, cmp, dirty) => deltaSort(arr, dirty, cmp));
+        results.deltaSort.push({ k, ...ds });
 
-            nativeTotal += measureTime(() => usersNative.sort(userComparator));
-            bisTotal += measureTime(() => binaryInsertionSort(usersBis, userComparator, dirty));
-            esmTotal += measureTime(() =>
-                extractSortMerge(usersEsm, userComparator, new Set(dirtyIndices)),
-            );
-            dsTotal += measureTime(() => deltaSort(usersDs, dirtyIndices, userComparator));
-        }
-
-        execResults.push({
-            k,
-            native: nativeTotal / ITERATIONS,
-            bis: bisTotal / ITERATIONS,
-            esm: esmTotal / ITERATIONS,
-            deltasort: dsTotal / ITERATIONS,
-        });
         console.log(" done");
     }
 
-    printExecutionTimeTable(execResults);
-
-    // --- Comparator Count ---
-    console.log();
-    console.log("Running comparator count benchmarks...");
-    const cmpResults: ComparatorCountResult[] = [];
-
-    for (const k of DELTA_COUNTS) {
-        process.stdout.write(`  k=${k.toString().padStart(5)}...`);
-
-        const indices = sampleDistinctIndices(N, k);
-        const mutatedUsers = baseUsers.map((u) => ({ ...u }));
-        const dirtyIndices = new Set<number>();
-
-        for (const idx of indices) {
-            mutatedUsers[idx] = mutateUser(mutatedUsers[idx]!);
-            dirtyIndices.add(idx);
-        }
-
-        const usersNative = mutatedUsers.map((u) => ({ ...u }));
-        const usersBis = mutatedUsers.map((u) => ({ ...u }));
-        const usersEsm = mutatedUsers.map((u) => ({ ...u }));
-        const usersDs = mutatedUsers.map((u) => ({ ...u }));
-
-        let nativeCmp = 0,
-            bisCmp = 0,
-            esmCmp = 0,
-            dsCmp = 0;
-
-        const countingCmp =
-            (counter: { count: number }) =>
-            (a: User, b: User): number => {
-                counter.count++;
-                return userComparator(a, b);
-            };
-
-        const nativeCounter = { count: 0 };
-        usersNative.sort(countingCmp(nativeCounter));
-        nativeCmp = nativeCounter.count;
-
-        const bisCounter = { count: 0 };
-        binaryInsertionSort(usersBis, countingCmp(bisCounter), new Set(dirtyIndices));
-        bisCmp = bisCounter.count;
-
-        const esmCounter = { count: 0 };
-        extractSortMerge(usersEsm, countingCmp(esmCounter), new Set(dirtyIndices));
-        esmCmp = esmCounter.count;
-
-        const dsCounter = { count: 0 };
-        deltaSort(usersDs, dirtyIndices, countingCmp(dsCounter));
-        dsCmp = dsCounter.count;
-
-        cmpResults.push({
-            k,
-            native: nativeCmp,
-            bis: bisCmp,
-            esm: esmCmp,
-            deltasort: dsCmp,
-        });
-        console.log(" done");
-    }
-
-    printComparatorCountTable(cmpResults);
+    printExecutionTimeTable(results);
+    printComparatorCountTable(results);
 
     // --- Crossover Analysis ---
     console.log();
@@ -441,10 +554,11 @@ async function main(): Promise<void> {
     if (shouldExport) {
         console.log();
         console.log("Exporting CSV files...");
-        const basePath = path.join(__dirname, "../../paper/benchmarks/js");
+        const currentDir = path.dirname(new URL(import.meta.url).pathname);
+        const basePath = path.join(currentDir, "../../paper/benchmarks/js");
         fs.mkdirSync(basePath, { recursive: true });
-        exportExecutionTimeCsv(execResults, path.join(basePath, "execution-time.csv"));
-        exportComparatorCountCsv(cmpResults, path.join(basePath, "comparator-count.csv"));
+        exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
+        exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverCsv(crossoverResults, path.join(basePath, "crossover-threshold.csv"));
     }
 

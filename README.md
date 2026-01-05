@@ -13,7 +13,7 @@ You have a sorted array. A few values get updated. How do you re-sort efficientl
 | Full re-sort  | O(n log n)               | Many values changed    |
 | **DeltaSort** | O(k log k + k log n + M) | **Few values changed** |
 
-_k = number of changed values, M = total movement (empirically mesure to be much smaller than O(n\*k)). The exact crossover threshold varies by environment — see benchmarks below._
+_k = number of changed values, M = total movement (empirically mesure to be much smaller than O(n\*k)). The exact crossover threshold varies by environment — see benchmarks from a sample run below._
 
 ## Quick Start
 
@@ -21,8 +21,8 @@ _k = number of changed values, M = total movement (empirically mesure to be much
 
 ```bash
 cd rust
-cargo run --release --bin benchmark   # Run performance benchmarks
-cargo test                            # Run correctness tests
+cargo benchmark   # Run performance benchmarks
+cargo test        # Run correctness tests
 ```
 
 ### JavaScript
@@ -49,7 +49,7 @@ _Results from Rust implementation on M3 Pro. The ~32% crossover threshold and sp
 1. **Phase 1:** Extract dirty values, sort them, write back to original indices
 2. **Phase 2:** Repair each "segment" independently using stack-based processing
 
-The key insight: pre-sorting dirty values creates _directional segments_ that can be repaired without interfering with each other. See the paper for formal proofs.
+The key insight: pre-sorting dirty values creates _segments_ that can be repaired independently. See the paper for formal proofs.
 
 ## Repository Structure
 

@@ -52,7 +52,7 @@ export function deltaSort<T>(
         const direction = i == arr.length ? Violation.LEFT : getDirection(arr, i, cmp);
 
         switch (direction) {
-            case Violation.LEFT:
+            case Violation.LEFT: {
                 // Fix all pending indices before fixing LEFT
                 let rightBound = i - 1;
                 while (stackTop > 0) {
@@ -68,6 +68,7 @@ export function deltaSort<T>(
                     leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
                 }
                 break;
+            }
             case Violation.RIGHT:
                 pendingRightViolations[stackTop++] = i;
                 break;

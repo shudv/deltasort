@@ -1,0 +1,46 @@
+% Figure: Crossover ratio vs array size
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6.5cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=500, xmax=20000000,
+    ymin=0, ymax=40,
+    ytick={0, 10, 20, 30, 40},
+    yticklabels={0, 10, 20, 30, 40},
+    xtick={1000, 10000, 100000, 1000000, 10000000},
+    xticklabels={1K, 10K, 100K, 1M, 10M},
+    legend pos=north east,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% Shaded region below the curve (DeltaSort wins)
+\addplot[name path=curve, color=blue!70!black, mark=*, thick, mark size=2.5pt, line width=1.2pt] table[col sep=comma, x index=0, y index=1] {\rootdir/figures/rust/crossover-threshold.csv};
+\path[name path=bottom] (axis cs:1000,0) -- (axis cs:10000000,0);
+\addplot[green!20, opacity=0.5] fill between[of=curve and bottom];
+
+% Vertical line at n=50K (the case evaluated in execution time chart)
+\draw[purple!70!black, thick, dashed] (axis cs:50000, 0) -- (axis cs:50000, 40);
+\node[circle, fill=purple!70!black, inner sep=3pt] at (axis cs:50000, 33.4) {};
+\node[font=\scriptsize\bfseries, text=purple!70!black, anchor=south west] at (axis cs:55000, 34) {$n{=}50$K (Fig.~\ref{fig:rust-execution-time})};
+
+% Annotation for the region
+\node[font=\footnotesize, text=green!50!black] at (axis cs:5000, 12) {DeltaSort faster};
+
+\end{axis}
+
+% Benchmark metadata (right margin, rotated)
+\end{tikzpicture}
+\caption{Crossover ratio $k_c / n$ as a function of array size. DeltaSort outperforms NativeSort when the updated fraction is below the curve (shaded region).\rustbenchmarknote}
+\label{fig:rust-crossover-threshold}
+\end{figure}

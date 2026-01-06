@@ -569,18 +569,18 @@ async function main(): Promise<void> {
     if (shouldExport) {
         console.log();
         console.log("Exporting CSV files...");
-        const basePath = path.join(process.cwd(), "../paper/benchmarks/js");
+        const basePath = path.join(process.cwd(), "../paper/figures/js");
         fs.mkdirSync(basePath, { recursive: true });
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
         exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverCsv(crossoverResults, path.join(basePath, "crossover-threshold.csv"));
-        exportMetadataCsv(path.join(basePath, "metadata.csv"));
+        exportMetadataCsv(path.join(basePath, "benchmark_metadata.csv"));
     }
 
     console.log();
     console.log("Done!");
     if (!shouldExport) {
-        console.log("Run with --export to write CSV files to paper/benchmarks/js/");
+        console.log("Run with --export to write CSV files to paper/figures/js/");
     }
 }
 

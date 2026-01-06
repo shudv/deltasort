@@ -1,6 +1,12 @@
 # Latex auxiliary files
 out/**
-main.*
-
-# Keep the primary TeX file
-!main.tex
+*.aux
+*.log
+*.bbl
+*.blg
+*.out
+*.vtc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+main.pdf

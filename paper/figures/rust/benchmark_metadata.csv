@@ -2,4 +2,4 @@ key,value
 date,January 2026
 machine,Apple M3 Pro
 n,50000
-iterations,100
+iterations,20-1000 (scaled by k)

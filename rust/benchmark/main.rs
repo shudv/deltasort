@@ -804,10 +804,8 @@ struct SegmentationResult {
     k_percent: f64,
     k: usize,
     segment_count_mean: f64,
-    segment_count_sd: f64,
     segment_count_ci: f64,
     segments_per_k_mean: f64, // segment_count / k
-    segments_per_k_sd: f64,
     segments_per_k_ci: f64,
 }
 
@@ -971,10 +969,8 @@ fn run_segmentation_analysis() -> Vec<SegmentationResult> {
                 k_percent,
                 k,
                 segment_count_mean: count_stats.mean,
-                segment_count_sd: count_stats.sd,
                 segment_count_ci: count_stats.ci_95,
                 segments_per_k_mean: spk_stats.mean,
-                segments_per_k_sd: spk_stats.sd,
                 segments_per_k_ci: spk_stats.ci_95,
             });
         }

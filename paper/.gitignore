@@ -6,4 +6,7 @@ out/**
 *.blg
 *.out
 *.vtc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
 main.pdf

@@ -290,16 +290,6 @@ Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_
 
 The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 
-\subsection{Segmentation Analysis}
-
-To empirically validate the segmentation structure underlying DeltaSort, we measure how updated values partition into segments across different array sizes and update ratios. Figure~\ref{fig:segments-per-k} plots the ratio of segment count to update count ($s/k$) as a function of the update ratio $k/n$.
-
-\input{figures/segments-per-k}
-
-The results reveal several key insights. At very small update ratios ($k/n < 1\%$), each updated value tends to form its own segment, yielding $s/k \approx 1$. As more values are updated, segments begin to merge: violations that land in overlapping regions coalesce into shared segments. This merging effect is most pronounced around $k/n \approx 2$--$5\%$, where the ratio reaches its minimum. At higher update ratios ($k/n > 20\%$), the ratio stabilizes near $0.12$--$0.13$ regardless of array size, indicating that approximately 8 violations share each segment on average.
-
-Notably, the curves for different array sizes ($n = 1$K, $10$K, $100$K) exhibit similar shapes, confirming that the segmentation behavior is scale-independent. This supports the theoretical expectation that segment structure depends primarily on the \emph{ratio} $k/n$ rather than absolute values.
-
 \subsection{Performance in managed execution environments}
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of segmented repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.

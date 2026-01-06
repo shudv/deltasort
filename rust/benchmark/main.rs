@@ -30,13 +30,13 @@ const CROSSOVER_SIZES: &[usize] = &[
 ];
 
 /// Array sizes for segmentation analysis
-const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
+const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000];
 
 /// Delta percentages for segmentation analysis (as fractions of n)
 const SEGMENTATION_K_PERCENTS: &[f64] = &[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0];
 
 /// Iterations for segmentation analysis
-const SEGMENTATION_ITERATIONS: usize = 200;
+const SEGMENTATION_ITERATIONS: usize = 10;
 
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;

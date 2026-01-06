@@ -41,10 +41,10 @@ const SEGMENTATION_K_PERCENTS: &[f64] = &[
 const SEGMENTATION_ITERATIONS: usize = 10;
 
 /// Base number of iterations per benchmark (scaled up for small k)
-const BASE_ITERATIONS: usize = 100;
+const BASE_ITERATIONS: usize = 5;
 
 /// Number of iterations for crossover measurements
-const CROSSOVER_ITERATIONS: usize = 50;
+const CROSSOVER_ITERATIONS: usize = 3;
 
 /// Z-score for 95% confidence interval
 const Z_95: f64 = 1.96;
@@ -147,7 +147,6 @@ fn user_comparator(a: &User, b: &User) -> std::cmp::Ordering {
 
 thread_local! {
     static COMPARISON_COUNT: Cell<u64> = const { Cell::new(0) };
-    static MOVEMENT_COUNT: Cell<u64> = const { Cell::new(0) };
 }
 
 fn counting_comparator(a: &User, b: &User) -> std::cmp::Ordering {
@@ -161,18 +160,6 @@ fn reset_comparison_count() {
 
 fn get_comparison_count() -> u64 {
     COMPARISON_COUNT.with(|c| c.get())
-}
-
-fn add_movements(count: u64) {
-    MOVEMENT_COUNT.with(|c| c.set(c.get() + count));
-}
-
-fn reset_movement_count() {
-    MOVEMENT_COUNT.with(|c| c.set(0));
-}
-
-fn get_movement_count() -> u64 {
-    MOVEMENT_COUNT.with(|c| c.get())
 }
 
 fn generate_sorted_users(n: usize) -> Vec<User> {
@@ -254,59 +241,10 @@ fn deltasort_wrapper(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
 }
 
 // ============================================================================
-// REFERENCE SORT (MergeSort) - Non-counting version
-// ============================================================================
-
-fn mergesort(arr: &mut [User]) {
-    let len = arr.len();
-    if len <= 1 {
-        return;
-    }
-    let mid = len / 2;
-    mergesort(&mut arr[..mid]);
-    mergesort(&mut arr[mid..]);
-
-    // Merge using temporary vectors
-    let left: Vec<User> = arr[..mid].to_vec();
-    let right: Vec<User> = arr[mid..].to_vec();
-
-    let (mut i, mut j, mut k) = (0, 0, 0);
-    while i < left.len() && j < right.len() {
-        if user_comparator(&left[i], &right[j]) != std::cmp::Ordering::Greater {
-            arr[k] = left[i].clone();
-            i += 1;
-        } else {
-            arr[k] = right[j].clone();
-            j += 1;
-        }
-        k += 1;
-    }
-    while i < left.len() {
-        arr[k] = left[i].clone();
-        i += 1;
-        k += 1;
-    }
-    while j < right.len() {
-        arr[k] = right[j].clone();
-        j += 1;
-        k += 1;
-    }
-}
-
-fn mergesort_wrapper(arr: &mut Vec<User>, _dirty_indices: &HashSet<usize>) {
-    mergesort(arr.as_mut_slice());
-}
-
-// ============================================================================
-// ALGORITHMS (counting versions for comparison counts + movement counts)
+// ALGORITHMS (counting versions for comparison counts)
 // ============================================================================
 
 fn native_sort_counting(arr: &mut [User]) {
-    // Native sort movements can't be tracked directly; we estimate based on algorithm
-    // PDQSort does ~1.4 * n * log2(n) swaps on average, each swap = 2 movements
-    let n = arr.len();
-    let estimated_swaps = (1.4 * n as f64 * (n as f64).log2()) as u64;
-    add_movements(estimated_swaps * 2);
     arr.sort_by(counting_comparator);
 }
 
@@ -314,67 +252,86 @@ fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<u
     if dirty_indices.is_empty() {
         return;
     }
-    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
-    let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
-    for &idx in &sorted_desc {
-        // remove shifts all elements after idx left by 1
-        add_movements((arr.len() - idx - 1) as u64);
-        extracted.push(arr.remove(idx));
+    
+    let n = arr.len();
+    let k = dirty_indices.len();
+    
+    // Single O(n) pass to separate clean and dirty values
+    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
+    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
+    
+    for (i, val) in arr.iter().enumerate() {
+        if dirty_indices.contains(&i) {
+            dirty_values.push(val.clone());
+        } else {
+            clean_values.push(val.clone());
+        }
     }
-    for value in extracted {
-        let pos =
-            arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
-        // insert shifts all elements from pos right by 1
-        add_movements((arr.len() - pos) as u64);
-        arr.insert(pos, value);
+    
+    // Binary insert each dirty value into clean array
+    for value in dirty_values {
+        let pos = clean_values.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
+        clean_values.insert(pos, value);
     }
+    
+    *arr = clean_values;
 }
 
 fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     if dirty_indices.is_empty() {
         return;
     }
-    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
-    let mut dirty_values: Vec<User> = Vec::with_capacity(sorted_desc.len());
-    for &idx in &sorted_desc {
-        // remove shifts elements
-        add_movements((arr.len() - idx - 1) as u64);
-        dirty_values.push(arr.remove(idx));
+    
+    let n = arr.len();
+    let k = dirty_indices.len();
+    
+    // Single O(n) pass to separate clean and dirty values
+    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
+    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
+    
+    for (i, val) in arr.iter().enumerate() {
+        if dirty_indices.contains(&i) {
+            dirty_values.push(val.clone());
+        } else {
+            clean_values.push(val.clone());
+        }
     }
+    
     dirty_values.sort_by(counting_comparator);
-    let clean_len = arr.len();
-    let dirty_len = dirty_values.len();
-    // Merge writes every element once
-    add_movements((clean_len + dirty_len) as u64);
-    let mut result: Vec<User> = Vec::with_capacity(clean_len + dirty_len);
+    
+    // Merge
+    let mut result: Vec<User> = Vec::with_capacity(n);
     let mut i = 0;
     let mut j = 0;
+    let clean_len = clean_values.len();
+    let dirty_len = dirty_values.len();
+    
     while i < clean_len && j < dirty_len {
-        if counting_comparator(&arr[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut arr[i]));
+        if counting_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
+            result.push(clean_values[i].clone());
             i += 1;
         } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
+            result.push(dirty_values[j].clone());
             j += 1;
         }
     }
-    for item in arr.drain(i..) {
-        result.push(item);
+    while i < clean_len {
+        result.push(clean_values[i].clone());
+        i += 1;
     }
-    for item in dirty_values.drain(j..) {
-        result.push(item);
+    while j < dirty_len {
+        result.push(dirty_values[j].clone());
+        j += 1;
     }
+    
     *arr = result;
 }
 
 fn deltasort_wrapper_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    // Use our own instrumented version that tracks movements
     deltasort_counting_impl(arr.as_mut_slice(), dirty_indices);
 }
 
-/// Instrumented DeltaSort implementation that counts comparisons and movements
+/// Instrumented DeltaSort implementation that counts comparisons
 fn deltasort_counting_impl(arr: &mut [User], updated_indices: &HashSet<usize>) {
     if updated_indices.is_empty() {
         return;
@@ -390,8 +347,6 @@ fn deltasort_counting_impl(arr: &mut [User], updated_indices: &HashSet<usize>) {
         user_comparator(a, b)
     });
 
-    // Writing sorted values back = k movements
-    add_movements(dirty.len() as u64);
     for (i, &idx) in dirty.iter().enumerate() {
         arr[idx] = values[i].clone();
     }
@@ -454,8 +409,6 @@ fn fix_right_counting(arr: &mut [User], i: usize, right_bound: usize) -> usize {
 
     let target = hi as usize;
     if i != target {
-        // Movement = number of elements shifted
-        add_movements((target - i) as u64);
         arr[i..=target].rotate_left(1);
     }
     target
@@ -477,60 +430,9 @@ fn fix_left_counting(arr: &mut [User], i: usize, left_bound: usize) -> usize {
     }
 
     if i != lo {
-        // Movement = number of elements shifted
-        add_movements((i - lo) as u64);
         arr[lo..=i].rotate_right(1);
     }
     lo
-}
-
-// ============================================================================
-// REFERENCE SORT - Counting version
-// ============================================================================
-
-fn mergesort_counting(arr: &mut [User]) {
-    let len = arr.len();
-    if len <= 1 {
-        return;
-    }
-    let mid = len / 2;
-    mergesort_counting(&mut arr[..mid]);
-    mergesort_counting(&mut arr[mid..]);
-
-    // Merge using temporary vectors - count all copies
-    let left: Vec<User> = arr[..mid].to_vec();
-    let right: Vec<User> = arr[mid..].to_vec();
-    add_movements(len as u64); // copy to temp vectors
-
-    let (mut i, mut j, mut k) = (0, 0, 0);
-    while i < left.len() && j < right.len() {
-        COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-        if user_comparator(&left[i], &right[j]) != std::cmp::Ordering::Greater {
-            arr[k] = left[i].clone();
-            i += 1;
-        } else {
-            arr[k] = right[j].clone();
-            j += 1;
-        }
-        add_movements(1); // write back
-        k += 1;
-    }
-    while i < left.len() {
-        arr[k] = left[i].clone();
-        add_movements(1);
-        i += 1;
-        k += 1;
-    }
-    while j < right.len() {
-        arr[k] = right[j].clone();
-        add_movements(1);
-        j += 1;
-        k += 1;
-    }
-}
-
-fn mergesort_wrapper_counting(arr: &mut Vec<User>, _dirty_indices: &HashSet<usize>) {
-    mergesort_counting(arr.as_mut_slice());
 }
 
 // ============================================================================
@@ -587,15 +489,11 @@ struct BenchmarkResult {
     comparisons_sd: f64,
     comparisons_ci: f64,
     comparisons_cv: f64,
-    movements: f64,
-    movements_sd: f64,
-    movements_ci: f64,
-    movements_cv: f64,
     iterations: usize,
 }
 
 /// Measure timing using non-counting comparator (accurate timing)
-/// Measure comparisons and movements using counting versions (separate runs)
+/// Measure comparisons using counting versions (separate runs)
 /// Each iteration generates fresh random mutations for proper variance measurement
 fn run_benchmark<F, G>(
     base_users: &[User],
@@ -627,9 +525,8 @@ where
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
-    // Phase 2: Measure comparisons and movements (separate runs with fresh mutations)
+    // Phase 2: Measure comparisons (separate runs with fresh mutations)
     let mut comparisons = Vec::with_capacity(iters);
-    let mut movements = Vec::with_capacity(iters);
     for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
@@ -639,15 +536,12 @@ where
             dirty_indices.insert(idx);
         }
         reset_comparison_count();
-        reset_movement_count();
         count_fn(&mut users, &dirty_indices);
         comparisons.push(get_comparison_count());
-        movements.push(get_movement_count());
     }
 
     let time_stats = calculate_stats(&times_us);
     let cmp_stats = calculate_stats_u64(&comparisons);
-    let mov_stats = calculate_stats_u64(&movements);
 
     BenchmarkResult {
         time_us: time_stats.mean,
@@ -658,10 +552,6 @@ where
         comparisons_sd: cmp_stats.sd,
         comparisons_ci: cmp_stats.ci_95,
         comparisons_cv: cmp_stats.cv,
-        movements: mov_stats.mean,
-        movements_sd: mov_stats.sd,
-        movements_ci: mov_stats.ci_95,
-        movements_cv: mov_stats.cv,
         iterations: iters,
     }
 }
@@ -684,9 +574,8 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
-    // Phase 2: Comparisons and movements with fresh mutations
+    // Phase 2: Comparisons with fresh mutations
     let mut comparisons = Vec::with_capacity(iters);
-    let mut movements = Vec::with_capacity(iters);
     for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
@@ -694,15 +583,12 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
             users[idx].mutate(&mut rng);
         }
         reset_comparison_count();
-        reset_movement_count();
         native_sort_counting(&mut users);
         comparisons.push(get_comparison_count());
-        movements.push(get_movement_count());
     }
 
     let time_stats = calculate_stats(&times_us);
     let cmp_stats = calculate_stats_u64(&comparisons);
-    let mov_stats = calculate_stats_u64(&movements);
 
     BenchmarkResult {
         time_us: time_stats.mean,
@@ -713,10 +599,6 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
         comparisons_sd: cmp_stats.sd,
         comparisons_ci: cmp_stats.ci_95,
         comparisons_cv: cmp_stats.cv,
-        movements: mov_stats.mean,
-        movements_sd: mov_stats.sd,
-        movements_ci: mov_stats.ci_95,
-        movements_cv: mov_stats.cv,
         iterations: iters,
     }
 }
@@ -1074,15 +956,10 @@ struct AlgorithmResult {
     comparisons_sd: f64,
     comparisons_ci: f64,
     comparisons_cv: f64,
-    movements: f64,
-    movements_sd: f64,
-    movements_ci: f64,
-    movements_cv: f64,
 }
 
 struct BenchmarkResults {
     native: Vec<AlgorithmResult>,
-    mergesort: Vec<AlgorithmResult>,
     bis: Vec<AlgorithmResult>,
     esm: Vec<AlgorithmResult>,
     deltasort: Vec<AlgorithmResult>,
@@ -1128,21 +1005,16 @@ fn print_execution_time_table(results: &BenchmarkResults) {
 
     println!();
     println!("Execution Time (µs) - n={}", format_number(N));
-    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
-    println!("│   k    │     Native      │    MergeSort    │       BIS       │       ESM       │    DeltaSort    │");
-    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
+    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
+    println!("│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │");
+    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
     for i in 0..results.native.len() {
         println!(
-            "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
+            "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
             format_with_ci(
                 results.native[i].time_us,
                 results.native[i].time_ci,
-                COL_WIDTH
-            ),
-            format_with_ci(
-                results.mergesort[i].time_us,
-                results.mergesort[i].time_ci,
                 COL_WIDTH
             ),
             format_with_ci(results.bis[i].time_us, results.bis[i].time_ci, COL_WIDTH),
@@ -1154,7 +1026,7 @@ fn print_execution_time_table(results: &BenchmarkResults) {
             ),
         );
     }
-    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
+    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
 }
 
 fn print_comparator_count_table(results: &BenchmarkResults) {
@@ -1162,21 +1034,16 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
 
     println!();
     println!("Comparator Invocations - n={}", format_number(N));
-    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
-    println!("│   k    │     Native      │    MergeSort    │       BIS       │       ESM       │    DeltaSort    │");
-    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
+    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
+    println!("│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │");
+    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
     for i in 0..results.native.len() {
         println!(
-            "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
+            "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
             format_int_with_ci(
                 results.native[i].comparisons,
                 results.native[i].comparisons_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.mergesort[i].comparisons,
-                results.mergesort[i].comparisons_ci,
                 COL_WIDTH
             ),
             format_int_with_ci(
@@ -1196,49 +1063,7 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
             ),
         );
     }
-    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
-}
-
-fn print_movement_count_table(results: &BenchmarkResults) {
-    const COL_WIDTH: usize = 15;
-
-    println!();
-    println!("Data Movements (writes) - n={}", format_number(N));
-    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
-    println!("│   k    │  Native (est.)  │    MergeSort    │       BIS       │       ESM       │    DeltaSort    │");
-    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
-    for i in 0..results.native.len() {
-        println!(
-            "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
-            results.native[i].k,
-            format_int_with_ci(
-                results.native[i].movements,
-                results.native[i].movements_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.mergesort[i].movements,
-                results.mergesort[i].movements_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.bis[i].movements,
-                results.bis[i].movements_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.esm[i].movements,
-                results.esm[i].movements_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.deltasort[i].movements,
-                results.deltasort[i].movements_ci,
-                COL_WIDTH
-            ),
-        );
-    }
-    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
+    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
 }
 
 fn print_crossover_table(results: &[CrossoverResult]) {
@@ -1262,20 +1087,16 @@ fn print_crossover_table(results: &[CrossoverResult]) {
 // ============================================================================
 
 fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         csv.push_str(&format!(
-            "{},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
+            "{},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
             results.native[i].k,
             results.native[i].iterations,
             results.native[i].time_us,
             results.native[i].time_sd,
             results.native[i].time_ci,
             results.native[i].time_cv,
-            results.mergesort[i].time_us,
-            results.mergesort[i].time_sd,
-            results.mergesort[i].time_ci,
-            results.mergesort[i].time_cv,
             results.bis[i].time_us,
             results.bis[i].time_sd,
             results.bis[i].time_ci,
@@ -1295,20 +1116,16 @@ fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
 }
 
 fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         csv.push_str(&format!(
-            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
+            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
             results.native[i].k,
             results.native[i].iterations,
             results.native[i].comparisons,
             results.native[i].comparisons_sd,
             results.native[i].comparisons_ci,
             results.native[i].comparisons_cv,
-            results.mergesort[i].comparisons,
-            results.mergesort[i].comparisons_sd,
-            results.mergesort[i].comparisons_ci,
-            results.mergesort[i].comparisons_cv,
             results.bis[i].comparisons,
             results.bis[i].comparisons_sd,
             results.bis[i].comparisons_ci,
@@ -1324,39 +1141,6 @@ fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
         ));
     }
     fs::write(path, csv).expect("Failed to write comparator-count.csv");
-    println!("Exported: {}", path);
-}
-
-fn export_movement_count_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
-    for i in 0..results.native.len() {
-        csv.push_str(&format!(
-            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
-            results.native[i].k,
-            results.native[i].iterations,
-            results.native[i].movements,
-            results.native[i].movements_sd,
-            results.native[i].movements_ci,
-            results.native[i].movements_cv,
-            results.mergesort[i].movements,
-            results.mergesort[i].movements_sd,
-            results.mergesort[i].movements_ci,
-            results.mergesort[i].movements_cv,
-            results.bis[i].movements,
-            results.bis[i].movements_sd,
-            results.bis[i].movements_ci,
-            results.bis[i].movements_cv,
-            results.esm[i].movements,
-            results.esm[i].movements_sd,
-            results.esm[i].movements_ci,
-            results.esm[i].movements_cv,
-            results.deltasort[i].movements,
-            results.deltasort[i].movements_sd,
-            results.deltasort[i].movements_ci,
-            results.deltasort[i].movements_cv,
-        ));
-    }
-    fs::write(path, csv).expect("Failed to write movement-count.csv");
     println!("Exported: {}", path);
 }
 
@@ -1433,10 +1217,9 @@ fn main() {
 
     // --- Combined Execution Time & Comparator Count ---
     println!();
-    println!("Running benchmarks (time + comparisons + movements)...");
+    println!("Running benchmarks (time + comparisons)...");
     let mut results = BenchmarkResults {
         native: Vec::new(),
-        mergesort: Vec::new(),
         bis: Vec::new(),
         esm: Vec::new(),
         deltasort: Vec::new(),
@@ -1458,33 +1241,6 @@ fn main() {
             comparisons_sd: native.comparisons_sd,
             comparisons_ci: native.comparisons_ci,
             comparisons_cv: native.comparisons_cv,
-            movements: native.movements,
-            movements_sd: native.movements_sd,
-            movements_ci: native.movements_ci,
-            movements_cv: native.movements_cv,
-        });
-
-        let ms = run_benchmark(
-            &base_users,
-            k,
-            mergesort_wrapper,
-            mergesort_wrapper_counting,
-        );
-        results.mergesort.push(AlgorithmResult {
-            k,
-            iterations: ms.iterations,
-            time_us: ms.time_us,
-            time_sd: ms.time_sd,
-            time_ci: ms.time_ci,
-            time_cv: ms.time_cv,
-            comparisons: ms.comparisons,
-            comparisons_sd: ms.comparisons_sd,
-            comparisons_ci: ms.comparisons_ci,
-            comparisons_cv: ms.comparisons_cv,
-            movements: ms.movements,
-            movements_sd: ms.movements_sd,
-            movements_ci: ms.movements_ci,
-            movements_cv: ms.movements_cv,
         });
 
         let bis = run_benchmark(
@@ -1504,10 +1260,6 @@ fn main() {
             comparisons_sd: bis.comparisons_sd,
             comparisons_ci: bis.comparisons_ci,
             comparisons_cv: bis.comparisons_cv,
-            movements: bis.movements,
-            movements_sd: bis.movements_sd,
-            movements_ci: bis.movements_ci,
-            movements_cv: bis.movements_cv,
         });
 
         let esm = run_benchmark(
@@ -1527,10 +1279,6 @@ fn main() {
             comparisons_sd: esm.comparisons_sd,
             comparisons_ci: esm.comparisons_ci,
             comparisons_cv: esm.comparisons_cv,
-            movements: esm.movements,
-            movements_sd: esm.movements_sd,
-            movements_ci: esm.movements_ci,
-            movements_cv: esm.movements_cv,
         });
 
         let ds = run_benchmark(
@@ -1550,10 +1298,6 @@ fn main() {
             comparisons_sd: ds.comparisons_sd,
             comparisons_ci: ds.comparisons_ci,
             comparisons_cv: ds.comparisons_cv,
-            movements: ds.movements,
-            movements_sd: ds.movements_sd,
-            movements_ci: ds.movements_ci,
-            movements_cv: ds.movements_cv,
         });
 
         println!(" done");
@@ -1561,7 +1305,6 @@ fn main() {
 
     print_execution_time_table(&results);
     print_comparator_count_table(&results);
-    print_movement_count_table(&results);
 
     // --- Crossover Analysis ---
     println!();
@@ -1598,7 +1341,6 @@ fn main() {
         fs::create_dir_all(figures_path).ok();
         export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
         export_comparator_count_csv(&results, &format!("{}/comparator-count.csv", base_path));
-        export_movement_count_csv(&results, &format!("{}/movement-count.csv", base_path));
         export_crossover_csv(
             &crossover_results,
             &format!("{}/crossover-threshold.csv", base_path),

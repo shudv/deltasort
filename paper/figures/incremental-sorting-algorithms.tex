@@ -1,0 +1,17 @@
+\begin{table}[h]
+\centering
+\caption{Algorithms for the update-aware sorting model}
+\label{tab:incremental-sorting-algorithms}
+\begin{tabular}{l c c}
+\toprule
+Algorithm & Time & Space \\
+\midrule
+Binary-Insertion-Sort & $O(kn)$ & $O(1)$ \\
+Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ \\
+\textbf{DeltaSort} & \textbf{$O(k \log n + n)$} & \textbf{$O(k)$} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{$n$ = array size, $k$ = number of updates}
+\end{table}

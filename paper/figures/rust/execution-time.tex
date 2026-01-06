@@ -23,17 +23,21 @@
     label style={font=\small},
 ]
 
-% NativeSort (horizontal-ish baseline)
-\addplot[color=gray!70, mark=square*, thick, mark size=2pt] table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/execution-time.csv};
+% NativeSort
+\addplot[color=gray!70, mark=square*, thick, mark size=2pt] 
+    table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/execution-time.csv};
 
-% Binary Insertion (steep slope)
-\addplot[color=orange!80, mark=triangle*, thick, mark size=2pt] table[col sep=comma, x=k, y=bis] {\rootdir/figures/rust/execution-time.csv};
+% Binary Insertion
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2pt] 
+    table[col sep=comma, x=k, y=bis] {\rootdir/figures/rust/execution-time.csv};
 
 % Extract-Sort-Merge
-\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt] table[col sep=comma, x=k, y=esm] {\rootdir/figures/rust/execution-time.csv};
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt] 
+    table[col sep=comma, x=k, y=esm] {\rootdir/figures/rust/execution-time.csv};
 
-% DeltaSort (our algorithm - emphasized)
-\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/execution-time.csv};
+% DeltaSort (emphasized)
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] 
+    table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/execution-time.csv};
 
 % Crossover point: bold marker + dashed drop line + label
 \node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:16500, 5000) {};

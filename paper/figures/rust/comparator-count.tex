@@ -25,16 +25,20 @@
 ]
 
 % Native Sort
-\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/comparator-count.csv};
+\addplot[color=gray!70, mark=square*, thick, mark size=2.5pt] 
+    table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/comparator-count.csv};
 
 % Binary Insertion
-\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=bis] {\rootdir/figures/rust/comparator-count.csv};
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt] 
+    table[col sep=comma, x=k, y=bis] {\rootdir/figures/rust/comparator-count.csv};
 
 % Extract-Sort-Merge
-\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] table[col sep=comma, x=k, y=esm] {\rootdir/figures/rust/comparator-count.csv};
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt] 
+    table[col sep=comma, x=k, y=esm] {\rootdir/figures/rust/comparator-count.csv};
 
-% DeltaSort
-\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/comparator-count.csv};
+% DeltaSort (emphasized)
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] 
+    table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/comparator-count.csv};
 
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}

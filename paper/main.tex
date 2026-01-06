@@ -67,7 +67,6 @@ Sorting is among the most optimized primitives in modern systems, backed by deca
 
 In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of values and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or standard repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge. As an example, consider a web application that shows a real-time game leaderboard. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches fall short---full re-sort can block the main UI thread for long durations, while Binary-Insertion-Sort can be slow for a large number of updates. To address these limitations, this paper makes the following contributions:
 
-\clearpage
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
   We formulate an incremental sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as natural baseline algorithms for maintaining sorted order through incremental updates.
@@ -80,6 +79,8 @@ In many practical systems, this assumption is unnecessarily pessimistic. Sorted 
 \section{Related Work}
 \label{sec:related}
 %==============================================================================
+
+%TODO: Talk about parallelizable sorting algorithms
 
 Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, operate under a blind model: partial order must be rediscovered through full-array scans, and no external information about which values have changed is assumed.
 
@@ -131,6 +132,10 @@ DeltaSort operates in two phases:
   \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring RIGHT indices to a stack until the first LEFT index is encountered. When a LEFT is encountered, first flush and repair all pending RIGHTs in LIFO order, then repair the LEFT. Continue left-to-right.
 \end{enumerate}
 
+Figure~\ref{fig:delta-sort-example} illustrates the full DeltaSort process on a small example.
+
+\input{figures/delta-sort-example}
+
 \subsection{Key Insight: \emph{Segmentation enables localized repair}}
 \label{sec:insight}
 
@@ -150,7 +155,18 @@ Let $S$ be a segment with RIGHT indices $R_1, \ldots, R_m$ followed by LEFT indi
   \item LEFT values move leftward but cannot pass the last RIGHT index $R_m$ (if it exists) or the segment boundary, since $A[R_m] < A[L_j]$ for all $j$.
 \end{enumerate}
 
-Since no value exits its segment, segments can be repaired independently.
+Since no value exits its segment, segments can be repaired independently. Next, we stablish an asymptotic bound on number of movements during repair.
+\end{proof}
+
+
+
+\begin{theorem}[Asymptotic Movement Bound]
+\label{thm:movement-bound}
+The total number of movements for repairing $k$ udpdated indices in an array of size $n$ using DeltaSort is $\theta(n)$.
+\end{theorem}
+
+\begin{proof}
+  WIP
 \end{proof}
 
 \subsection{Pseudocode}
@@ -184,6 +200,7 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 \end{proof}
 
 \subsection{Complexity Analysis}
+% TODO: Establish 2 class of algorithms: blind vs update-aware and clearly call out with algorithms belong where
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}
@@ -224,31 +241,15 @@ Table~\ref{tab:complexity} compares algorithm complexity with the standard basel
   \item \textbf{Extract-Sort-Merge (ESM)}: Extract updated values, sort them, merge with clean values. $O(k \log k + n)$ comparisons, $O(n)$ movement. Requires $O(n)$ auxiliary space.
 \end{itemize}
 
-\begin{table}[h]
-\centering
-\caption{Algorithm complexity comparison}
-\label{tab:complexity}
-\begin{tabular}{l c c c}
-\toprule
-Algorithm & Comparisons & Movement & Space \\
-\midrule
-NativeSort & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ \\
-Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ \\
-Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
-\textbf{DeltaSort} & $O(k \log n)$ & $O(kn)$* & $O(k)$ \\
-\bottomrule
-\end{tabular}
-
-\vspace{0.3em}
-{\small *Worst case; average case is empirically much smaller.}
-\end{table}
+\input{figures/sorting-algorithms}
 
 %==============================================================================
 \section{Experimental Evaluation}
 \label{sec:experiments}
 %==============================================================================
 
-All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM).
+
+All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM). Each data point is the mean of 20--1000 iterations (more iterations for small $k$ to account for timer resolution). Coefficient of variation was below 15\% for all measurements; raw data with confidence intervals is available in the repository.
 
 \subsection{Correctness}
 Correctness is formally proven in Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values. All tests pass successfully.
@@ -279,7 +280,6 @@ The key takeaway is that DeltaSort offers the best incremental sort performance 
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of segmented repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
 
-\clearpage
 %==============================================================================
 \section{Future Work}
 \label{sec:future}
@@ -310,7 +310,6 @@ This paper introduced \emph{DeltaSort}, an incremental repair algorithm for main
 
 More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which values changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight---segmentation combined with disciplined processing order---can yield substantial practical gains.
 
-\clearpage
 %==============================================================================
 \bibliographystyle{plain}
 \bibliography{refs}

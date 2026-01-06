@@ -26,17 +26,28 @@ const DELTA_COUNTS: &[usize] = &[
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
     1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000,
-    //5_000_000, 10_000_000,
+    5_000_000, 10_000_000,
 ];
 
-/// Number of iterations per benchmark
-const ITERATIONS: usize = 20;
+/// Base number of iterations per benchmark (scaled up for small k)
+const BASE_ITERATIONS: usize = 100;
 
 /// Number of iterations for crossover measurements
-const CROSSOVER_ITERATIONS: usize = 3;
+const CROSSOVER_ITERATIONS: usize = 20;
 
 /// Z-score for 95% confidence interval
 const Z_95: f64 = 1.96;
+
+/// Get number of iterations for a given k value
+/// Small k values need more iterations due to timer resolution
+fn iterations_for_k(k: usize) -> usize {
+    match k {
+        0..=10 => BASE_ITERATIONS * 10,   // 1000 iterations for k <= 10
+        11..=50 => BASE_ITERATIONS * 5,   // 500 iterations for k <= 50
+        51..=200 => BASE_ITERATIONS * 2,  // 200 iterations for k <= 200
+        _ => BASE_ITERATIONS,             // 100 iterations for large k
+    }
+}
 
 // ============================================================================
 // BENCHMARK DATA
@@ -517,17 +528,24 @@ fn mergesort_wrapper_counting(arr: &mut Vec<User>, _dirty_indices: &HashSet<usiz
 
 struct Stats {
     mean: f64,
-    ci_95: f64,
+    sd: f64,      // Standard deviation
+    ci_95: f64,   // 95% confidence interval half-width
+    cv: f64,      // Coefficient of variation (SD/mean as percentage)
 }
 
 fn calculate_stats(values: &[f64]) -> Stats {
     let n = values.len() as f64;
+    if n < 2.0 {
+        let mean = if n > 0.0 { values[0] } else { 0.0 };
+        return Stats { mean, sd: 0.0, ci_95: 0.0, cv: 0.0 };
+    }
     let mean = values.iter().sum::<f64>() / n;
     let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
-    let std_dev = variance.sqrt();
-    let std_error = std_dev / n.sqrt();
+    let sd = variance.sqrt();
+    let std_error = sd / n.sqrt();
     let ci_95 = Z_95 * std_error;
-    Stats { mean, ci_95 }
+    let cv = if mean > 0.0 { (sd / mean) * 100.0 } else { 0.0 };
+    Stats { mean, sd, ci_95, cv }
 }
 
 fn calculate_stats_u64(values: &[u64]) -> Stats {
@@ -541,11 +559,18 @@ fn calculate_stats_u64(values: &[u64]) -> Stats {
 
 struct BenchmarkResult {
     time_us: f64,
+    time_sd: f64,
     time_ci: f64,
+    time_cv: f64,
     comparisons: f64,
+    comparisons_sd: f64,
     comparisons_ci: f64,
+    comparisons_cv: f64,
     movements: f64,
+    movements_sd: f64,
     movements_ci: f64,
+    movements_cv: f64,
+    iterations: usize,
 }
 
 /// Measure timing using non-counting comparator (accurate timing)
@@ -563,11 +588,12 @@ where
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
+    let iters = iterations_for_k(k);
 
     // Phase 1: Measure timing (without counting overhead)
     // Each iteration uses fresh random mutations
-    let mut times_us = Vec::with_capacity(ITERATIONS);
-    for _ in 0..ITERATIONS {
+    let mut times_us = Vec::with_capacity(iters);
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         let mut dirty_indices = HashSet::with_capacity(k);
@@ -581,9 +607,9 @@ where
     }
 
     // Phase 2: Measure comparisons and movements (separate runs with fresh mutations)
-    let mut comparisons = Vec::with_capacity(ITERATIONS);
-    let mut movements = Vec::with_capacity(ITERATIONS);
-    for _ in 0..ITERATIONS {
+    let mut comparisons = Vec::with_capacity(iters);
+    let mut movements = Vec::with_capacity(iters);
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         let mut dirty_indices = HashSet::with_capacity(k);
@@ -604,21 +630,29 @@ where
 
     BenchmarkResult {
         time_us: time_stats.mean,
+        time_sd: time_stats.sd,
         time_ci: time_stats.ci_95,
+        time_cv: time_stats.cv,
         comparisons: cmp_stats.mean,
+        comparisons_sd: cmp_stats.sd,
         comparisons_ci: cmp_stats.ci_95,
+        comparisons_cv: cmp_stats.cv,
         movements: mov_stats.mean,
+        movements_sd: mov_stats.sd,
         movements_ci: mov_stats.ci_95,
+        movements_cv: mov_stats.cv,
+        iterations: iters,
     }
 }
 
 fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
+    let iters = iterations_for_k(k);
 
     // Phase 1: Timing with fresh mutations each iteration
-    let mut times_us = Vec::with_capacity(ITERATIONS);
-    for _ in 0..ITERATIONS {
+    let mut times_us = Vec::with_capacity(iters);
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         for idx in indices {
@@ -630,9 +664,9 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
     }
 
     // Phase 2: Comparisons and movements with fresh mutations
-    let mut comparisons = Vec::with_capacity(ITERATIONS);
-    let mut movements = Vec::with_capacity(ITERATIONS);
-    for _ in 0..ITERATIONS {
+    let mut comparisons = Vec::with_capacity(iters);
+    let mut movements = Vec::with_capacity(iters);
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         for idx in indices {
@@ -651,11 +685,18 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
 
     BenchmarkResult {
         time_us: time_stats.mean,
+        time_sd: time_stats.sd,
         time_ci: time_stats.ci_95,
+        time_cv: time_stats.cv,
         comparisons: cmp_stats.mean,
+        comparisons_sd: cmp_stats.sd,
         comparisons_ci: cmp_stats.ci_95,
+        comparisons_cv: cmp_stats.cv,
         movements: mov_stats.mean,
+        movements_sd: mov_stats.sd,
         movements_ci: mov_stats.ci_95,
+        movements_cv: mov_stats.cv,
+        iterations: iters,
     }
 }
 
@@ -738,12 +779,19 @@ fn find_crossover(n: usize) -> usize {
 
 struct AlgorithmResult {
     k: usize,
+    iterations: usize,
     time_us: f64,
+    time_sd: f64,
     time_ci: f64,
+    time_cv: f64,
     comparisons: f64,
+    comparisons_sd: f64,
     comparisons_ci: f64,
+    comparisons_cv: f64,
     movements: f64,
+    movements_sd: f64,
     movements_ci: f64,
+    movements_cv: f64,
 }
 
 struct BenchmarkResults {
@@ -872,20 +920,36 @@ fn print_crossover_table(results: &[CrossoverResult]) {
 }
 
 // ============================================================================
-// CSV EXPORT (values only, no CI)
+// CSV EXPORT (with full statistics: mean, SD, CI, CV, iterations)
 // ============================================================================
 
 fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,native,mergesort,bis,esm,deltasort\n");
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         csv.push_str(&format!(
-            "{},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
+            "{},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
             results.native[i].k,
+            results.native[i].iterations,
             results.native[i].time_us,
+            results.native[i].time_sd,
+            results.native[i].time_ci,
+            results.native[i].time_cv,
             results.mergesort[i].time_us,
+            results.mergesort[i].time_sd,
+            results.mergesort[i].time_ci,
+            results.mergesort[i].time_cv,
             results.bis[i].time_us,
+            results.bis[i].time_sd,
+            results.bis[i].time_ci,
+            results.bis[i].time_cv,
             results.esm[i].time_us,
+            results.esm[i].time_sd,
+            results.esm[i].time_ci,
+            results.esm[i].time_cv,
             results.deltasort[i].time_us,
+            results.deltasort[i].time_sd,
+            results.deltasort[i].time_ci,
+            results.deltasort[i].time_cv,
         ));
     }
     fs::write(path, csv).expect("Failed to write execution-time.csv");
@@ -893,16 +957,32 @@ fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
 }
 
 fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,native,mergesort,bis,esm,deltasort\n");
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         csv.push_str(&format!(
-            "{},{:.0},{:.0},{:.0},{:.0},{:.0}\n",
+            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
             results.native[i].k,
+            results.native[i].iterations,
             results.native[i].comparisons,
+            results.native[i].comparisons_sd,
+            results.native[i].comparisons_ci,
+            results.native[i].comparisons_cv,
             results.mergesort[i].comparisons,
+            results.mergesort[i].comparisons_sd,
+            results.mergesort[i].comparisons_ci,
+            results.mergesort[i].comparisons_cv,
             results.bis[i].comparisons,
+            results.bis[i].comparisons_sd,
+            results.bis[i].comparisons_ci,
+            results.bis[i].comparisons_cv,
             results.esm[i].comparisons,
+            results.esm[i].comparisons_sd,
+            results.esm[i].comparisons_ci,
+            results.esm[i].comparisons_cv,
             results.deltasort[i].comparisons,
+            results.deltasort[i].comparisons_sd,
+            results.deltasort[i].comparisons_ci,
+            results.deltasort[i].comparisons_cv,
         ));
     }
     fs::write(path, csv).expect("Failed to write comparator-count.csv");
@@ -910,16 +990,32 @@ fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
 }
 
 fn export_movement_count_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,native,mergesort,bis,esm,deltasort\n");
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,mergesort,mergesort_sd,mergesort_ci,mergesort_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         csv.push_str(&format!(
-            "{},{:.0},{:.0},{:.0},{:.0},{:.0}\n",
+            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
             results.native[i].k,
+            results.native[i].iterations,
             results.native[i].movements,
+            results.native[i].movements_sd,
+            results.native[i].movements_ci,
+            results.native[i].movements_cv,
             results.mergesort[i].movements,
+            results.mergesort[i].movements_sd,
+            results.mergesort[i].movements_ci,
+            results.mergesort[i].movements_cv,
             results.bis[i].movements,
+            results.bis[i].movements_sd,
+            results.bis[i].movements_ci,
+            results.bis[i].movements_cv,
             results.esm[i].movements,
+            results.esm[i].movements_sd,
+            results.esm[i].movements_ci,
+            results.esm[i].movements_cv,
             results.deltasort[i].movements,
+            results.deltasort[i].movements_sd,
+            results.deltasort[i].movements_ci,
+            results.deltasort[i].movements_cv,
         ));
     }
     fs::write(path, csv).expect("Failed to write movement-count.csv");
@@ -960,7 +1056,7 @@ fn export_metadata_csv(path: &str) {
 
     let csv = format!(
         "key,value\ndate,{}\nmachine,{}\nn,{}\niterations,{}\n",
-        date, machine, N, ITERATIONS
+        date, machine, N, "20-1000 (scaled by k)"
     );
     fs::write(path, csv).expect("Failed to write metadata.csv");
     println!("Exported: {}", path);
@@ -1015,12 +1111,19 @@ fn main() {
         let native = run_native_benchmark(&base_users, k);
         results.native.push(AlgorithmResult {
             k,
+            iterations: native.iterations,
             time_us: native.time_us,
+            time_sd: native.time_sd,
             time_ci: native.time_ci,
+            time_cv: native.time_cv,
             comparisons: native.comparisons,
+            comparisons_sd: native.comparisons_sd,
             comparisons_ci: native.comparisons_ci,
+            comparisons_cv: native.comparisons_cv,
             movements: native.movements,
+            movements_sd: native.movements_sd,
             movements_ci: native.movements_ci,
+            movements_cv: native.movements_cv,
         });
 
         let ms = run_benchmark(
@@ -1031,12 +1134,19 @@ fn main() {
         );
         results.mergesort.push(AlgorithmResult {
             k,
+            iterations: ms.iterations,
             time_us: ms.time_us,
+            time_sd: ms.time_sd,
             time_ci: ms.time_ci,
+            time_cv: ms.time_cv,
             comparisons: ms.comparisons,
+            comparisons_sd: ms.comparisons_sd,
             comparisons_ci: ms.comparisons_ci,
+            comparisons_cv: ms.comparisons_cv,
             movements: ms.movements,
+            movements_sd: ms.movements_sd,
             movements_ci: ms.movements_ci,
+            movements_cv: ms.movements_cv,
         });
 
         let bis = run_benchmark(
@@ -1047,12 +1157,19 @@ fn main() {
         );
         results.bis.push(AlgorithmResult {
             k,
+            iterations: bis.iterations,
             time_us: bis.time_us,
+            time_sd: bis.time_sd,
             time_ci: bis.time_ci,
+            time_cv: bis.time_cv,
             comparisons: bis.comparisons,
+            comparisons_sd: bis.comparisons_sd,
             comparisons_ci: bis.comparisons_ci,
+            comparisons_cv: bis.comparisons_cv,
             movements: bis.movements,
+            movements_sd: bis.movements_sd,
             movements_ci: bis.movements_ci,
+            movements_cv: bis.movements_cv,
         });
 
         let esm = run_benchmark(
@@ -1063,12 +1180,19 @@ fn main() {
         );
         results.esm.push(AlgorithmResult {
             k,
+            iterations: esm.iterations,
             time_us: esm.time_us,
+            time_sd: esm.time_sd,
             time_ci: esm.time_ci,
+            time_cv: esm.time_cv,
             comparisons: esm.comparisons,
+            comparisons_sd: esm.comparisons_sd,
             comparisons_ci: esm.comparisons_ci,
+            comparisons_cv: esm.comparisons_cv,
             movements: esm.movements,
+            movements_sd: esm.movements_sd,
             movements_ci: esm.movements_ci,
+            movements_cv: esm.movements_cv,
         });
 
         let ds = run_benchmark(
@@ -1079,12 +1203,19 @@ fn main() {
         );
         results.deltasort.push(AlgorithmResult {
             k,
+            iterations: ds.iterations,
             time_us: ds.time_us,
+            time_sd: ds.time_sd,
             time_ci: ds.time_ci,
+            time_cv: ds.time_cv,
             comparisons: ds.comparisons,
+            comparisons_sd: ds.comparisons_sd,
             comparisons_ci: ds.comparisons_ci,
+            comparisons_cv: ds.comparisons_cv,
             movements: ds.movements,
+            movements_sd: ds.movements_sd,
             movements_ci: ds.movements_ci,
+            movements_cv: ds.movements_cv,
         });
 
         println!(" done");

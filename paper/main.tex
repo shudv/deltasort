@@ -155,18 +155,7 @@ Let $S$ be a segment with RIGHT indices $R_1, \ldots, R_m$ followed by LEFT indi
   \item LEFT values move leftward but cannot pass the last RIGHT index $R_m$ (if it exists) or the segment boundary, since $A[R_m] < A[L_j]$ for all $j$.
 \end{enumerate}
 
-Since no value exits its segment, segments can be repaired independently. Next, we stablish an asymptotic bound on number of movements during repair.
-\end{proof}
-
-
-
-\begin{theorem}[Asymptotic Movement Bound]
-\label{thm:movement-bound}
-The total number of movements for repairing $k$ udpdated indices in an array of size $n$ using DeltaSort is $\theta(n)$.
-\end{theorem}
-
-\begin{proof}
-  WIP
+Since no value exits its segment, each segment can be repaired independently. The more segments we have after Phase~1, more localized fixes are possible. Theorem~\ref{thm:movement-bound} establishes an asymptotic bound on number of segments.
 \end{proof}
 
 \subsection{Pseudocode}
@@ -201,6 +190,15 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 
 \subsection{Complexity Analysis}
 % TODO: Establish 2 class of algorithms: blind vs update-aware and clearly call out with algorithms belong where
+
+\begin{theorem}[Asymptotic Movement Bound]
+\label{thm:movement-bound}
+The total number of movements for repairing $k$ udpdated indices in an array of size $n$ using DeltaSort is $\theta(n)$.
+\end{theorem}
+
+\begin{proof}
+  WIP
+\end{proof}
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}

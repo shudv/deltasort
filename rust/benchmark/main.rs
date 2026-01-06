@@ -29,11 +29,20 @@ const CROSSOVER_SIZES: &[usize] = &[
     5_000_000, 10_000_000,
 ];
 
+/// Array sizes for segmentation analysis
+const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
+
+/// Delta percentages for segmentation analysis (as fractions of n)
+const SEGMENTATION_K_PERCENTS: &[f64] = &[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0];
+
+/// Iterations for segmentation analysis
+const SEGMENTATION_ITERATIONS: usize = 200;
+
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;
 
 /// Number of iterations for crossover measurements
-const CROSSOVER_ITERATIONS: usize = 20;
+const CROSSOVER_ITERATIONS: usize = 50;
 
 /// Z-score for 95% confidence interval
 const Z_95: f64 = 1.96;
@@ -774,6 +783,254 @@ fn find_crossover(n: usize) -> usize {
 }
 
 // ============================================================================
+// SEGMENTATION ANALYSIS
+// ============================================================================
+
+/// Result of segmentation analysis for one (n, k%) configuration
+struct SegmentationResult {
+    n: usize,
+    k_percent: f64,
+    k: usize,
+    segment_count_mean: f64,
+    segment_count_sd: f64,
+    segment_count_ci: f64,
+    segments_per_k_mean: f64,      // segment_count / k
+    segments_per_k_sd: f64,
+    segments_per_k_ci: f64,
+}
+
+/// Analyze segmentation structure for a given n and k
+/// Returns (segment_count, segments_per_k) over many iterations
+fn analyze_segmentation(n: usize, k: usize, iters: usize) -> (Vec<usize>, Vec<f64>) {
+    let mut rng = rand::thread_rng();
+    
+    let mut segment_counts = Vec::with_capacity(iters);
+    let mut segments_per_k = Vec::with_capacity(iters);
+    
+    for _ in 0..iters {
+        // Create a sorted base array
+        let mut arr: Vec<i32> = (0..n as i32).collect();
+        
+        // Sample k distinct indices and mutate their values randomly
+        let indices = sample_distinct_indices(&mut rng, n, k);
+        let dirty_set: HashSet<usize> = indices.iter().copied().collect();
+        
+        // Mutate values at dirty indices to random values
+        for &idx in &indices {
+            arr[idx] = rng.gen_range(0..n as i32);
+        }
+        
+        // Compute segments
+        let (count, _total_size) = compute_segments(&arr, &dirty_set);
+        segment_counts.push(count);
+        
+        // Segments per k (how many segments per violation)
+        let spk = if k > 0 { count as f64 / k as f64 } else { 0.0 };
+        segments_per_k.push(spk);
+    }
+    
+    (segment_counts, segments_per_k)
+}
+
+/// Compute segment boundaries for a given array and dirty indices
+/// 
+/// A segment is defined by its violation types:
+/// - Trailing segment: starts at 0, contains only L violations (no R in between)
+/// - Leading segment: ends at n-1, contains only R violations (no L after)
+/// - Intermediate segment: contains R violations followed by L violations
+///
+/// Algorithm: Start at 0, run past all R's, when L is found run past all L's
+/// keeping track of farthest L encountered. When you hit R or end of array,
+/// record segment from start to farthest L. If hit R, it becomes start of next segment.
+///
+/// Returns (segment_count, total_segment_size)
+fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, usize) {
+    if updated_indices.is_empty() {
+        return (0, 0);
+    }
+    
+    let n = arr.len();
+    
+    // Sort dirty indices
+    let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
+    dirty.sort_unstable();
+    
+    // Create working array after Phase 1 redistribution
+    // (dirty values sorted among themselves and placed back at dirty positions)
+    let mut values: Vec<i32> = dirty.iter().map(|&i| arr[i]).collect();
+    values.sort_unstable();
+    
+    let mut work_arr = arr.to_vec();
+    for (i, &idx) in dirty.iter().enumerate() {
+        work_arr[idx] = values[i];
+    }
+    
+    // Classify each dirty index as L (left violation) or R (right violation)
+    // L: value is less than its left neighbor (needs to move left)
+    // R: value is greater than its right neighbor (needs to move right)
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    enum ViolationType { L, R }
+    
+    let mut violations: Vec<(usize, ViolationType)> = Vec::new();
+    for &idx in &dirty {
+        let vtype = if idx > 0 && work_arr[idx] < work_arr[idx - 1] {
+            ViolationType::L
+        } else {
+            ViolationType::R
+        };
+        violations.push((idx, vtype));
+    }
+    
+    if violations.is_empty() {
+        return (0, 0);
+    }
+    
+    // Now detect segments by traversing violations
+    // Segment starts at leftmost index, run past R's, then past L's, recording farthest L
+    let mut segments: Vec<(usize, usize)> = Vec::new();
+    let mut i = 0;
+    
+
+    // If first violation index is not 0, then we can just assumy dummy R, add a 0,R to front of violations array
+    if violations[0].0 != 0 {
+        violations.insert(0, (0, ViolationType::R));
+    }
+
+    // If last violation index is not n-1, then we can just assumy dummy L, add a n-1,L to end of violations array
+    if violations[violations.len() - 1].0 != n - 1 {
+        violations.push((n - 1, ViolationType::L));
+    }
+
+    loop {
+        let seg_start_idx = violations[i].0;
+
+        // Do an R run first
+        while i < violations.len() && violations[i].1 == ViolationType::R {
+            i += 1;
+        }
+
+        // Then do an L run
+        let mut last_l_idx = seg_start_idx; // Initialize to segment start, not i
+        while i < violations.len() && violations[i].1 == ViolationType::L {
+            last_l_idx = violations[i].0;
+            i += 1;
+        }
+
+        segments.push((seg_start_idx, last_l_idx));
+
+        if i >= violations.len() {
+            break;
+        }
+    }
+
+    // Count and sum segment sizes
+    let segment_count = segments.len();
+    let total_size: usize = segments.iter().map(|(l, r)| r - l + 1).sum();
+    
+    (segment_count, total_size)
+}
+
+/// Run segmentation analysis across all configurations
+fn run_segmentation_analysis() -> Vec<SegmentationResult> {
+    let mut results = Vec::new();
+    
+    for &n in SEGMENTATION_SIZES {
+        for &k_percent in SEGMENTATION_K_PERCENTS {
+            let k = ((n as f64 * k_percent / 100.0).round() as usize).max(if k_percent > 0.0 { 1 } else { 0 });
+            
+            if k > n {
+                continue;
+            }
+            
+            let (counts, spk) = analyze_segmentation(n, k, SEGMENTATION_ITERATIONS);
+            
+            let count_stats = calculate_stats_u64(&counts.iter().map(|&x| x as u64).collect::<Vec<_>>());
+            let spk_stats = calculate_stats(&spk);
+            
+            results.push(SegmentationResult {
+                n,
+                k_percent,
+                k,
+                segment_count_mean: count_stats.mean,
+                segment_count_sd: count_stats.sd,
+                segment_count_ci: count_stats.ci_95,
+                segments_per_k_mean: spk_stats.mean,
+                segments_per_k_sd: spk_stats.sd,
+                segments_per_k_ci: spk_stats.ci_95,
+            });
+        }
+    }
+    
+    results
+}
+
+fn print_segmentation_table(results: &[SegmentationResult]) {
+    println!();
+    println!("Segmentation Analysis");
+    println!("┌────────────┬──────────┬────────┬────────────────────┬────────────────────┐");
+    println!("│     n      │   k (%)  │    k   │   Segment Count    │    Segments/k      │");
+    println!("├────────────┼──────────┼────────┼────────────────────┼────────────────────┤");
+    
+    for r in results {
+        println!(
+            "│ {:>10} │ {:>7.1}% │ {:>6} │ {:>7.1} ± {:>7.1} │ {:>7.3} ± {:>7.3} │",
+            format_number(r.n),
+            r.k_percent,
+            r.k,
+            r.segment_count_mean, r.segment_count_ci,
+            r.segments_per_k_mean, r.segments_per_k_ci,
+        );
+    }
+    println!("└────────────┴──────────┴────────┴────────────────────┴────────────────────┘");
+}
+
+fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
+    // Export segment count
+    let mut count_csv = String::from("k_percent");
+    for &n in SEGMENTATION_SIZES {
+        count_csv.push_str(&format!(",n{},n{}_ci", n, n));
+    }
+    count_csv.push('\n');
+    
+    for &k_percent in SEGMENTATION_K_PERCENTS {
+        count_csv.push_str(&format!("{:.1}", k_percent));
+        for &n in SEGMENTATION_SIZES {
+            if let Some(r) = results.iter().find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01) {
+                count_csv.push_str(&format!(",{:.2},{:.2}", r.segment_count_mean, r.segment_count_ci));
+            } else {
+                count_csv.push_str(",,");
+            }
+        }
+        count_csv.push('\n');
+    }
+    let count_path = format!("{}/segmentation-count.csv", base_path);
+    fs::write(&count_path, count_csv).expect("Failed to write segmentation-count.csv");
+    println!("Exported: {}", count_path);
+    
+    // Export segments per k
+    let mut spk_csv = String::from("k_percent");
+    for &n in SEGMENTATION_SIZES {
+        spk_csv.push_str(&format!(",n{},n{}_ci", n, n));
+    }
+    spk_csv.push('\n');
+    
+    for &k_percent in SEGMENTATION_K_PERCENTS {
+        spk_csv.push_str(&format!("{:.1}", k_percent));
+        for &n in SEGMENTATION_SIZES {
+            if let Some(r) = results.iter().find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01) {
+                spk_csv.push_str(&format!(",{:.4},{:.4}", r.segments_per_k_mean, r.segments_per_k_ci));
+            } else {
+                spk_csv.push_str(",,");
+            }
+        }
+        spk_csv.push('\n');
+    }
+    let spk_path = format!("{}/segments-per-k.csv", base_path);
+    fs::write(&spk_path, spk_csv).expect("Failed to write segments-per-k.csv");
+    println!("Exported: {}", spk_path);
+}
+
+// ============================================================================
 // RESULTS STORAGE
 // ============================================================================
 
@@ -1244,12 +1501,20 @@ fn main() {
 
     print_crossover_table(&crossover_results);
 
+    // --- Segmentation Analysis ---
+    println!();
+    println!("Running segmentation analysis...");
+    let segmentation_results = run_segmentation_analysis();
+    print_segmentation_table(&segmentation_results);
+
     // --- Export CSVs ---
     if export {
         println!();
         println!("Exporting CSV files...");
         let base_path = "../paper/figures/rust";
+        let figures_path = "../paper/figures";
         fs::create_dir_all(base_path).ok();
+        fs::create_dir_all(figures_path).ok();
         export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
         export_comparator_count_csv(&results, &format!("{}/comparator-count.csv", base_path));
         export_movement_count_csv(&results, &format!("{}/movement-count.csv", base_path));
@@ -1258,6 +1523,8 @@ fn main() {
             &format!("{}/crossover-threshold.csv", base_path),
         );
         export_metadata_csv(&format!("{}/benchmark_metadata.csv", base_path));
+        // Segmentation goes in root figures folder (language-independent analysis)
+        export_segmentation_csv(&segmentation_results, figures_path);
     }
 
     println!();

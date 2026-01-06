@@ -247,7 +247,17 @@ Table~\ref{tab:complexity} compares algorithm complexity with the standard basel
 %==============================================================================
 
 
-All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. DeltaSort is compared against three baselines: NativeSort (Rust's \texttt{sort\_by}), Binary-Insertion-Sort (BIS), and Extract-Sort-Merge (ESM). Each data point is the mean of 20--1000 iterations (more iterations for small $k$ to account for timer resolution). Coefficient of variation was below 15\% for all measurements; raw data with confidence intervals is available in the repository.
+All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point is the mean of 20--1000 iterations (more iterations for small $k$ to account for timer resolution). Coefficient of variation was below 15\% for all measurements; raw data with confidence intervals is available in the repository.
+
+\subsection{Algorithms Compared}
+
+DeltaSort is compared against four baselines:
+\begin{itemize}
+    \item \textbf{NativeSort}: Rust's \texttt{sort\_by} (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array. Used as baseline for execution time.
+    \item \textbf{MergeSort}: A standard merge sort implementation, included to provide an instrumentable blind-sort baseline for data movement measurements (NativeSort's internal movements cannot be directly tracked).
+    \item \textbf{Binary-Insertion-Sort (BIS)}: The naive incremental approach---extract updated values, then reinsert each using binary search. $O(k \log n)$ comparisons but $O(kn)$ movements.
+    \item \textbf{Extract-Sort-Merge (ESM)}: Extract updated values, sort them separately, and merge with the remaining sorted portion. $O(k \log k + n)$ comparisons and $O(n)$ movements.
+\end{itemize}
 
 \subsection{Correctness}
 Correctness is formally proven in Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values. All tests pass successfully.
@@ -264,6 +274,12 @@ Figure~\ref{fig:rust-comparator-count} shows the number of comparator invocation
 
 \input{figures/rust/comparator-count}
 
+\subsection{Data Movement Count}
+
+Figure~\ref{fig:rust-movement-count} shows the number of data movements (element writes) for each algorithm. MergeSort provides an instrumented baseline for blind sorting with $O(n \log n)$ movements. BIS exhibits the highest movement count due to its $O(kn)$ complexity from repeated insertions. ESM requires $O(n)$ movements for the final merge. DeltaSort achieves 2--3 orders of magnitude fewer movements than all alternatives for small $k$, confirming that Lemma~\ref{lem:confinement}'s confinement guarantee translates to practical efficiency gains.
+
+\input{figures/rust/movement-count}
+
 \subsection{Crossover Threshold Analysis}
 
 A key practical question is: at what update count should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M values.
@@ -273,6 +289,16 @@ Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_
 \input{figures/rust/crossover-threshold}
 
 The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
+
+\subsection{Segmentation Analysis}
+
+To empirically validate the segmentation structure underlying DeltaSort, we measure how updated values partition into segments across different array sizes and update ratios. Figure~\ref{fig:segments-per-k} plots the ratio of segment count to update count ($s/k$) as a function of the update ratio $k/n$.
+
+\input{figures/segments-per-k}
+
+The results reveal several key insights. At very small update ratios ($k/n < 1\%$), each updated value tends to form its own segment, yielding $s/k \approx 1$. As more values are updated, segments begin to merge: violations that land in overlapping regions coalesce into shared segments. This merging effect is most pronounced around $k/n \approx 2$--$5\%$, where the ratio reaches its minimum. At higher update ratios ($k/n > 20\%$), the ratio stabilizes near $0.12$--$0.13$ regardless of array size, indicating that approximately 8 violations share each segment on average.
+
+Notably, the curves for different array sizes ($n = 1$K, $10$K, $100$K) exhibit similar shapes, confirming that the segmentation behavior is scale-independent. This supports the theoretical expectation that segment structure depends primarily on the \emph{ratio} $k/n$ rather than absolute values.
 
 \subsection{Performance in managed execution environments}
 

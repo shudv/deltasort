@@ -33,7 +33,9 @@ const CROSSOVER_SIZES: &[usize] = &[
 const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000];
 
 /// Delta percentages for segmentation analysis (as fractions of n)
-const SEGMENTATION_K_PERCENTS: &[f64] = &[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0];
+const SEGMENTATION_K_PERCENTS: &[f64] = &[
+    0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
+];
 
 /// Iterations for segmentation analysis
 const SEGMENTATION_ITERATIONS: usize = 10;
@@ -51,10 +53,10 @@ const Z_95: f64 = 1.96;
 /// Small k values need more iterations due to timer resolution
 fn iterations_for_k(k: usize) -> usize {
     match k {
-        0..=10 => BASE_ITERATIONS * 10,   // 1000 iterations for k <= 10
-        11..=50 => BASE_ITERATIONS * 5,   // 500 iterations for k <= 50
-        51..=200 => BASE_ITERATIONS * 2,  // 200 iterations for k <= 200
-        _ => BASE_ITERATIONS,             // 100 iterations for large k
+        0..=10 => BASE_ITERATIONS * 10,  // 1000 iterations for k <= 10
+        11..=50 => BASE_ITERATIONS * 5,  // 500 iterations for k <= 50
+        51..=200 => BASE_ITERATIONS * 2, // 200 iterations for k <= 200
+        _ => BASE_ITERATIONS,            // 100 iterations for large k
     }
 }
 
@@ -263,11 +265,11 @@ fn mergesort(arr: &mut [User]) {
     let mid = len / 2;
     mergesort(&mut arr[..mid]);
     mergesort(&mut arr[mid..]);
-    
+
     // Merge using temporary vectors
     let left: Vec<User> = arr[..mid].to_vec();
     let right: Vec<User> = arr[mid..].to_vec();
-    
+
     let (mut i, mut j, mut k) = (0, 0, 0);
     while i < left.len() && j < right.len() {
         if user_comparator(&left[i], &right[j]) != std::cmp::Ordering::Greater {
@@ -494,12 +496,12 @@ fn mergesort_counting(arr: &mut [User]) {
     let mid = len / 2;
     mergesort_counting(&mut arr[..mid]);
     mergesort_counting(&mut arr[mid..]);
-    
+
     // Merge using temporary vectors - count all copies
     let left: Vec<User> = arr[..mid].to_vec();
     let right: Vec<User> = arr[mid..].to_vec();
     add_movements(len as u64); // copy to temp vectors
-    
+
     let (mut i, mut j, mut k) = (0, 0, 0);
     while i < left.len() && j < right.len() {
         COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
@@ -537,16 +539,21 @@ fn mergesort_wrapper_counting(arr: &mut Vec<User>, _dirty_indices: &HashSet<usiz
 
 struct Stats {
     mean: f64,
-    sd: f64,      // Standard deviation
-    ci_95: f64,   // 95% confidence interval half-width
-    cv: f64,      // Coefficient of variation (SD/mean as percentage)
+    sd: f64,    // Standard deviation
+    ci_95: f64, // 95% confidence interval half-width
+    cv: f64,    // Coefficient of variation (SD/mean as percentage)
 }
 
 fn calculate_stats(values: &[f64]) -> Stats {
     let n = values.len() as f64;
     if n < 2.0 {
         let mean = if n > 0.0 { values[0] } else { 0.0 };
-        return Stats { mean, sd: 0.0, ci_95: 0.0, cv: 0.0 };
+        return Stats {
+            mean,
+            sd: 0.0,
+            ci_95: 0.0,
+            cv: 0.0,
+        };
     }
     let mean = values.iter().sum::<f64>() / n;
     let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
@@ -554,7 +561,12 @@ fn calculate_stats(values: &[f64]) -> Stats {
     let std_error = sd / n.sqrt();
     let ci_95 = Z_95 * std_error;
     let cv = if mean > 0.0 { (sd / mean) * 100.0 } else { 0.0 };
-    Stats { mean, sd, ci_95, cv }
+    Stats {
+        mean,
+        sd,
+        ci_95,
+        cv,
+    }
 }
 
 fn calculate_stats_u64(values: &[u64]) -> Stats {
@@ -794,7 +806,7 @@ struct SegmentationResult {
     segment_count_mean: f64,
     segment_count_sd: f64,
     segment_count_ci: f64,
-    segments_per_k_mean: f64,      // segment_count / k
+    segments_per_k_mean: f64, // segment_count / k
     segments_per_k_sd: f64,
     segments_per_k_ci: f64,
 }
@@ -803,37 +815,37 @@ struct SegmentationResult {
 /// Returns (segment_count, segments_per_k) over many iterations
 fn analyze_segmentation(n: usize, k: usize, iters: usize) -> (Vec<usize>, Vec<f64>) {
     let mut rng = rand::thread_rng();
-    
+
     let mut segment_counts = Vec::with_capacity(iters);
     let mut segments_per_k = Vec::with_capacity(iters);
-    
+
     for _ in 0..iters {
         // Create a sorted base array
         let mut arr: Vec<i32> = (0..n as i32).collect();
-        
+
         // Sample k distinct indices and mutate their values randomly
         let indices = sample_distinct_indices(&mut rng, n, k);
         let dirty_set: HashSet<usize> = indices.iter().copied().collect();
-        
+
         // Mutate values at dirty indices to random values
         for &idx in &indices {
             arr[idx] = rng.gen_range(0..n as i32);
         }
-        
+
         // Compute segments
         let (count, _total_size) = compute_segments(&arr, &dirty_set);
         segment_counts.push(count);
-        
+
         // Segments per k (how many segments per violation)
         let spk = if k > 0 { count as f64 / k as f64 } else { 0.0 };
         segments_per_k.push(spk);
     }
-    
+
     (segment_counts, segments_per_k)
 }
 
 /// Compute segment boundaries for a given array and dirty indices
-/// 
+///
 /// A segment is defined by its violation types:
 /// - Trailing segment: starts at 0, contains only L violations (no R in between)
 /// - Leading segment: ends at n-1, contains only R violations (no L after)
@@ -848,29 +860,32 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
     if updated_indices.is_empty() {
         return (0, 0);
     }
-    
+
     let n = arr.len();
-    
+
     // Sort dirty indices
     let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
     dirty.sort_unstable();
-    
+
     // Create working array after Phase 1 redistribution
     // (dirty values sorted among themselves and placed back at dirty positions)
     let mut values: Vec<i32> = dirty.iter().map(|&i| arr[i]).collect();
     values.sort_unstable();
-    
+
     let mut work_arr = arr.to_vec();
     for (i, &idx) in dirty.iter().enumerate() {
         work_arr[idx] = values[i];
     }
-    
+
     // Classify each dirty index as L (left violation) or R (right violation)
     // L: value is less than its left neighbor (needs to move left)
     // R: value is greater than its right neighbor (needs to move right)
     #[derive(Debug, Clone, Copy, PartialEq)]
-    enum ViolationType { L, R }
-    
+    enum ViolationType {
+        L,
+        R,
+    }
+
     let mut violations: Vec<(usize, ViolationType)> = Vec::new();
     for &idx in &dirty {
         let vtype = if idx > 0 && work_arr[idx] < work_arr[idx - 1] {
@@ -880,16 +895,15 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
         };
         violations.push((idx, vtype));
     }
-    
+
     if violations.is_empty() {
         return (0, 0);
     }
-    
+
     // Now detect segments by traversing violations
     // Segment starts at leftmost index, run past R's, then past L's, recording farthest L
     let mut segments: Vec<(usize, usize)> = Vec::new();
     let mut i = 0;
-    
 
     // If first violation index is not 0, then we can just assumy dummy R, add a 0,R to front of violations array
     if violations[0].0 != 0 {
@@ -926,27 +940,32 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
     // Count and sum segment sizes
     let segment_count = segments.len();
     let total_size: usize = segments.iter().map(|(l, r)| r - l + 1).sum();
-    
+
     (segment_count, total_size)
 }
 
 /// Run segmentation analysis across all configurations
 fn run_segmentation_analysis() -> Vec<SegmentationResult> {
     let mut results = Vec::new();
-    
+
     for &n in SEGMENTATION_SIZES {
         for &k_percent in SEGMENTATION_K_PERCENTS {
-            let k = ((n as f64 * k_percent / 100.0).round() as usize).max(if k_percent > 0.0 { 1 } else { 0 });
-            
+            let k = ((n as f64 * k_percent / 100.0).round() as usize).max(if k_percent > 0.0 {
+                1
+            } else {
+                0
+            });
+
             if k > n {
                 continue;
             }
-            
+
             let (counts, spk) = analyze_segmentation(n, k, SEGMENTATION_ITERATIONS);
-            
-            let count_stats = calculate_stats_u64(&counts.iter().map(|&x| x as u64).collect::<Vec<_>>());
+
+            let count_stats =
+                calculate_stats_u64(&counts.iter().map(|&x| x as u64).collect::<Vec<_>>());
             let spk_stats = calculate_stats(&spk);
-            
+
             results.push(SegmentationResult {
                 n,
                 k_percent,
@@ -960,7 +979,7 @@ fn run_segmentation_analysis() -> Vec<SegmentationResult> {
             });
         }
     }
-    
+
     results
 }
 
@@ -970,15 +989,17 @@ fn print_segmentation_table(results: &[SegmentationResult]) {
     println!("┌────────────┬──────────┬────────┬────────────────────┬────────────────────┐");
     println!("│     n      │   k (%)  │    k   │   Segment Count    │    Segments/k      │");
     println!("├────────────┼──────────┼────────┼────────────────────┼────────────────────┤");
-    
+
     for r in results {
         println!(
             "│ {:>10} │ {:>7.1}% │ {:>6} │ {:>7.1} ± {:>7.1} │ {:>7.3} ± {:>7.3} │",
             format_number(r.n),
             r.k_percent,
             r.k,
-            r.segment_count_mean, r.segment_count_ci,
-            r.segments_per_k_mean, r.segments_per_k_ci,
+            r.segment_count_mean,
+            r.segment_count_ci,
+            r.segments_per_k_mean,
+            r.segments_per_k_ci,
         );
     }
     println!("└────────────┴──────────┴────────┴────────────────────┴────────────────────┘");
@@ -991,12 +1012,18 @@ fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
         count_csv.push_str(&format!(",n{},n{}_ci", n, n));
     }
     count_csv.push('\n');
-    
+
     for &k_percent in SEGMENTATION_K_PERCENTS {
         count_csv.push_str(&format!("{:.1}", k_percent));
         for &n in SEGMENTATION_SIZES {
-            if let Some(r) = results.iter().find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01) {
-                count_csv.push_str(&format!(",{:.2},{:.2}", r.segment_count_mean, r.segment_count_ci));
+            if let Some(r) = results
+                .iter()
+                .find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01)
+            {
+                count_csv.push_str(&format!(
+                    ",{:.2},{:.2}",
+                    r.segment_count_mean, r.segment_count_ci
+                ));
             } else {
                 count_csv.push_str(",,");
             }
@@ -1006,19 +1033,25 @@ fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
     let count_path = format!("{}/segmentation-count.csv", base_path);
     fs::write(&count_path, count_csv).expect("Failed to write segmentation-count.csv");
     println!("Exported: {}", count_path);
-    
+
     // Export segments per k
     let mut spk_csv = String::from("k_percent");
     for &n in SEGMENTATION_SIZES {
         spk_csv.push_str(&format!(",n{},n{}_ci", n, n));
     }
     spk_csv.push('\n');
-    
+
     for &k_percent in SEGMENTATION_K_PERCENTS {
         spk_csv.push_str(&format!("{:.1}", k_percent));
         for &n in SEGMENTATION_SIZES {
-            if let Some(r) = results.iter().find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01) {
-                spk_csv.push_str(&format!(",{:.4},{:.4}", r.segments_per_k_mean, r.segments_per_k_ci));
+            if let Some(r) = results
+                .iter()
+                .find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01)
+            {
+                spk_csv.push_str(&format!(
+                    ",{:.4},{:.4}",
+                    r.segments_per_k_mean, r.segments_per_k_ci
+                ));
             } else {
                 spk_csv.push_str(",,");
             }
@@ -1106,11 +1139,23 @@ fn print_execution_time_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_with_ci(results.native[i].time_us, results.native[i].time_ci, COL_WIDTH),
-            format_with_ci(results.mergesort[i].time_us, results.mergesort[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.native[i].time_us,
+                results.native[i].time_ci,
+                COL_WIDTH
+            ),
+            format_with_ci(
+                results.mergesort[i].time_us,
+                results.mergesort[i].time_ci,
+                COL_WIDTH
+            ),
             format_with_ci(results.bis[i].time_us, results.bis[i].time_ci, COL_WIDTH),
             format_with_ci(results.esm[i].time_us, results.esm[i].time_ci, COL_WIDTH),
-            format_with_ci(results.deltasort[i].time_us, results.deltasort[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.deltasort[i].time_us,
+                results.deltasort[i].time_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
@@ -1128,11 +1173,31 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_int_with_ci(results.native[i].comparisons, results.native[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.mergesort[i].comparisons, results.mergesort[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.bis[i].comparisons, results.bis[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.esm[i].comparisons, results.esm[i].comparisons_ci, COL_WIDTH),
-            format_int_with_ci(results.deltasort[i].comparisons, results.deltasort[i].comparisons_ci, COL_WIDTH),
+            format_int_with_ci(
+                results.native[i].comparisons,
+                results.native[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.mergesort[i].comparisons,
+                results.mergesort[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.bis[i].comparisons,
+                results.bis[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.esm[i].comparisons,
+                results.esm[i].comparisons_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.deltasort[i].comparisons,
+                results.deltasort[i].comparisons_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
@@ -1150,11 +1215,31 @@ fn print_movement_count_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_int_with_ci(results.native[i].movements, results.native[i].movements_ci, COL_WIDTH),
-            format_int_with_ci(results.mergesort[i].movements, results.mergesort[i].movements_ci, COL_WIDTH),
-            format_int_with_ci(results.bis[i].movements, results.bis[i].movements_ci, COL_WIDTH),
-            format_int_with_ci(results.esm[i].movements, results.esm[i].movements_ci, COL_WIDTH),
-            format_int_with_ci(results.deltasort[i].movements, results.deltasort[i].movements_ci, COL_WIDTH),
+            format_int_with_ci(
+                results.native[i].movements,
+                results.native[i].movements_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.mergesort[i].movements,
+                results.mergesort[i].movements_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.bis[i].movements,
+                results.bis[i].movements_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.esm[i].movements,
+                results.esm[i].movements_ci,
+                COL_WIDTH
+            ),
+            format_int_with_ci(
+                results.deltasort[i].movements,
+                results.deltasort[i].movements_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");

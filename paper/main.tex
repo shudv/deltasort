@@ -108,31 +108,16 @@ Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined b
 \end{definition}
 
 \begin{remark}
-Note that the above model is general enough to account for additions and deletions from the array as well-
+The above model can be easily extended to account for additions and deletions from the array-
 \begin{itemize}
   \item \textbf{Addition:} For an existing array of size $n$, append new value to end of the array and add $n$ (the new index) to $U$. 
   \item \textbf{Deletion:} To delete value at index $i$, set its value to a sentinel $\infty$ that is greater than all other values according to $\texttt{cmp}$ and add it to $U$. Once sorted, the array size can be reduced by one removing the last element.
 \end{itemize}
 \end{remark}
 
-\begin{definition}[Update-Aware Sort Primitive]
-\label{def:sort-primitive}
-The update-aware sort primitive is defined as:
-\[
-\textsc{Sort}(A, U, \texttt{cmp}) \rightarrow A'
-\]
-where:
-\begin{itemize}
-  \item \textbf{Input:}
-  \begin{itemize}
-    \item $A[0..n-1]$: an array that was sorted with respect to $\texttt{cmp}$ before updates
-    \item $U \subseteq \{0, 1, \ldots, n-1\}$: the set of indices whose values have been modified
-    \item $\texttt{cmp}: V \times V \rightarrow \{-1, 0, +1\}$: a comparator defining a strict weak ordering
-  \end{itemize}
-  \item \textbf{Output:} $A'$ is a permutation of $A$ that is sorted with respect to $\texttt{cmp}$
-\end{itemize}
-\end{definition}
-
+\begin{remark}
+The above model is general enough to be applicable to not just primitive types but also keyed-records. The application layer needs to maintain the mapping from keys to indices in the array (extra $O(n)$ space), and provide an appropriate comparator that compares records based on the desired sort key.
+\end{remark}
 
 %==============================================================================
 \section{DeltaSort Algorithm}
@@ -145,7 +130,7 @@ Before we get to how the algorithm works, let's establish useful terminology-
 
 \begin{definition}[Direction]
 \label{def:direction}
-For an updated index $i$, we classify its \emph{direction} based on local order:
+For an updated index $i$, we define its \emph{direction} based on local order:
 \begin{itemize}
   \item \textbf{LEFT ($L$)}: Value \textbf{must} move left---$\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$).
   \item \textbf{RIGHT ($R$)}: Value \textbf{may} move right and \textbf{cannot} move left.
@@ -153,7 +138,12 @@ For an updated index $i$, we classify its \emph{direction} based on local order:
 \end{definition}
 
 \begin{remark}
-  Note the asymmetry in the definition: a $L$ value is always an order violation while a R value might or might not be an order violation. This is deliberate. If instead, we do establish a third direction (say STABLE), it would be handled identically to how a R value is handled. Moreover, it also introduces new cases where the direction of an updated index can change from STABLE to R once a R value is fixed. Hence, this asymmetric definition simplifies the narrative and implementation by introducing a useful invariant in the system: \emph{the direction of an updated value never changes until it is fixed}.
+The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate STABLE direction for values already in their correct position. However, this complicates the algorithm:
+\begin{enumerate}
+  \item STABLE values would be processed identically to R values (both may stay or move right).
+  \item Fixing an R value can shift elements, potentially converting a previously STABLE neighbor into an R violation.
+\end{enumerate}
+The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes during Phase~2}. An L stays L until fixed; an R stays R until fixed. This simplifies both the correctness argument and implementation.
 \end{remark}
 
 \begin{definition}[Segment]
@@ -236,16 +226,51 @@ DeltaSort produces a correctly sorted array.
 The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By Lemma~\ref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
 \end{proof}
 
-\subsection{Complexity Analysis}
+\subsection{Algorithm Analysis}
 % TODO: Establish 2 class of algorithms: blind vs update-aware and clearly call out with algorithms belong where
 
-\begin{theorem}[Asymptotic Movement Bound]
+\begin{theorem}[Expected Movement Bound]
 \label{thm:movement-bound}
-The total number of movements for repairing $k$ udpdated indices in an array of size $n$ using DeltaSort is $\theta(n)$.
+Under a bounded-range update model where $k$ indices are selected uniformly at random and their values are drawn uniformly from a fixed range, the expected total data movement during DeltaSort's repair phase is $O(n)$.
 \end{theorem}
 
 \begin{proof}
-  WIP
+We analyze the direction sequence of $k$ updated indices, where position $i$ (0-indexed, so $i \in \{0, \ldots, k-1\}$) has direction R with probability $(i+1)/k$ and direction L with probability $1 - (i+1)/k = (k-1-i)/k$. This reflects that early indices are more likely to have R-direction (room to move right) and later indices are more likely to have L-direction (room to move left).
+
+\paragraph{Segment boundaries.}
+A new segment begins whenever an L-direction index is followed by an R-direction index---i.e., an ``LR'' pattern. The expected number of segments equals one plus the expected count of LR occurrences.
+
+\paragraph{Expected LR count.}
+For adjacent positions $(i, i+1)$ where $i \in \{0, \ldots, k-2\}$, the probability of LR is:
+\[
+P(\text{L at } i) \times P(\text{R at } i+1) = \frac{k-1-i}{k} \times \frac{i+2}{k} = \frac{(k-1-i)(i+2)}{k^2}
+\]
+
+Summing over all $k-1$ adjacent pairs:
+\[
+\mathbb{E}[\text{LR count}] = \sum_{i=0}^{k-2} \frac{(k-1-i)(i+2)}{k^2} = \frac{1}{k^2} \sum_{i=0}^{k-2} (k-1-i)(i+2)
+\]
+
+Substituting $j = i+1$ (so $j$ runs from 1 to $k-1$) gives $(k-j)(j+1)$, and using standard summation formulas:
+\begin{align*}
+\sum_{j=1}^{k-1} (k-j)(j+1) &= \frac{(k-1)k(k+1)}{6}
+\end{align*}
+
+Therefore:
+\[
+\mathbb{E}[\text{LR count}] = \frac{(k-1)k(k+1)}{6k^2} = \frac{(k-1)(k+1)}{6k} \approx \frac{k}{6} \quad \text{for large } k
+\]
+
+\paragraph{Expected number of segments.}
+The expected number of segments is $1 + k/6 = \Theta(k)$.
+
+\paragraph{Movement bound.}
+With $\Theta(k)$ segments partitioning the array, each segment spans $O(n/k)$ array indices on average. By Lemma~\ref{lem:confinement}, movement is confined within each segment. Each of the $k$ updated indices moves at most the width of its containing segment:
+\[
+\mathbb{E}[\text{total movement}] \le k \cdot O\left(\frac{n}{k}\right) = O(n)
+\]
+
+The $k$ terms cancel: more updates create more segments (reducing per-update movement), while fewer updates create larger segments. The total movement remains linear in $n$.
 \end{proof}
 
 \begin{theorem}[Time Complexity]

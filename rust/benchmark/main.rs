@@ -37,11 +37,11 @@ const DELTA_COUNTS: &[usize] = &[
 ];
 
 /// Number of iterations for crossover measurements (higher = more stable but slower)
-const CROSSOVER_ITERATIONS: usize = 20;
+const CROSSOVER_ITERATIONS: usize = 5;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
-    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000,
+    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000//, 1_000_000,
 ];
 
 /// Get number of iterations for a given k value
@@ -217,7 +217,7 @@ fn esm_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
 
 /// Generic crossover finder using binary search
 /// lo_ratio and hi_ratio define the search range as fractions of n (0.0 to 1.0)
-fn find_crossover_generic<F>(n: usize, is_faster: F) -> usize
+fn find_crossover_generic<F>(n: usize, lo_ratio: f64, hi_ratio: f64, is_faster: F) -> usize
 where
     F: Fn(&[User], usize, usize) -> bool,
 {
@@ -229,8 +229,8 @@ where
         users.sort_by(user_comparator);
     }
 
-    let mut lo: usize = 1;
-    let mut hi: usize = n;
+    let mut lo: usize = ((n as f64) * lo_ratio).max(1.0) as usize;
+    let mut hi: usize = ((n as f64) * hi_ratio) as usize;
 
     let min_range = (n as f64 * 0.001) as usize;
 
@@ -252,15 +252,15 @@ where
 }
 
 fn find_crossover(n: usize) -> usize {
-    find_crossover_generic(n, deltasort_is_faster)
+    find_crossover_generic(n, 0.0, 0.5, deltasort_is_faster)
 }
 
 fn find_crossover_bis(n: usize) -> usize {
-    find_crossover_generic(n, bis_is_faster)
+    find_crossover_generic(n, 0.0, if n < 5000 { 0.1 } else { 0.01 }, bis_is_faster)
 }
 
 fn find_crossover_esm(n: usize) -> usize {
-    find_crossover_generic(n, esm_is_faster)
+    find_crossover_generic(n, if n > 5000 {0.7} else {0.6}, 0.95, esm_is_faster)
 }
 
 /// Find crossover where DeltaSort becomes slower than ESM

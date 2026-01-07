@@ -75,7 +75,7 @@ The traditional approaches aren't optimal have limitations: Full re-sorting is e
 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
-  We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they already assume knowledge of what has been updated.
+  We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they already assume knowledge of what has been updated. Table~\ref{tab:incremental-sorting-algorithms} summarizes the key characteristics of these algorithms under the update-aware model.
 
   \item \textbf{DeltaSort algorithm:}
   We present \emph{DeltaSort}, an incremental repair algorithm for sorted arrays designed for the update-aware model. DeltaSort batches multiple updates and achieves multi-fold speedups over traditional approaches for a wide range of update batch sizes.

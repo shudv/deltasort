@@ -3,9 +3,19 @@
 //! Run with: `cargo run --bin benchmark --release`
 //! Export CSV: `cargo run --bin benchmark --release -- --export`
 
+mod binary_insertion_sort;
+mod data;
+mod extract_sort_merge;
+mod statistics;
+
+use crate::binary_insertion_sort::binary_insertion_sort;
+use crate::data::{
+    counting_comparator, generate_sorted_users, get_comparison_count, reset_comparison_count,
+    sample_distinct_indices, user_comparator, User,
+};
+use crate::extract_sort_merge::extract_sort_merge;
+use crate::statistics::{calculate_stats, calculate_stats_u64};
 use deltasort::delta_sort_by;
-use rand::Rng;
-use std::cell::Cell;
 use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Write};
@@ -23,31 +33,16 @@ const BASE_ITERATIONS: usize = 100;
 
 /// Delta counts to test
 const DELTA_COUNTS: &[usize] = &[
-    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000, 40000, 45000, 50000,
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000,
 ];
 
-/// Number of iterations for crossover measurements
-const CROSSOVER_ITERATIONS: usize = 0;
+/// Number of iterations for crossover measurements (higher = more stable but slower)
+const CROSSOVER_ITERATIONS: usize = 20;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
-    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000,
-    5_000_000, 10_000_000,
+    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000,
 ];
-
-// TODO: Analyze segmentation and includ in the paper
-const SEGMENTATION_ITERATIONS: usize = 0;
-
-/// Array sizes for segmentation analysis
-const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000];
-
-/// Delta percentages for segmentation analysis (as fractions of n)
-const SEGMENTATION_K_PERCENTS: &[f64] = &[
-    0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
-];
-
-/// Z-score for 95% confidence interval
-const Z_95: f64 = 1.96;
 
 /// Get number of iterations for a given k value
 /// Small k values need more iterations due to timer resolution
@@ -58,450 +53,6 @@ fn iterations_for_k(k: usize) -> usize {
         51..=200 => BASE_ITERATIONS * 2, // 200 iterations for k <= 200
         _ => BASE_ITERATIONS,            // 100 iterations for large k
     }
-}
-
-// ============================================================================
-// BENCHMARK DATA
-// ============================================================================
-
-const COUNTRIES: &[&str] = &[
-    "USA",
-    "Canada",
-    "UK",
-    "Germany",
-    "France",
-    "Spain",
-    "Italy",
-    "Japan",
-    "Australia",
-    "Brazil",
-    "India",
-    "China",
-    "Mexico",
-    "Argentina",
-    "Sweden",
-];
-
-const FIRST_NAMES: &[&str] = &[
-    "Vijay",
-    "Meera",
-    "Akash",
-    "Kashish",
-    "Sunita",
-    "Aviral",
-    "Saumya",
-    "Aman",
-    "Sanjay",
-    "Kavitha",
-    "Radhika",
-    "Meenakshi",
-    "Suresh",
-    "Krishna",
-];
-
-const LAST_NAMES: &[&str] = &[
-    "Sharma", "Patel", "Dwivedi", "Kumar", "Singh", "Gupta", "Nair", "Iyer", "Rao", "Menon",
-    "Pillai", "Joshi", "Verma",
-];
-
-#[derive(Clone, Debug, Default)]
-struct User {
-    name: String,
-    age: u32,
-    country: String,
-}
-
-impl User {
-    fn generate(seed: usize) -> Self {
-        let first_idx = seed % FIRST_NAMES.len();
-        let last_idx = (seed / FIRST_NAMES.len()) % LAST_NAMES.len();
-        let country_idx = (seed / (FIRST_NAMES.len() * LAST_NAMES.len())) % COUNTRIES.len();
-
-        User {
-            name: format!("{} {}", FIRST_NAMES[first_idx], LAST_NAMES[last_idx]),
-            age: 18 + (seed % 62) as u32,
-            country: COUNTRIES[country_idx].to_string(),
-        }
-    }
-
-    fn mutate(&mut self, rng: &mut impl Rng) {
-        let field = rng.gen_range(0..3);
-        match field {
-            0 => {
-                let first = FIRST_NAMES[rng.gen_range(0..FIRST_NAMES.len())];
-                let last = LAST_NAMES[rng.gen_range(0..LAST_NAMES.len())];
-                self.name = format!("{} {}", first, last);
-            }
-            1 => self.age = 18 + rng.gen_range(0..62),
-            _ => self.country = COUNTRIES[rng.gen_range(0..COUNTRIES.len())].to_string(),
-        }
-    }
-}
-
-fn user_comparator(a: &User, b: &User) -> std::cmp::Ordering {
-    a.country
-        .cmp(&b.country)
-        .then_with(|| a.age.cmp(&b.age))
-        .then_with(|| a.name.cmp(&b.name))
-}
-
-thread_local! {
-    static COMPARISON_COUNT: Cell<u64> = const { Cell::new(0) };
-}
-
-fn counting_comparator(a: &User, b: &User) -> std::cmp::Ordering {
-    COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-    user_comparator(a, b)
-}
-
-fn reset_comparison_count() {
-    COMPARISON_COUNT.with(|c| c.set(0));
-}
-
-fn get_comparison_count() -> u64 {
-    COMPARISON_COUNT.with(|c| c.get())
-}
-
-fn generate_sorted_users(n: usize) -> Vec<User> {
-    let mut users: Vec<User> = (0..n).map(User::generate).collect();
-    users.sort_by(user_comparator);
-    users
-}
-
-fn sample_distinct_indices(rng: &mut impl Rng, n: usize, k: usize) -> Vec<usize> {
-    let mut arr: Vec<usize> = (0..n).collect();
-    for i in 0..k {
-        let j = rng.gen_range(i..n);
-        arr.swap(i, j);
-    }
-    arr.truncate(k);
-    arr
-}
-
-// ============================================================================
-// ALGORITHMS (non-counting versions for timing)
-// ============================================================================
-
-fn native_sort(arr: &mut [User]) {
-    arr.sort_by(user_comparator);
-}
-
-fn binary_insertion_sort(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    if dirty_indices.is_empty() {
-        return;
-    }
-
-    // Sort indices descending for back-to-front extraction (indices stay valid)
-    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
-
-    // Extract dirty values from back to front - O(kn) but cache-friendly
-    let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
-    for &idx in &sorted_desc {
-        extracted.push(arr.remove(idx));
-    }
-
-    // Binary insert each dirty value - O(kn)
-    for value in extracted {
-        let pos = arr.partition_point(|x| user_comparator(x, &value) == std::cmp::Ordering::Less);
-        arr.insert(pos, value);
-    }
-}
-
-fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    if dirty_indices.is_empty() {
-        return;
-    }
-
-    let n = arr.len();
-    let k = dirty_indices.len();
-
-    // Sort indices ascending for single-pass extraction
-    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_indices.sort_unstable();
-
-    // Single O(n) pass with index comparison (no HashSet lookups)
-    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
-    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    let mut dirty_ptr = 0;
-
-    for (i, val) in arr.drain(..).enumerate() {
-        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
-            dirty_values.push(val);
-            dirty_ptr += 1;
-        } else {
-            clean_values.push(val);
-        }
-    }
-
-    // Sort dirty values - O(k log k)
-    dirty_values.sort_by(user_comparator);
-
-    // Merge - O(n)
-    let mut result: Vec<User> = Vec::with_capacity(n);
-    let clean_len = clean_values.len();
-    let dirty_len = dirty_values.len();
-    let mut i = 0;
-    let mut j = 0;
-
-    while i < clean_len && j < dirty_len {
-        if user_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut clean_values[i]));
-            i += 1;
-        } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
-            j += 1;
-        }
-    }
-
-    for item in clean_values.drain(i..) {
-        result.push(item);
-    }
-    for item in dirty_values.drain(j..) {
-        result.push(item);
-    }
-
-    *arr = result;
-}
-
-fn deltasort_wrapper(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    delta_sort_by(arr.as_mut_slice(), dirty_indices, user_comparator);
-}
-
-// ============================================================================
-// ALGORITHMS (counting versions for comparison counts)
-// ============================================================================
-
-fn native_sort_counting(arr: &mut [User]) {
-    arr.sort_by(counting_comparator);
-}
-
-fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    if dirty_indices.is_empty() {
-        return;
-    }
-
-    // Sort indices descending for back-to-front extraction (indices stay valid)
-    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
-
-    // Extract dirty values from back to front - O(kn) but cache-friendly
-    let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
-    for &idx in &sorted_desc {
-        extracted.push(arr.remove(idx));
-    }
-
-    // Binary insert each dirty value - O(kn)
-    for value in extracted {
-        let pos =
-            arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
-        arr.insert(pos, value);
-    }
-}
-
-fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    if dirty_indices.is_empty() {
-        return;
-    }
-
-    let n = arr.len();
-    let k = dirty_indices.len();
-
-    // Sort indices ascending for single-pass extraction
-    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_indices.sort_unstable();
-
-    // Single O(n) pass with index comparison (no HashSet lookups)
-    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
-    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    let mut dirty_ptr = 0;
-
-    for (i, val) in arr.drain(..).enumerate() {
-        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
-            dirty_values.push(val);
-            dirty_ptr += 1;
-        } else {
-            clean_values.push(val);
-        }
-    }
-
-    // Sort dirty values - O(k log k)
-    dirty_values.sort_by(counting_comparator);
-
-    // Merge - O(n)
-    let mut result: Vec<User> = Vec::with_capacity(n);
-    let clean_len = clean_values.len();
-    let dirty_len = dirty_values.len();
-    let mut i = 0;
-    let mut j = 0;
-
-    while i < clean_len && j < dirty_len {
-        if counting_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut clean_values[i]));
-            i += 1;
-        } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
-            j += 1;
-        }
-    }
-
-    for item in clean_values.drain(i..) {
-        result.push(item);
-    }
-    for item in dirty_values.drain(j..) {
-        result.push(item);
-    }
-
-    *arr = result;
-}
-
-fn deltasort_wrapper_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
-    deltasort_counting_impl(arr.as_mut_slice(), dirty_indices);
-}
-
-/// Instrumented DeltaSort implementation that counts comparisons
-fn deltasort_counting_impl(arr: &mut [User], updated_indices: &HashSet<usize>) {
-    if updated_indices.is_empty() {
-        return;
-    }
-
-    // Phase 1: Extract and sort dirty values, write back in index order
-    let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
-    dirty.sort_unstable();
-
-    let mut values: Vec<User> = dirty.iter().map(|&i| arr[i].clone()).collect();
-    values.sort_by(|a, b| {
-        COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-        user_comparator(a, b)
-    });
-
-    for (i, &idx) in dirty.iter().enumerate() {
-        arr[idx] = values[i].clone();
-    }
-
-    // Add sentinel to trigger final flush
-    dirty.push(arr.len());
-
-    // Phase 2: Scan updated indices left to right
-    let mut pending_right_violations: Vec<usize> = Vec::with_capacity(dirty.len());
-    let mut left_bound = 0;
-
-    for &i in &dirty {
-        let direction = if i == arr.len() {
-            true // LEFT (sentinel)
-        } else {
-            // Check if LEFT violation
-            if i > 0 {
-                COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-                user_comparator(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater
-            } else {
-                false
-            }
-        };
-
-        if direction {
-            // LEFT violation - fix all pending RIGHTs first
-            let mut right_bound = i.saturating_sub(1);
-            while let Some(idx) = pending_right_violations.pop() {
-                if idx < arr.len() - 1 {
-                    COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-                    if user_comparator(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater {
-                        right_bound = fix_right_counting(arr, idx, right_bound).saturating_sub(1);
-                    }
-                }
-            }
-            // Fix actual LEFT violation
-            if i < arr.len() {
-                left_bound = fix_left_counting(arr, i, left_bound) + 1;
-            }
-        } else {
-            pending_right_violations.push(i);
-        }
-    }
-}
-
-fn fix_right_counting(arr: &mut [User], i: usize, right_bound: usize) -> usize {
-    let mut lo = i + 1;
-    let mut hi = right_bound as isize;
-
-    while lo as isize <= hi {
-        let mid = lo + ((hi as usize - lo) >> 1);
-        COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-        let cmp_result = user_comparator(&arr[mid], &arr[i]);
-        if cmp_result != std::cmp::Ordering::Greater {
-            lo = mid + 1;
-        } else {
-            hi = mid as isize - 1;
-        }
-    }
-
-    let target = hi as usize;
-    if i != target {
-        arr[i..=target].rotate_left(1);
-    }
-    target
-}
-
-fn fix_left_counting(arr: &mut [User], i: usize, left_bound: usize) -> usize {
-    let mut lo = left_bound;
-    let mut hi = i.saturating_sub(1) as isize;
-
-    while lo as isize <= hi {
-        let mid = lo + ((hi as usize - lo) >> 1);
-        COMPARISON_COUNT.with(|c| c.set(c.get() + 1));
-        let cmp_result = user_comparator(&arr[i], &arr[mid]);
-        if cmp_result == std::cmp::Ordering::Less {
-            hi = mid as isize - 1;
-        } else {
-            lo = mid + 1;
-        }
-    }
-
-    if i != lo {
-        arr[lo..=i].rotate_right(1);
-    }
-    lo
-}
-
-// ============================================================================
-// STATISTICS
-// ============================================================================
-
-struct Stats {
-    mean: f64,
-    sd: f64,    // Standard deviation
-    ci_95: f64, // 95% confidence interval half-width
-    cv: f64,    // Coefficient of variation (SD/mean as percentage)
-}
-
-fn calculate_stats(values: &[f64]) -> Stats {
-    let n = values.len() as f64;
-    if n < 2.0 {
-        let mean = if n > 0.0 { values[0] } else { 0.0 };
-        return Stats {
-            mean,
-            sd: 0.0,
-            ci_95: 0.0,
-            cv: 0.0,
-        };
-    }
-    let mean = values.iter().sum::<f64>() / n;
-    let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
-    let sd = variance.sqrt();
-    let std_error = sd / n.sqrt();
-    let ci_95 = Z_95 * std_error;
-    let cv = if mean > 0.0 { (sd / mean) * 100.0 } else { 0.0 };
-    Stats {
-        mean,
-        sd,
-        ci_95,
-        cv,
-    }
-}
-
-fn calculate_stats_u64(values: &[u64]) -> Stats {
-    let floats: Vec<f64> = values.iter().map(|&x| x as f64).collect();
-    calculate_stats(&floats)
 }
 
 // ============================================================================
@@ -523,15 +74,9 @@ struct BenchmarkResult {
 /// Measure timing using non-counting comparator (accurate timing)
 /// Measure comparisons using counting versions (separate runs)
 /// Each iteration generates fresh random mutations for proper variance measurement
-fn run_benchmark<F, G>(
-    base_users: &[User],
-    k: usize,
-    mut time_fn: F,
-    mut count_fn: G,
-) -> BenchmarkResult
+fn run_benchmark<F>(base_users: &[User], k: usize, mut sort_fn: F) -> BenchmarkResult
 where
-    F: FnMut(&mut Vec<User>, &HashSet<usize>),
-    G: FnMut(&mut Vec<User>, &HashSet<usize>),
+    F: FnMut(&mut Vec<User>, &HashSet<usize>, fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
@@ -549,13 +94,13 @@ where
             dirty_indices.insert(idx);
         }
         let start = Instant::now();
-        time_fn(&mut users, &dirty_indices);
+        sort_fn(&mut users, &dirty_indices, user_comparator);
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
     // Phase 2: Measure comparisons (separate runs with fresh mutations)
     let mut comparisons = Vec::with_capacity(iters);
-    for _ in 0..iters {
+    for _ in 0..10 {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         let mut dirty_indices = HashSet::with_capacity(k);
@@ -564,54 +109,7 @@ where
             dirty_indices.insert(idx);
         }
         reset_comparison_count();
-        count_fn(&mut users, &dirty_indices);
-        comparisons.push(get_comparison_count());
-    }
-
-    let time_stats = calculate_stats(&times_us);
-    let cmp_stats = calculate_stats_u64(&comparisons);
-
-    BenchmarkResult {
-        time_us: time_stats.mean,
-        time_sd: time_stats.sd,
-        time_ci: time_stats.ci_95,
-        time_cv: time_stats.cv,
-        comparisons: cmp_stats.mean,
-        comparisons_sd: cmp_stats.sd,
-        comparisons_ci: cmp_stats.ci_95,
-        comparisons_cv: cmp_stats.cv,
-        iterations: iters,
-    }
-}
-
-fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
-    let mut rng = rand::thread_rng();
-    let n = base_users.len();
-    let iters = iterations_for_k(k);
-
-    // Phase 1: Timing with fresh mutations each iteration
-    let mut times_us = Vec::with_capacity(iters);
-    for _ in 0..iters {
-        let mut users = base_users.to_vec();
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        for idx in indices {
-            users[idx].mutate(&mut rng);
-        }
-        let start = Instant::now();
-        native_sort(&mut users);
-        times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
-    }
-
-    // Phase 2: Comparisons with fresh mutations
-    let mut comparisons = Vec::with_capacity(iters);
-    for _ in 0..iters {
-        let mut users = base_users.to_vec();
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        for idx in indices {
-            users[idx].mutate(&mut rng);
-        }
-        reset_comparison_count();
-        native_sort_counting(&mut users);
+        sort_fn(&mut users, &dirty_indices, counting_comparator);
         comparisons.push(get_comparison_count());
     }
 
@@ -635,17 +133,21 @@ fn run_native_benchmark(base_users: &[User], k: usize) -> BenchmarkResult {
 // CROSSOVER ANALYSIS
 // ============================================================================
 
-fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
+/// Compare algorithm timing against native sort
+fn algorithm_is_faster<F>(base_users: &[User], k: usize, n: usize, mut algo: F) -> bool
+where
+    F: FnMut(&mut Vec<User>, &HashSet<usize>),
+{
     let mut rng = rand::thread_rng();
 
     let mut native_time = 0.0;
-    let mut ds_time = 0.0;
+    let mut algo_time = 0.0;
 
     for _ in 0..CROSSOVER_ITERATIONS {
         let mut users = base_users.to_vec();
-        let mut dirty_indices = HashSet::new();
-        for _ in 0..k {
-            let idx = rng.gen_range(0..n);
+        let indices = sample_distinct_indices(&mut rng, n, k);
+        let mut dirty_indices = HashSet::with_capacity(k);
+        for idx in indices {
             users[idx].mutate(&mut rng);
             dirty_indices.insert(idx);
         }
@@ -658,14 +160,67 @@ fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
 
         let start = Instant::now();
         let mut test_users = users.clone();
+        algo(&mut test_users, &dirty_indices);
+        algo_time += start.elapsed().as_secs_f64();
+    }
+
+    algo_time < native_time
+}
+
+/// Compare DeltaSort timing against ESM
+fn deltasort_is_faster_than_esm(base_users: &[User], k: usize, n: usize) -> bool {
+    let mut rng = rand::thread_rng();
+
+    let mut esm_time = 0.0;
+    let mut ds_time = 0.0;
+
+    for _ in 0..CROSSOVER_ITERATIONS {
+        let mut users = base_users.to_vec();
+        let indices = sample_distinct_indices(&mut rng, n, k);
+        let mut dirty_indices = HashSet::with_capacity(k);
+        for idx in indices {
+            users[idx].mutate(&mut rng);
+            dirty_indices.insert(idx);
+        }
+
+        let start = Instant::now();
+        let mut test_users = users.clone();
+        extract_sort_merge(&mut test_users, &dirty_indices, user_comparator);
+        esm_time += start.elapsed().as_secs_f64();
+
+        let start = Instant::now();
+        let mut test_users = users.clone();
         delta_sort_by(&mut test_users, &dirty_indices, user_comparator);
         ds_time += start.elapsed().as_secs_f64();
     }
 
-    ds_time < native_time
+    ds_time < esm_time
 }
 
-fn find_crossover(n: usize) -> usize {
+fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
+    algorithm_is_faster(base_users, k, n, |arr, indices| {
+        delta_sort_by(arr.as_mut_slice(), indices, user_comparator);
+    })
+}
+
+fn bis_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
+    algorithm_is_faster(base_users, k, n, |arr, indices| {
+        binary_insertion_sort(arr, indices, user_comparator);
+    })
+}
+
+fn esm_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
+    algorithm_is_faster(base_users, k, n, |arr, indices| {
+        extract_sort_merge(arr, indices, user_comparator);
+    })
+}
+
+/// Generic crossover finder using binary search
+/// lo_ratio and hi_ratio define the search range as fractions of n (0.0 to 1.0)
+fn find_crossover_generic<F>(n: usize, is_faster: F) -> usize
+where
+    F: Fn(&[User], usize, usize) -> bool,
+{
     let base_users = generate_sorted_users(n);
 
     // Warmup
@@ -675,15 +230,7 @@ fn find_crossover(n: usize) -> usize {
     }
 
     let mut lo: usize = 1;
-    let mut hi: usize = (n * 2) / 5;
-
-    if !deltasort_is_faster(&base_users, 1, n) {
-        return 0;
-    }
-
-    if deltasort_is_faster(&base_users, n, n) {
-        return n;
-    }
+    let mut hi: usize = n;
 
     let min_range = (n as f64 * 0.001) as usize;
 
@@ -694,7 +241,51 @@ fn find_crossover(n: usize) -> usize {
 
         let mid = lo + (hi - lo).div_ceil(2);
 
-        if deltasort_is_faster(&base_users, mid, n) {
+        if is_faster(&base_users, mid, n) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+
+    lo
+}
+
+fn find_crossover(n: usize) -> usize {
+    find_crossover_generic(n, deltasort_is_faster)
+}
+
+fn find_crossover_bis(n: usize) -> usize {
+    find_crossover_generic(n, bis_is_faster)
+}
+
+fn find_crossover_esm(n: usize) -> usize {
+    find_crossover_generic(n, esm_is_faster)
+}
+
+/// Find crossover where DeltaSort becomes slower than ESM
+fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
+    let base_users = generate_sorted_users(n);
+
+    // Warmup
+    for _ in 0..5 {
+        let mut users = base_users.clone();
+        users.sort_by(user_comparator);
+    }
+
+    let mut lo: usize = 1;
+    let mut hi: usize = n;
+
+    let min_range = (n as f64 * 0.001) as usize;
+
+    while lo < hi {
+        if hi - lo < min_range {
+            break;
+        }
+
+        let mid = lo + (hi - lo).div_ceil(2);
+
+        if deltasort_is_faster_than_esm(&base_users, mid, n) {
             lo = mid;
         } else {
             hi = mid - 1;
@@ -705,52 +296,8 @@ fn find_crossover(n: usize) -> usize {
 }
 
 // ============================================================================
-// SEGMENTATION ANALYSIS
+// SEGMENTATION ANALYSIS (NOT USED)
 // ============================================================================
-
-/// Result of segmentation analysis for one (n, k%) configuration
-struct SegmentationResult {
-    n: usize,
-    k_percent: f64,
-    k: usize,
-    segment_count_mean: f64,
-    segment_count_ci: f64,
-    segments_per_k_mean: f64, // segment_count / k
-    segments_per_k_ci: f64,
-}
-
-/// Analyze segmentation structure for a given n and k
-/// Returns (segment_count, segments_per_k) over many iterations
-fn analyze_segmentation(n: usize, k: usize, iters: usize) -> (Vec<usize>, Vec<f64>) {
-    let mut rng = rand::thread_rng();
-
-    let mut segment_counts = Vec::with_capacity(iters);
-    let mut segments_per_k = Vec::with_capacity(iters);
-
-    for _ in 0..iters {
-        // Create a sorted base array
-        let mut arr: Vec<i32> = (0..n as i32).collect();
-
-        // Sample k distinct indices and mutate their values randomly
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        let dirty_set: HashSet<usize> = indices.iter().copied().collect();
-
-        // Mutate values at dirty indices to random values
-        for &idx in &indices {
-            arr[idx] = rng.gen_range(0..n as i32);
-        }
-
-        // Compute segments
-        let (count, _total_size) = compute_segments(&arr, &dirty_set);
-        segment_counts.push(count);
-
-        // Segments per k (how many segments per violation)
-        let spk = if k > 0 { count as f64 / k as f64 } else { 0.0 };
-        segments_per_k.push(spk);
-    }
-
-    (segment_counts, segments_per_k)
-}
 
 /// Compute segment boundaries for a given array and dirty indices
 ///
@@ -764,6 +311,8 @@ fn analyze_segmentation(n: usize, k: usize, iters: usize) -> (Vec<usize>, Vec<f6
 /// record segment from start to farthest L. If hit R, it becomes start of next segment.
 ///
 /// Returns (segment_count, total_segment_size)
+
+/*
 fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, usize) {
     if updated_indices.is_empty() {
         return (0, 0);
@@ -851,124 +400,7 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
 
     (segment_count, total_size)
 }
-
-/// Run segmentation analysis across all configurations
-fn run_segmentation_analysis() -> Vec<SegmentationResult> {
-    let mut results = Vec::new();
-
-    for &n in SEGMENTATION_SIZES {
-        for &k_percent in SEGMENTATION_K_PERCENTS {
-            let k = ((n as f64 * k_percent / 100.0).round() as usize).max(if k_percent > 0.0 {
-                1
-            } else {
-                0
-            });
-
-            if k > n {
-                continue;
-            }
-
-            let (counts, spk) = analyze_segmentation(n, k, SEGMENTATION_ITERATIONS);
-
-            let count_stats =
-                calculate_stats_u64(&counts.iter().map(|&x| x as u64).collect::<Vec<_>>());
-            let spk_stats = calculate_stats(&spk);
-
-            results.push(SegmentationResult {
-                n,
-                k_percent,
-                k,
-                segment_count_mean: count_stats.mean,
-                segment_count_ci: count_stats.ci_95,
-                segments_per_k_mean: spk_stats.mean,
-                segments_per_k_ci: spk_stats.ci_95,
-            });
-        }
-    }
-
-    results
-}
-
-fn print_segmentation_table(results: &[SegmentationResult]) {
-    println!();
-    println!("Segmentation Analysis");
-    println!("┌────────────┬──────────┬────────┬────────────────────┬────────────────────┐");
-    println!("│     n      │   k (%)  │    k   │   Segment Count    │    Segments/k      │");
-    println!("├────────────┼──────────┼────────┼────────────────────┼────────────────────┤");
-
-    for r in results {
-        println!(
-            "│ {:>10} │ {:>7.1}% │ {:>6} │ {:>7.1} ± {:>7.1} │ {:>7.3} ± {:>7.3} │",
-            format_number(r.n),
-            r.k_percent,
-            r.k,
-            r.segment_count_mean,
-            r.segment_count_ci,
-            r.segments_per_k_mean,
-            r.segments_per_k_ci,
-        );
-    }
-    println!("└────────────┴──────────┴────────┴────────────────────┴────────────────────┘");
-}
-
-fn export_segmentation_csv(results: &[SegmentationResult]) {
-    // Export segment count
-    let mut count_csv = String::from("k_percent");
-    for &n in SEGMENTATION_SIZES {
-        count_csv.push_str(&format!(",n{},n{}_ci", n, n));
-    }
-    count_csv.push('\n');
-
-    for &k_percent in SEGMENTATION_K_PERCENTS {
-        count_csv.push_str(&format!("{:.1}", k_percent));
-        for &n in SEGMENTATION_SIZES {
-            if let Some(r) = results
-                .iter()
-                .find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01)
-            {
-                count_csv.push_str(&format!(
-                    ",{:.2},{:.2}",
-                    r.segment_count_mean, r.segment_count_ci
-                ));
-            } else {
-                count_csv.push_str(",,");
-            }
-        }
-        count_csv.push('\n');
-    }
-    // let count_path = format!("{}/segmentation-count.csv", base_path);
-    // fs::write(&count_path, count_csv).expect("Failed to write segmentation-count.csv");
-    // println!("Exported: {}", count_path);
-
-    // Export segments per k
-    let mut spk_csv = String::from("k_percent");
-    for &n in SEGMENTATION_SIZES {
-        spk_csv.push_str(&format!(",n{},n{}_ci", n, n));
-    }
-    spk_csv.push('\n');
-
-    for &k_percent in SEGMENTATION_K_PERCENTS {
-        spk_csv.push_str(&format!("{:.1}", k_percent));
-        for &n in SEGMENTATION_SIZES {
-            if let Some(r) = results
-                .iter()
-                .find(|r| r.n == n && (r.k_percent - k_percent).abs() < 0.01)
-            {
-                spk_csv.push_str(&format!(
-                    ",{:.4},{:.4}",
-                    r.segments_per_k_mean, r.segments_per_k_ci
-                ));
-            } else {
-                spk_csv.push_str(",,");
-            }
-        }
-        spk_csv.push('\n');
-    }
-
-    //let spk_path = format!("{}/segments-per-k.csv", base_path);
-    //fs::write(&spk_path, spk_csv).expect("Failed to write segments-per-k.csv");
-    //println!("Exported: {}", spk_path);
-}
+*/
 
 // ============================================================================
 // RESULTS STORAGE
@@ -994,7 +426,16 @@ struct BenchmarkResults {
     deltasort: Vec<AlgorithmResult>,
 }
 
-struct CrossoverResult {
+/// Extended crossover results for all algorithms vs native
+struct CrossoverResultsAll {
+    n: usize,
+    bis_ratio: f64,
+    esm_ratio: f64,
+    deltasort_ratio: f64,
+}
+
+/// Crossover result for DeltaSort vs ESM
+struct CrossoverResultDeltaVsEsm {
     n: usize,
     crossover_ratio: f64,
 }
@@ -1095,9 +536,27 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
 }
 
-fn print_crossover_table(results: &[CrossoverResult]) {
+fn print_crossover_table_all(results: &[CrossoverResultsAll]) {
     println!();
-    println!("Crossover Threshold");
+    println!("Crossover Threshold (All Algorithms vs Native)");
+    println!("┌────────────┬──────────────┬──────────────┬──────────────┐");
+    println!("│     n      │  BIS k_c/n   │  ESM k_c/n   │   DS k_c/n   │");
+    println!("├────────────┼──────────────┼──────────────┼──────────────┤");
+    for r in results {
+        println!(
+            "│ {:>10} │ {:>11.1}% │ {:>11.1}% │ {:>11.1}% │",
+            format_number(r.n),
+            r.bis_ratio,
+            r.esm_ratio,
+            r.deltasort_ratio
+        );
+    }
+    println!("└────────────┴──────────────┴──────────────┴──────────────┘");
+}
+
+fn print_crossover_table_ds_vs_esm(results: &[CrossoverResultDeltaVsEsm]) {
+    println!();
+    println!("Crossover Threshold (DeltaSort vs ESM)");
     println!("┌────────────┬──────────────┐");
     println!("│     n      │  k_c/n (%)   │");
     println!("├────────────┼──────────────┤");
@@ -1173,12 +632,24 @@ fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
     println!("Exported: {}", path);
 }
 
-fn export_crossover_csv(results: &[CrossoverResult], path: &str) {
+fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
+    let mut csv = String::from("n,bis,esm,deltasort\n");
+    for r in results {
+        csv.push_str(&format!(
+            "{},{:.1},{:.1},{:.1}\n",
+            r.n, r.bis_ratio, r.esm_ratio, r.deltasort_ratio
+        ));
+    }
+    fs::write(path, csv).expect("Failed to write crossover-all.csv");
+    println!("Exported: {}", path);
+}
+
+fn export_crossover_ds_vs_esm_csv(results: &[CrossoverResultDeltaVsEsm], path: &str) {
     let mut csv = String::from("n,crossover_ratio\n");
     for r in results {
         csv.push_str(&format!("{},{:.1}\n", r.n, r.crossover_ratio));
     }
-    fs::write(path, csv).expect("Failed to write crossover-threshold.csv");
+    fs::write(path, csv).expect("Failed to write crossover-ds-vs-esm.csv");
     println!("Exported: {}", path);
 }
 
@@ -1258,7 +729,9 @@ fn main() {
         print!("  k={:>5}...", k);
         io::stdout().flush().unwrap();
 
-        let native = run_native_benchmark(&base_users, k);
+        let native = run_benchmark(&base_users, k, |arr, _indices, cmp| {
+            arr.sort_by(cmp);
+        });
         results.native.push(AlgorithmResult {
             k,
             iterations: native.iterations,
@@ -1272,12 +745,7 @@ fn main() {
             comparisons_cv: native.comparisons_cv,
         });
 
-        let bis = run_benchmark(
-            &base_users,
-            k,
-            binary_insertion_sort,
-            binary_insertion_sort_counting,
-        );
+        let bis = run_benchmark(&base_users, k, binary_insertion_sort);
         results.bis.push(AlgorithmResult {
             k,
             iterations: bis.iterations,
@@ -1291,12 +759,7 @@ fn main() {
             comparisons_cv: bis.comparisons_cv,
         });
 
-        let esm = run_benchmark(
-            &base_users,
-            k,
-            extract_sort_merge,
-            extract_sort_merge_counting,
-        );
+        let esm = run_benchmark(&base_users, k, extract_sort_merge);
         results.esm.push(AlgorithmResult {
             k,
             iterations: esm.iterations,
@@ -1310,12 +773,10 @@ fn main() {
             comparisons_cv: esm.comparisons_cv,
         });
 
-        let ds = run_benchmark(
-            &base_users,
-            k,
-            deltasort_wrapper,
-            deltasort_wrapper_counting,
-        );
+        let ds = run_benchmark(&base_users, k, |arr, indices, cmp| {
+            delta_sort_by(arr.as_mut_slice(), indices, cmp)
+        });
+
         results.deltasort.push(AlgorithmResult {
             k,
             iterations: ds.iterations,
@@ -1335,30 +796,53 @@ fn main() {
     print_execution_time_table(&results);
     print_comparator_count_table(&results);
 
-    // --- Crossover Analysis ---
+    // --- Crossover Analysis (All Algorithms vs Native) ---
     println!();
-    println!("Running crossover analysis (this may take a while)...");
-    let mut crossover_results: Vec<CrossoverResult> = Vec::new();
+    println!("Running crossover analysis: All algorithms vs Native...");
+    let mut crossover_all_results: Vec<CrossoverResultsAll> = Vec::new();
 
     for &size in CROSSOVER_SIZES {
         print!("  n={:>10}...", format_number(size));
         io::stdout().flush().unwrap();
-        let k_c = find_crossover(size);
+
+        let bis_k_c = find_crossover_bis(size);
+        let esm_k_c = find_crossover_esm(size);
+        let ds_k_c = find_crossover(size);
+
+        crossover_all_results.push(CrossoverResultsAll {
+            n: size,
+            bis_ratio: (bis_k_c as f64 / size as f64) * 100.0,
+            esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
+            deltasort_ratio: (ds_k_c as f64 / size as f64) * 100.0,
+        });
+        println!(
+            " BIS={:.1}%, ESM={:.1}%, DS={:.1}%",
+            (bis_k_c as f64 / size as f64) * 100.0,
+            (esm_k_c as f64 / size as f64) * 100.0,
+            (ds_k_c as f64 / size as f64) * 100.0
+        );
+    }
+
+    print_crossover_table_all(&crossover_all_results);
+
+    // --- Crossover Analysis (DeltaSort vs ESM) ---
+    println!();
+    println!("Running crossover analysis: DeltaSort vs ESM...");
+    let mut crossover_ds_vs_esm_results: Vec<CrossoverResultDeltaVsEsm> = Vec::new();
+
+    for &size in CROSSOVER_SIZES {
+        print!("  n={:>10}...", format_number(size));
+        io::stdout().flush().unwrap();
+        let k_c = find_crossover_deltasort_vs_esm(size);
         let crossover_ratio = (k_c as f64 / size as f64) * 100.0;
-        crossover_results.push(CrossoverResult {
+        crossover_ds_vs_esm_results.push(CrossoverResultDeltaVsEsm {
             n: size,
             crossover_ratio,
         });
         println!(" k_c={} ({:.1}%)", k_c, crossover_ratio);
     }
 
-    print_crossover_table(&crossover_results);
-
-    // --- Segmentation Analysis ---
-    println!();
-    println!("Running segmentation analysis...");
-    let segmentation_results = run_segmentation_analysis();
-    print_segmentation_table(&segmentation_results);
+    print_crossover_table_ds_vs_esm(&crossover_ds_vs_esm_results);
 
     // --- Export CSVs ---
     if export {
@@ -1370,13 +854,15 @@ fn main() {
         fs::create_dir_all(figures_path).ok();
         export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
         export_comparator_count_csv(&results, &format!("{}/comparator-count.csv", base_path));
-        export_crossover_csv(
-            &crossover_results,
-            &format!("{}/crossover-threshold.csv", base_path),
+        export_crossover_all_csv(
+            &crossover_all_results,
+            &format!("{}/crossover-all.csv", base_path),
+        );
+        export_crossover_ds_vs_esm_csv(
+            &crossover_ds_vs_esm_results,
+            &format!("{}/crossover-ds-vs-esm.csv", base_path),
         );
         export_metadata_csv(&format!("{}/benchmark_metadata.csv", base_path));
-        // Segmentation goes in root figures folder (language-independent analysis)
-        export_segmentation_csv(&segmentation_results);
     }
 
     println!();

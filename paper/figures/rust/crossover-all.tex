@@ -1,0 +1,48 @@
+% Figure: Crossover ratio vs array size (all algorithms vs native)
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=7cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=500, xmax=20000000,
+    ymin=0, ymax=100,
+    ytick={0, 20, 40, 60, 80, 100},
+    xtick={1000, 10000, 100000, 1000000, 10000000},
+    xticklabels={1K, 10K, 100K, 1M, 10M},
+    legend pos=north east,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% BIS crossover (O(1) space, but slow O(kn) time)
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=bis] {\rootdir/figures/rust/crossover-all.csv};
+
+% ESM crossover (O(n) space, fast O(n + k log k) time)
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=esm] {\rootdir/figures/rust/crossover-all.csv};
+
+% DeltaSort crossover (O(k) space, balanced performance)
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] 
+    table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
+
+% Space annotations
+\node[font=\scriptsize, text=orange!70!black, anchor=west] at (axis cs:12000000, 8) {$O(1)$ space};
+\node[font=\scriptsize, text=green!60!black, anchor=west] at (axis cs:12000000, 35) {$O(k)$ space};
+\node[font=\scriptsize, text=purple!60!black, anchor=west] at (axis cs:12000000, 75) {$O(n)$ space};
+
+\legend{BIS, ESM, \textbf{DeltaSort}}
+\end{axis}
+\end{tikzpicture}
+\caption{Crossover thresholds for update-aware algorithms versus NativeSort. Each line shows the maximum update fraction $k_c/n$ at which the algorithm outperforms full re-sorting. BIS uses $O(1)$ space but has a low crossover due to $O(kn)$ time complexity. ESM achieves the highest crossover with $O(n)$ space. DeltaSort occupies the middle ground with $O(k)$ space.\rustbenchmarknote}
+\label{fig:rust-crossover-all}
+\end{figure}

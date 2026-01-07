@@ -67,9 +67,11 @@ Sorting is among the most optimized primitives in modern systems, backed by deca
 
 In many practical systems, this assumption is unnecessarily pessimistic. Sorted arrays are often maintained incrementally in read-heavy workloads where updates affect only a subset of values and the indices of those updates can be easily tracked if needed. Nevertheless, this information is typically not tracked or utilized, and systems fall back to blind re-sorting or standard repair approaches using Binary-Insertion-Sort or Extract-Sort-Merge, depending on the update batch size.
 
-As an example, consider a web application that shows a real-time game leaderboard sorted by score. Being able to efficiently update the sorted view on updates directly impacts the user experience. The traditional approaches aren't optimal have limitations: Full re-sorting is expensive for small updates, Binary-Insertion-Sort incurs high write cost ($O(kn)$) for large update batches, and Extract-Sort-Merge uses $O(n)$ auxiliary space even for small updates.
+As an example, consider a web application that shows a real-time game leaderboard sorted by score. Being able to efficiently update the sorted view on updates directly impacts the user experience. 
 
-To address these limitations, this paper makes the following contributions:
+Consider an analytics service that supports queries over telemetry records sorted by a particular field. The underlying data is distributed across multiple clusters, and query results are materialized and cached to serve repeated reads efficiently. As the base data sources receive updates, the cached sorted result must either be invalidated and recomputed, or incrementally updated to reflect the changes. Cache invalidation is the simplest approach, but it forces a full re-fetch and re-sort of the result even when updates are sparse. An alternative is to incrementally repair the cached sorted array as updates arrive from the underlying sources. In this setting, updates are naturally identified by key, and their positions in the cached result are known or can be tracked. Applying incremental sorting techniques such as DeltaSort allows the cached result to be updated in place, avoiding repeated full re-sorts. At scale—where many users issue similar queries and updates arrive continuously—this distinction can have a significant impact on both latency and resource utilization. Incremental repair enables systems to trade occasional localized reordering for improved steady-state performance under read-heavy workloads.
+
+The traditional approaches aren't optimal have limitations: Full re-sorting is expensive for small updates, Binary-Insertion-Sort incurs high write cost ($O(kn)$) for large update batches, and Extract-Sort-Merge uses $O(n)$ auxiliary space even for small updates. To address these limitations, this paper makes the following contributions:
 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:}
@@ -361,11 +363,17 @@ The key takeway is that as comparator cost grows, DeltaSort's relative advantage
 
 \subsection{Crossover Threshold Analysis}
 
-A key practical question is: at what update count should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M values.
+A key practical question is: at what update count should one switch from an update-aware algorithm to NativeSort? We conducted binary search for the crossover point $k_c$ across array sizes from 1K to 10M values for all update-aware algorithms.
 
-Figure~\ref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ${\sim}33\%$ for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
+Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort. BIS has the lowest crossover threshold due to its $O(kn)$ time complexity, making it practical only for very small update counts. ESM achieves the highest crossover threshold thanks to its $O(n + k \log k)$ time complexity, but requires $O(n)$ auxiliary space. DeltaSort occupies the middle ground---higher crossover than BIS while using only $O(k)$ space instead of ESM's $O(n)$.
 
-\input{figures/rust/crossover-threshold}
+\input{figures/rust/crossover-all}
+
+Beyond comparing each algorithm to NativeSort, we also measured the crossover threshold for DeltaSort versus ESM directly. This comparison is particularly relevant because ESM is the strongest baseline in terms of asymptotic time complexity.
+
+\input{figures/rust/crossover-ds-vs-esm}
+
+Figure~\ref{fig:rust-crossover-ds-vs-esm} shows that DeltaSort outperforms ESM for update fractions below the crossover curve while using only $O(k)$ space compared to ESM's $O(n)$. This demonstrates that DeltaSort provides both time and space benefits for moderate update sizes---the common case in incremental maintenance scenarios.
 
 The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 

@@ -6,13 +6,13 @@
 \toprule
 Algorithm & Comparisons & Movement & Space \\
 \midrule
-NativeSort & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ \\
+NativeSort* & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ \\
 Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ \\
 Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
-\textbf{DeltaSort} & $O(k \log n)$ & $O(kn)$* & $O(k)$ \\
+\textbf{DeltaSort} & $O(k \log n)$ & $O(n)$ & $O(k)$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
-{\small *Worst case; average case is empirically much smaller.}
+{\small *Not update-aware; hence complexity is a function of only $n$.}
 \end{table}

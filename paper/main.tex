@@ -93,9 +93,9 @@ Adaptive sorting algorithms exploit existing order in the input to improve perfo
 
 A separate line of work studies incremental computation and view maintenance in database and streaming systems, where changes to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. While they demonstrate the practical value of update-aware computation, they do not specifically address the problem of efficiently restoring sorted order in arrays under batched point updates.
 
-Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its attendant cache locality. Library sort~\cite{bender2004insertion} reduces insertion overhead by maintaining gaps within arrays, but addresses online insertion and incurs additional space overhead.
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its associated advantages.
 
-In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. \emph{DeltaSort} performs segmented repair without auxiliary data structures, which distinguishes it from prior adaptive sorting algorithms, incremental view maintenance techniques, and dynamic ordered data structures.
+In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. Unlike adaptive sorting algorithms, which need to discover the presortedness, \emph{DeltaSort} already knows which values have changed and hence can leverage this information to achieve better performance. Unlike incremental view maintenance techniques, which focus on higher-level query results, \emph{DeltaSort} is a low-level sorting primitive for arrays which can be used by higher level systems. Unlike dynamic data structures, which sacrifice array layout for update efficiency, \emph{DeltaSort} maintains the contiguous array layout.
 
 %==============================================================================
 \section{Problem Model}
@@ -104,7 +104,7 @@ In contrast, this work considers maintaining sorted order in arrays where the in
 
 \begin{definition}[Update-Aware Sorting]
 \label{def:problem}
-Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $U = \langle u_1, u_2, \dots, u_k \rangle$ be a sequence of indices such that \[ 0 \le u_1 < u_2 < \dots < u_k \le n-1, \] and the values at these indices may have been arbitrarily updated, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $U$.
+Let $A[0..n-1]$ be an array sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $U = \langle u_0, u_1, \dots, u_{k-1} \rangle$ be a sequence of indices such that \[ 0 \le u_0 < u_1 < \dots < u_{k-1} \le n-1, \] and the values at these indices may have been arbitrarily updated, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $U$.
 \end{definition}
 
 \begin{remark}
@@ -113,10 +113,6 @@ The above model can be easily extended to account for additions and deletions fr
   \item \textbf{Addition:} For an existing array of size $n$, append new value to end of the array and add $n$ (the new index) to $U$. 
   \item \textbf{Deletion:} To delete value at index $i$, set its value to a sentinel $\infty$ that is greater than all other values according to $\texttt{cmp}$ and add it to $U$. Once sorted, the array size can be reduced by one removing the last element.
 \end{itemize}
-\end{remark}
-
-\begin{remark}
-The above model is general enough to be applicable to not just primitive types but also keyed-records. The application layer needs to maintain the mapping from keys to indices in the array (extra $O(n)$ space), and provide an appropriate comparator that compares records based on the desired sort key.
 \end{remark}
 
 %==============================================================================
@@ -204,7 +200,7 @@ Since no value exits its segment, each segment can be repaired independently. Th
 
 \begin{lemma}[Violation Fix Invariant]
 \label{lem:fix-invariant}
-Each fix operation during Phase~2 resolves a violation without introducing new ones.
+Each fix operation during Phase~2 resolves an order violation without introducing new ones.
 \end{lemma}
 
 \begin{proof}
@@ -226,9 +222,7 @@ DeltaSort produces a correctly sorted array.
 The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By Lemma~\ref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
 \end{proof}
 
-\subsection{Algorithm Analysis}
-% TODO: Establish 2 class of algorithms: blind vs update-aware and clearly call out with algorithms belong where
-
+\subsection{Complexity Analysis}
 \begin{theorem}[Expected Movement Bound]
 \label{thm:movement-bound}
 Under a bounded-range update model where $k$ indices are selected uniformly at random and their values are drawn uniformly from a fixed range, the expected total data movement during DeltaSort's repair phase is $O(n)$.
@@ -275,7 +269,7 @@ The $k$ terms cancel: more updates create more segments (reducing per-update mov
 
 \begin{theorem}[Time Complexity]
 \label{thm:time}
-DeltaSort runs in $O(k \log k + k \log n + M)$ time, where $M$ is the total movement.
+DeltaSort runs in $O(k \log n + n)$ time.
 \end{theorem}
 
 \begin{proof}
@@ -301,38 +295,37 @@ DeltaSort uses $O(k)$ auxiliary space.
 Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. No $O(n)$ auxiliary structures are required.
 \end{proof}
 
-\begin{remark}[Movement Efficiency]
-While worst-case movement is $O(kn)$, the segmentation created by Phase~1 tends to reduce movement in the average case. Empirical results in \S\ref{sec:experiments} demonstrate substantial speedups, validating that segmentation (Lemma~\ref{lem:confinement}) effectively reduces movement in practice. We will analyze average-case movement more rigorously in future work.
-\end{remark}
+\subsection{Behavior Analysis}
 
-Table~\ref{tab:complexity} compares algorithm complexity with the standard baseline approaches used in the experiments:
-\begin{itemize}
-  \item \textbf{NativeSort (NS)}: Re-sort the array using the natively available sort function. $O(n \log n)$ comparisons and movements.
-  \item \textbf{Binary-Insertion-Sort (BIS)}: Extract updated values, then for each: binary search for correct position, reinsert. $O(k \log n)$ comparisons, $O(kn)$ worst-case movement. Searches the full array range for each insertion.
-  \item \textbf{Extract-Sort-Merge (ESM)}: Extract updated values, sort them, merge with clean values. $O(k \log k + n)$ comparisons, $O(n)$ movement. Requires $O(n)$ auxiliary space.
-\end{itemize}
+We discuss 2 key behavioral aspects of DeltaSort:
 
-\input{figures/sorting-algorithms}
+\begin{enumerate}
+  \item \textbf{Stability}: DeltaSort's stability depends on the underlying sort used in Phase~1. Using a stable sort ensures that equal updated values maintain their relative order, preserving overall stability.
+  \item \textbf{Sensitivity to Updates}: The performance of DeltaSort is sensitive to the number and distribution of updates. As the number of updates $k$ increases, the algorithm adapts by creating more segments, balancing movement and comparison costs.
+\end{enumerate}
 
 %==============================================================================
 \section{Experimental Evaluation}
 \label{sec:experiments}
 %==============================================================================
 
+\subsection{Setup}
+All experiments are run on a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point has a CI of $<5\%$. All measurements are taken after warm-up runs to account for caching effects. We deliberately evaluate DeltaSort on fully random update distributions, which provide no favorable structure to the workload (such as bounded-window or smooth-value updates) which can further amplify DeltaSort's advantages. We use a multi-key comparator that lexicographically compares country (string), age (integer), and name (string) to ensure that we use a realistic comparison scenario. All the results are reproducible using the code and data available in the repository~\cite{deltasort-repo}.
+DeltaSort is evaluated against the following baselines:
 
-All experiments are run using a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point is the mean of 20--1000 iterations (more iterations for small $k$ to account for timer resolution). Coefficient of variation was below 15\% for all measurements; raw data with confidence intervals is available in the repository.
-
-\subsection{Algorithms Compared}
-
-DeltaSort is compared against three baselines:
 \begin{itemize}
-    \item \textbf{NativeSort}: Rust's \texttt{sort\_by} (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array.
-    \item \textbf{Binary-Insertion-Sort (BIS)}: The naive incremental approach---extract updated values, then reinsert each using binary search. $O(k \log n)$ comparisons but $O(kn)$ movements.
-    \item \textbf{Extract-Sort-Merge (ESM)}: Extract updated values, sort them separately, and merge with the remaining sorted portion. $O(k \log k + n)$ comparisons and $O(n)$ movements.
+    \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array. NativeSort is \emph{not} update-aware, but serves as an important baseline to quantify the benefit of exposing update information to the sorting routine. We expect update-aware algorithms to outperform NativeSort only up to a critical batch size $k_c$, beyond which full re-sorting becomes preferable. Benchmarking NativeSort is therefore essential to identify this crossover point.
+
+    \item \textbf{Binary-Insertion-Sort (BIS)}: Extract each updated value and reinsert it independently using binary search. This approach performs $O(k \log n)$ comparisons but may incur $O(kn)$ data movement in the worst case. BIS is highly comparison-efficient and is a common choice for very small update batches.
+
+    \item \textbf{Extract-Sort-Merge (ESM)}: Extract all updated values, sort them separately, and merge them with the remaining sorted portion of the array. This approach performs $O(k \log k + n)$ comparisons and $O(n)$ data movement. ESM is more movement-efficient than BIS for larger $k$, but incurs higher comparison cost.
 \end{itemize}
 
+Together, these baselines provide strong baselines for comparison across the full range of update batch sizes ($k$).
+\input{figures/sorting-algorithms}
+
 \subsection{Correctness}
-Correctness is formally proven in Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized unit tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values. All tests pass successfully.
+Correctness is formally proven in Theorem~\ref{thm:correctness} and also verified by an extensive set of randomized tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values.
 
 \subsection{Execution Time}
 

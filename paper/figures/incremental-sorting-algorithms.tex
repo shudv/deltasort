@@ -7,11 +7,13 @@
 Algorithm & Time & Space \\
 \midrule
 Binary-Insertion-Sort & $O(kn)$ & $O(1)$ \\
-Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ \\
-\textbf{DeltaSort} & \textbf{$O(k \log n + n)$} & \textbf{$O(k)$} \\
+Extract-Sort-Merge* & $O(k \log k + n)$ & $O(n)$ \\
+\textbf{DeltaSort}* & $O(k \log n + n)$ & $O(k)$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
 {$n$ = array size, $k$ = number of updates}
+
+\small *These algorithms rely on a sort primitive assumed to run in $O(k \log k)$ time and $O(k)$ space.
 \end{table}

@@ -18,16 +18,25 @@ use std::time::Instant;
 /// Array size for main benchmarks
 const N: usize = 50_000;
 
+/// Base number of iterations per benchmark (scaled up for small k)
+const BASE_ITERATIONS: usize = 100;
+
 /// Delta counts to test
 const DELTA_COUNTS: &[usize] = &[
-    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000,
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000, 40000, 45000, 50000,
 ];
+
+/// Number of iterations for crossover measurements
+const CROSSOVER_ITERATIONS: usize = 0;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
     1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000,
     5_000_000, 10_000_000,
 ];
+
+// TODO: Analyze segmentation and includ in the paper
+const SEGMENTATION_ITERATIONS: usize = 0;
 
 /// Array sizes for segmentation analysis
 const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000];
@@ -36,15 +45,6 @@ const SEGMENTATION_SIZES: &[usize] = &[1_000, 10_000, 100_000];
 const SEGMENTATION_K_PERCENTS: &[f64] = &[
     0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
 ];
-
-/// Iterations for segmentation analysis
-const SEGMENTATION_ITERATIONS: usize = 10;
-
-/// Base number of iterations per benchmark (scaled up for small k)
-const BASE_ITERATIONS: usize = 5;
-
-/// Number of iterations for crossover measurements
-const CROSSOVER_ITERATIONS: usize = 3;
 
 /// Z-score for 95% confidence interval
 const Z_95: f64 = 1.96;
@@ -190,12 +190,18 @@ fn binary_insertion_sort(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     if dirty_indices.is_empty() {
         return;
     }
+
+    // Sort indices descending for back-to-front extraction (indices stay valid)
     let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
     sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
+
+    // Extract dirty values from back to front - O(kn) but cache-friendly
     let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
     for &idx in &sorted_desc {
         extracted.push(arr.remove(idx));
     }
+
+    // Binary insert each dirty value - O(kn)
     for value in extracted {
         let pos = arr.partition_point(|x| user_comparator(x, &value) == std::cmp::Ordering::Less);
         arr.insert(pos, value);
@@ -206,33 +212,55 @@ fn extract_sort_merge(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     if dirty_indices.is_empty() {
         return;
     }
-    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
-    let mut dirty_values: Vec<User> = Vec::with_capacity(sorted_desc.len());
-    for &idx in &sorted_desc {
-        dirty_values.push(arr.remove(idx));
+
+    let n = arr.len();
+    let k = dirty_indices.len();
+
+    // Sort indices ascending for single-pass extraction
+    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
+    sorted_indices.sort_unstable();
+
+    // Single O(n) pass with index comparison (no HashSet lookups)
+    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
+    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
+    let mut dirty_ptr = 0;
+
+    for (i, val) in arr.drain(..).enumerate() {
+        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
+            dirty_values.push(val);
+            dirty_ptr += 1;
+        } else {
+            clean_values.push(val);
+        }
     }
+
+    // Sort dirty values - O(k log k)
     dirty_values.sort_by(user_comparator);
-    let clean_len = arr.len();
+
+    // Merge - O(n)
+    let mut result: Vec<User> = Vec::with_capacity(n);
+    let clean_len = clean_values.len();
     let dirty_len = dirty_values.len();
-    let mut result: Vec<User> = Vec::with_capacity(clean_len + dirty_len);
     let mut i = 0;
     let mut j = 0;
+
     while i < clean_len && j < dirty_len {
-        if user_comparator(&arr[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut arr[i]));
+        if user_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
+            result.push(std::mem::take(&mut clean_values[i]));
             i += 1;
         } else {
             result.push(std::mem::take(&mut dirty_values[j]));
             j += 1;
         }
     }
-    for item in arr.drain(i..) {
+
+    for item in clean_values.drain(i..) {
         result.push(item);
     }
     for item in dirty_values.drain(j..) {
         result.push(item);
     }
+
     *arr = result;
 }
 
@@ -252,78 +280,78 @@ fn binary_insertion_sort_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<u
     if dirty_indices.is_empty() {
         return;
     }
-    
-    let n = arr.len();
-    let k = dirty_indices.len();
-    
-    // Single O(n) pass to separate clean and dirty values
-    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
-    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    
-    for (i, val) in arr.iter().enumerate() {
-        if dirty_indices.contains(&i) {
-            dirty_values.push(val.clone());
-        } else {
-            clean_values.push(val.clone());
-        }
+
+    // Sort indices descending for back-to-front extraction (indices stay valid)
+    let mut sorted_desc: Vec<usize> = dirty_indices.iter().copied().collect();
+    sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
+
+    // Extract dirty values from back to front - O(kn) but cache-friendly
+    let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
+    for &idx in &sorted_desc {
+        extracted.push(arr.remove(idx));
     }
-    
-    // Binary insert each dirty value into clean array
-    for value in dirty_values {
-        let pos = clean_values.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
-        clean_values.insert(pos, value);
+
+    // Binary insert each dirty value - O(kn)
+    for value in extracted {
+        let pos =
+            arr.partition_point(|x| counting_comparator(x, &value) == std::cmp::Ordering::Less);
+        arr.insert(pos, value);
     }
-    
-    *arr = clean_values;
 }
 
 fn extract_sort_merge_counting(arr: &mut Vec<User>, dirty_indices: &HashSet<usize>) {
     if dirty_indices.is_empty() {
         return;
     }
-    
+
     let n = arr.len();
     let k = dirty_indices.len();
-    
-    // Single O(n) pass to separate clean and dirty values
+
+    // Sort indices ascending for single-pass extraction
+    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
+    sorted_indices.sort_unstable();
+
+    // Single O(n) pass with index comparison (no HashSet lookups)
     let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
     let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    
-    for (i, val) in arr.iter().enumerate() {
-        if dirty_indices.contains(&i) {
-            dirty_values.push(val.clone());
+    let mut dirty_ptr = 0;
+
+    for (i, val) in arr.drain(..).enumerate() {
+        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
+            dirty_values.push(val);
+            dirty_ptr += 1;
         } else {
-            clean_values.push(val.clone());
+            clean_values.push(val);
         }
     }
-    
+
+    // Sort dirty values - O(k log k)
     dirty_values.sort_by(counting_comparator);
-    
-    // Merge
+
+    // Merge - O(n)
     let mut result: Vec<User> = Vec::with_capacity(n);
-    let mut i = 0;
-    let mut j = 0;
     let clean_len = clean_values.len();
     let dirty_len = dirty_values.len();
-    
+    let mut i = 0;
+    let mut j = 0;
+
     while i < clean_len && j < dirty_len {
         if counting_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(clean_values[i].clone());
+            result.push(std::mem::take(&mut clean_values[i]));
             i += 1;
         } else {
-            result.push(dirty_values[j].clone());
+            result.push(std::mem::take(&mut dirty_values[j]));
             j += 1;
         }
     }
-    while i < clean_len {
-        result.push(clean_values[i].clone());
-        i += 1;
+
+    for item in clean_values.drain(i..) {
+        result.push(item);
     }
-    while j < dirty_len {
-        result.push(dirty_values[j].clone());
-        j += 1;
+    for item in dirty_values.drain(j..) {
+        result.push(item);
     }
-    
+
     *arr = result;
 }
 
@@ -883,7 +911,7 @@ fn print_segmentation_table(results: &[SegmentationResult]) {
     println!("└────────────┴──────────┴────────┴────────────────────┴────────────────────┘");
 }
 
-fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
+fn export_segmentation_csv(results: &[SegmentationResult]) {
     // Export segment count
     let mut count_csv = String::from("k_percent");
     for &n in SEGMENTATION_SIZES {
@@ -908,9 +936,9 @@ fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
         }
         count_csv.push('\n');
     }
-    let count_path = format!("{}/segmentation-count.csv", base_path);
-    fs::write(&count_path, count_csv).expect("Failed to write segmentation-count.csv");
-    println!("Exported: {}", count_path);
+    // let count_path = format!("{}/segmentation-count.csv", base_path);
+    // fs::write(&count_path, count_csv).expect("Failed to write segmentation-count.csv");
+    // println!("Exported: {}", count_path);
 
     // Export segments per k
     let mut spk_csv = String::from("k_percent");
@@ -936,9 +964,10 @@ fn export_segmentation_csv(results: &[SegmentationResult], base_path: &str) {
         }
         spk_csv.push('\n');
     }
-    let spk_path = format!("{}/segments-per-k.csv", base_path);
-    fs::write(&spk_path, spk_csv).expect("Failed to write segments-per-k.csv");
-    println!("Exported: {}", spk_path);
+
+    //let spk_path = format!("{}/segments-per-k.csv", base_path);
+    //fs::write(&spk_path, spk_csv).expect("Failed to write segments-per-k.csv");
+    //println!("Exported: {}", spk_path);
 }
 
 // ============================================================================
@@ -1347,7 +1376,7 @@ fn main() {
         );
         export_metadata_csv(&format!("{}/benchmark_metadata.csv", base_path));
         // Segmentation goes in root figures folder (language-independent analysis)
-        export_segmentation_csv(&segmentation_results, figures_path);
+        export_segmentation_csv(&segmentation_results);
     }
 
     println!();

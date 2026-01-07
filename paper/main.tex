@@ -56,7 +56,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge. In this paper, we show how to do better than these approaches. First, we formulate an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in practice. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable over \emph{DeltaSort}. 
+Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge. In this paper, we show how to do better than these approaches for certain update batch sizes. First, we formulate an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for a range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in practice. We also explore limitations of this approach and identify a crossover point, depending on array size, where full re-sorting becomes preferable over \emph{DeltaSort}. 
 \end{abstract}
 
 %==============================================================================
@@ -333,11 +333,31 @@ Figure~\ref{fig:rust-execution-time} shows execution time (in microseconds) for 
 
 \input{figures/rust/execution-time}
 
+There are many interesting observations from the execution time graph:
+\begin{enumerate}
+  \item Even though NativeSort (PDQSort~\cite{peters2021pdqsort}) is slower than update-aware algorithms (which is expected), it is able to effectively leverage partial order for small $k$ values, resulting in sub-linear time complexity in that range. After $k \gtrapprox 0.2\%$, NativeSort takes roughly the same amount of time irrespective of $k$.
+  \item BIS performs well for $k \lessapprox 0.004\% $ (still not the fastest) but quickly degrades into the worst performing algorithm due to high data movement cost ($O(kn)$).
+  \item ESM is the best performing baseline for most of the range $(1\% \gtrapprox k \lessapprox 80\%)$. So if updates are known and in this range, ESM is the fastest option at the cost of $O(n)$ auxiliary space. 
+  \item DeltaSort outperforms both BIS and ESM by $\approx$ $2$--$5$$\times$ for $k \lessapprox 1\%$. It uses $O(k)$ auxiliary space which is more than BIS ($O(1)$) but less than ESM ($(O(n)$)). Also, even though the range is small in absolute terms, in real-world scenarios the typical udpate sizes fall in this range.
+\end{enumerate}
+
+The above observations indicate that just like we have hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}) that adapt to input structure, we can also have hybrid \emph{update-aware} sorting algorithms that adapt to update size depending on the kind of execution environment we are in (memory-constrained or compute-constrained). We will explore this direction further in future work.
+
 \subsection{Comparator Invocation Count}
 
 Figure~\ref{fig:rust-comparator-count} shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort may be even greater.
 
 \input{figures/rust/comparator-count}
+
+We can observe following patterns form the comparator count graph:
+\begin{enumerate}
+  \item NativeSort's comparator count remains roughly constant after $k \gtrapprox 0.2\%$, mirroring its execution time behavior.
+  \item BIS is the most comparison-efficient algorithm.
+  \item ESM's comparator count is consistently high even for small $k$ and approaches that of NativeSort for large $k$.
+  \item DeltaSort's comparator count is similar to BIS for $k \lessapprox 0.1\%$ and is $\approx 10-20\%$ higher for the remaining range.
+\end{enumerate}
+
+The key takeway is that as comparator cost grows, DeltaSort's relative advantage over ESM and NativeSort increases while still remaining faster than BIS for $k \lessapprox 1\%$. We chose a typical comparator for our experiments. In future work, we will explore the performance patterns across a range of comparator costs.
 
 \subsection{Crossover Threshold Analysis}
 

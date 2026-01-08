@@ -242,15 +242,8 @@ where
     let mut lo: usize = ((n as f64) * lo_ratio).max(1.0) as usize;
     let mut hi: usize = ((n as f64) * hi_ratio) as usize;
 
-    let min_range = (n as f64 * 0.001) as usize;
-
     while lo < hi {
-        if hi - lo < min_range {
-            break;
-        }
-
         let mid = lo + (hi - lo).div_ceil(2);
-
         if is_faster(&base_users, mid, n) {
             lo = mid;
         } else {
@@ -439,14 +432,18 @@ struct BenchmarkResults {
 /// Extended crossover results for all algorithms vs native
 struct CrossoverResultsAll {
     n: usize,
+    bis_k_c: usize,
     bis_ratio: f64,
+    esm_k_c: usize,
     esm_ratio: f64,
+    deltasort_k_c: usize,
     deltasort_ratio: f64,
 }
 
 /// Crossover result for DeltaSort vs ESM
 struct CrossoverResultDeltaVsEsm {
     n: usize,
+    k_c: usize,
     crossover_ratio: f64,
 }
 
@@ -549,35 +546,39 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
 fn print_crossover_table_all(results: &[CrossoverResultsAll]) {
     println!();
     println!("Crossover Threshold (All Algorithms vs Native)");
-    println!("┌────────────┬──────────────┬──────────────┬──────────────┐");
-    println!("│     n      │  BIS k_c/n   │  ESM k_c/n   │   DS k_c/n   │");
-    println!("├────────────┼──────────────┼──────────────┼──────────────┤");
+    println!("┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐");
+    println!("│     n      │  BIS k_c   │  BIS k_c%  │  ESM k_c   │  ESM k_c%  │   DS k_c   │  DS k_c%   │");
+    println!("├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤");
     for r in results {
         println!(
-            "│ {:>10} │ {:>11.1}% │ {:>11.1}% │ {:>11.1}% │",
+            "│ {:>10} │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │",
             format_number(r.n),
+            format_number(r.bis_k_c),
             r.bis_ratio,
+            format_number(r.esm_k_c),
             r.esm_ratio,
+            format_number(r.deltasort_k_c),
             r.deltasort_ratio
         );
     }
-    println!("└────────────┴──────────────┴──────────────┴──────────────┘");
+    println!("└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘");
 }
 
 fn print_crossover_table_ds_vs_esm(results: &[CrossoverResultDeltaVsEsm]) {
     println!();
     println!("Crossover Threshold (DeltaSort vs ESM)");
-    println!("┌────────────┬──────────────┐");
-    println!("│     n      │  k_c/n (%)   │");
-    println!("├────────────┼──────────────┤");
+    println!("┌────────────┬────────────┬────────────┐");
+    println!("│     n      │    k_c     │   k_c %    │");
+    println!("├────────────┼────────────┼────────────┤");
     for r in results {
         println!(
-            "│ {:>10} │ {:>11.1}% │",
+            "│ {:>10} │ {:>10} │ {:>9.3}% │",
             format_number(r.n),
+            format_number(r.k_c),
             r.crossover_ratio
         );
     }
-    println!("└────────────┴──────────────┘");
+    println!("└────────────┴────────────┴────────────┘");
 }
 
 // ============================================================================
@@ -643,11 +644,11 @@ fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
 }
 
 fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
-    let mut csv = String::from("n,bis,esm,deltasort\n");
+    let mut csv = String::from("n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n");
     for r in results {
         csv.push_str(&format!(
-            "{},{:.1},{:.1},{:.1}\n",
-            r.n, r.bis_ratio, r.esm_ratio, r.deltasort_ratio
+            "{},{},{:.3},{},{:.3},{},{:.3}\n",
+            r.n, r.bis_k_c, r.bis_ratio, r.esm_k_c, r.esm_ratio, r.deltasort_k_c, r.deltasort_ratio
         ));
     }
     fs::write(path, csv).expect("Failed to write crossover-all.csv");
@@ -655,9 +656,9 @@ fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
 }
 
 fn export_crossover_ds_vs_esm_csv(results: &[CrossoverResultDeltaVsEsm], path: &str) {
-    let mut csv = String::from("n,crossover_ratio\n");
+    let mut csv = String::from("n,kc,crossover_ratio\n");
     for r in results {
-        csv.push_str(&format!("{},{:.1}\n", r.n, r.crossover_ratio));
+        csv.push_str(&format!("{},{},{:.3}\n", r.n, r.k_c, r.crossover_ratio));
     }
     fs::write(path, csv).expect("Failed to write crossover-ds-vs-esm.csv");
     println!("Exported: {}", path);
@@ -837,8 +838,11 @@ fn main() {
 
         crossover_all_results.push(CrossoverResultsAll {
             n: size,
+            bis_k_c,
             bis_ratio: (bis_k_c as f64 / size as f64) * 100.0,
+            esm_k_c,
             esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
+            deltasort_k_c: ds_k_c,
             deltasort_ratio: (ds_k_c as f64 / size as f64) * 100.0,
         });
         println!(
@@ -863,6 +867,7 @@ fn main() {
         let crossover_ratio = (k_c as f64 / size as f64) * 100.0;
         crossover_ds_vs_esm_results.push(CrossoverResultDeltaVsEsm {
             n: size,
+            k_c,
             crossover_ratio,
         });
         println!(" k_c={} ({:.1}%)", k_c, crossover_ratio);

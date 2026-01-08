@@ -193,13 +193,17 @@ interface BenchmarkResults {
 
 interface CrossoverResultsAll {
     n: number;
+    bisKc: number;
     bisRatio: number;
+    esmKc: number;
     esmRatio: number;
+    deltasortKc: number;
     deltasortRatio: number;
 }
 
 interface CrossoverResultDeltaVsEsm {
     n: number;
+    kc: number;
     crossoverRatio: number;
 }
 
@@ -373,13 +377,8 @@ function findCrossoverGeneric(
     let lo = Math.max(1, Math.floor(n * loRatio));
     let hi = Math.floor(n * hiRatio);
 
-    const minRange = Math.floor(n * 0.001);
-
     while (lo < hi) {
-        if (hi - lo < minRange) break;
-
         const mid = lo + Math.ceil((hi - lo) / 2);
-
         if (isFaster(baseUsers, mid, n)) {
             lo = mid;
         } else {
@@ -514,29 +513,37 @@ function printComparatorCountTable(results: BenchmarkResults): void {
 function printCrossoverTableAll(results: CrossoverResultsAll[]): void {
     console.log();
     console.log("Crossover Threshold (All Algorithms vs Native)");
-    console.log("┌────────────┬──────────────┬──────────────┬──────────────┐");
-    console.log("│     n      │  BIS k_c/n   │  ESM k_c/n   │   DS k_c/n   │");
-    console.log("├────────────┼──────────────┼──────────────┼──────────────┤");
+    console.log(
+        "┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐",
+    );
+    console.log(
+        "│     n      │  BIS k_c   │  BIS k_c%  │  ESM k_c   │  ESM k_c%  │   DS k_c   │  DS k_c%   │",
+    );
+    console.log(
+        "├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤",
+    );
     for (const r of results) {
         console.log(
-            `│ ${formatNumber(r.n).padStart(10)} │ ${r.bisRatio.toFixed(1).padStart(11)}% │ ${r.esmRatio.toFixed(1).padStart(11)}% │ ${r.deltasortRatio.toFixed(1).padStart(11)}% │`,
+            `│ ${formatNumber(r.n).padStart(10)} │ ${formatNumber(r.bisKc).padStart(10)} │ ${r.bisRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.esmKc).padStart(10)} │ ${r.esmRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.deltasortKc).padStart(10)} │ ${r.deltasortRatio.toFixed(3).padStart(9)}% │`,
         );
     }
-    console.log("└────────────┴──────────────┴──────────────┴──────────────┘");
+    console.log(
+        "└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘",
+    );
 }
 
 function printCrossoverTableDsVsEsm(results: CrossoverResultDeltaVsEsm[]): void {
     console.log();
     console.log("Crossover Threshold (DeltaSort vs ESM)");
-    console.log("┌────────────┬──────────────┐");
-    console.log("│     n      │  k_c/n (%)   │");
-    console.log("├────────────┼──────────────┤");
+    console.log("┌────────────┬────────────┬────────────┐");
+    console.log("│     n      │    k_c     │   k_c %    │");
+    console.log("├────────────┼────────────┼────────────┤");
     for (const r of results) {
         console.log(
-            `│ ${formatNumber(r.n).padStart(10)} │ ${r.crossoverRatio.toFixed(1).padStart(11)}% │`,
+            `│ ${formatNumber(r.n).padStart(10)} │ ${formatNumber(r.kc).padStart(10)} │ ${r.crossoverRatio.toFixed(3).padStart(9)}% │`,
         );
     }
-    console.log("└────────────┴──────────────┘");
+    console.log("└────────────┴────────────┴────────────┘");
 }
 
 // ============================================================================
@@ -572,9 +579,18 @@ function exportComparatorCountCsv(results: BenchmarkResults, filePath: string): 
 }
 
 function exportCrossoverAllCsv(results: CrossoverResultsAll[], filePath: string): void {
-    let csv = "n,bis,esm,deltasort\n";
+    let csv = "n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n";
     for (const r of results) {
-        csv += `${r.n},${r.bisRatio.toFixed(1)},${r.esmRatio.toFixed(1)},${r.deltasortRatio.toFixed(1)}\n`;
+        csv += `${r.n},${r.bisKc},${r.bisRatio.toFixed(3)},${r.esmKc},${r.esmRatio.toFixed(3)},${r.deltasortKc},${r.deltasortRatio.toFixed(3)}\n`;
+    }
+    fs.writeFileSync(filePath, csv);
+    console.log(`Exported: ${filePath}`);
+}
+
+function exportCrossoverDsVsEsmCsv(results: CrossoverResultDeltaVsEsm[], filePath: string): void {
+    let csv = "n,kc,crossover_ratio\n";
+    for (const r of results) {
+        csv += `${r.n},${r.kc},${r.crossoverRatio.toFixed(3)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -682,8 +698,11 @@ async function main(): Promise<void> {
 
         crossoverAllResults.push({
             n: size,
+            bisKc,
             bisRatio: (bisKc / size) * 100,
+            esmKc,
             esmRatio: (esmKc / size) * 100,
+            deltasortKc: dsKc,
             deltasortRatio: (dsKc / size) * 100,
         });
         console.log(
@@ -702,7 +721,7 @@ async function main(): Promise<void> {
         process.stdout.write(`  n=${formatNumber(size).padStart(10)}...`);
         const kc = findCrossoverDeltasortVsEsm(size);
         const crossoverRatio = (kc / size) * 100;
-        crossoverDsVsEsmResults.push({ n: size, crossoverRatio });
+        crossoverDsVsEsmResults.push({ n: size, kc, crossoverRatio });
         console.log(` k_c=${kc} (${crossoverRatio.toFixed(1)}%)`);
     }
 
@@ -717,6 +736,10 @@ async function main(): Promise<void> {
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
         exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverAllCsv(crossoverAllResults, path.join(basePath, "crossover-all.csv"));
+        exportCrossoverDsVsEsmCsv(
+            crossoverDsVsEsmResults,
+            path.join(basePath, "crossover-ds-vs-esm.csv"),
+        );
         exportMetadataCsv(results, path.join(basePath, "benchmark_metadata.csv"));
     }
 

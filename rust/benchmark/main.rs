@@ -45,12 +45,22 @@ const CROSSOVER_SIZES: &[usize] = &[
 
 /// Get number of iterations for a given k value
 /// Small k values need more iterations due to timer resolution
-fn iterations_for_k(k: usize) -> usize {
+fn timing_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=10 => BASE_ITERATIONS * 10,  // 1000 iterations for k <= 10
+        0..=5 => BASE_ITERATIONS * 50,  // 1000 iterations for k <= 10
+        6..=10 => BASE_ITERATIONS * 10,  // 1000 iterations for k <= 10
         11..=50 => BASE_ITERATIONS * 5,  // 500 iterations for k <= 50
         51..=200 => BASE_ITERATIONS * 2, // 200 iterations for k <= 200
         _ => BASE_ITERATIONS,            // 100 iterations for large k
+    }
+}
+
+/// Get number of comparison iterations for a given k value
+/// Small k values need more iterations due to timer resolution
+fn comparison_iterations_for_k(k: usize) -> usize {
+    match k {
+        0..=50 => BASE_ITERATIONS,  // 1000 iterations for k <= 10
+        _ => BASE_ITERATIONS/5,            // 100 iterations for large k
     }
 }
 
@@ -79,7 +89,7 @@ where
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
-    let iters = iterations_for_k(k);
+    let mut iters = timing_iterations_for_k(k);
 
     // Phase 1: Measure timing (without counting overhead)
     // Each iteration uses fresh random mutations
@@ -98,8 +108,9 @@ where
     }
 
     // Phase 2: Measure comparisons (separate runs with fresh mutations)
+    iters = comparison_iterations_for_k(k);
     let mut comparisons = Vec::with_capacity(iters);
-    for _ in 0..10 {
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
         let indices = sample_distinct_indices(&mut rng, n, k);
         let mut dirty_indices = HashSet::with_capacity(k);

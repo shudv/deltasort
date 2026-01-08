@@ -454,19 +454,19 @@ fn format_number(n: usize) -> String {
     }
 }
 
-/// Format value ± ci with consistent total width
+/// Format value ± ci% with consistent total width
 fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.1}", value);
-    let ci_str = format!("{:.1}", ci);
-    let content = format!("{} ± {}", val_str, ci_str);
+    let ci_percent = if value > 0.0 { (ci / value) * 100.0 } else { 0.0 };
+    let content = format!("{} ±{:.1}%", val_str, ci_percent);
     format!("{:>width$}", content, width = total_width)
 }
 
-/// Format integer value ± ci with consistent total width  
+/// Format integer value ± ci% with consistent total width  
 fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.0}", value);
-    let ci_str = format!("{:.0}", ci);
-    let content = format!("{} ± {}", val_str, ci_str);
+    let ci_percent = if value > 0.0 { (ci / value) * 100.0 } else { 0.0 };
+    let content = format!("{} ±{:.1}%", val_str, ci_percent);
     format!("{:>width$}", content, width = total_width)
 }
 
@@ -653,11 +653,15 @@ fn export_crossover_ds_vs_esm_csv(results: &[CrossoverResultDeltaVsEsm], path: &
     println!("Exported: {}", path);
 }
 
-fn export_metadata_csv(path: &str) {
+fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
     use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
-    // Get current date
-    let date = chrono_lite_date();
+    // Get timestamp
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
 
     // Get OS info
     let os = std::env::consts::OS;
@@ -676,24 +680,36 @@ fn export_metadata_csv(path: &str) {
         format!("{}/{}", os, arch)
     };
 
+    // Compute max CI as percentage of mean across all timing measurements
+    // This represents our least confident measurement (can be narrowed with more iterations)
+    let mut max_ci_percent: f64 = 0.0;
+    for r in &results.native {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in &results.bis {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in &results.esm {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in &results.deltasort {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+
     let csv = format!(
-        "key,value\ndate,{}\nmachine,{}\nn,{}\niterations,{}\n",
-        date, machine, N, "20-1000 (scaled by k)"
+        "key,value\ntimestamp,{}\nmachine,{}\nn,{}\nmax_ci,{:.2}\n",
+        timestamp, machine, N, max_ci_percent
     );
     fs::write(path, csv).expect("Failed to write metadata.csv");
     println!("Exported: {}", path);
-}
-
-/// Simple date formatter (avoids chrono dependency)
-fn chrono_lite_date() -> String {
-    use std::process::Command;
-    Command::new("date")
-        .arg("+%B %Y")
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "Unknown".to_string())
 }
 
 // ============================================================================
@@ -862,7 +878,7 @@ fn main() {
             &crossover_ds_vs_esm_results,
             &format!("{}/crossover-ds-vs-esm.csv", base_path),
         );
-        export_metadata_csv(&format!("{}/benchmark_metadata.csv", base_path));
+        export_metadata_csv(&results, &format!("{}/benchmark_metadata.csv", base_path));
     }
 
     println!();

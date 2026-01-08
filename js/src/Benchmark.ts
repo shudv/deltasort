@@ -443,15 +443,15 @@ function formatNumber(n: number): string {
 
 function formatWithCi(value: number, ci: number, totalWidth: number): string {
     const valStr = value.toFixed(1);
-    const ciStr = ci.toFixed(1);
-    const content = `${valStr} ± ${ciStr}`;
+    const ciPercent = value > 0 ? ((ci / value) * 100).toFixed(1) : "0.0";
+    const content = `${valStr} ±${ciPercent}%`;
     return content.padStart(totalWidth);
 }
 
 function formatIntWithCi(value: number, ci: number, totalWidth: number): string {
     const valStr = Math.round(value).toString();
-    const ciStr = Math.round(ci).toString();
-    const content = `${valStr} ± ${ciStr}`;
+    const ciPercent = value > 0 ? ((ci / value) * 100).toFixed(1) : "0.0";
+    const content = `${valStr} ±${ciPercent}%`;
     return content.padStart(totalWidth);
 }
 
@@ -580,8 +580,8 @@ function exportCrossoverAllCsv(results: CrossoverResultsAll[], filePath: string)
     console.log(`Exported: ${filePath}`);
 }
 
-function exportMetadataCsv(filePath: string): void {
-    const date = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+function exportMetadataCsv(results: BenchmarkResults, filePath: string): void {
+    const timestamp = Date.now();
     const platform = `${process.platform}/${process.arch}`;
 
     // Try to get CPU info on macOS
@@ -594,12 +594,27 @@ function exportMetadataCsv(filePath: string): void {
         // Ignore errors
     }
 
+    // Compute max CI as percentage of mean across all timing measurements
+    // This represents our least confident measurement (can be narrowed with more iterations)
+    let maxCiPercent = 0;
+    for (const r of results.native) {
+        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+    }
+    for (const r of results.bis) {
+        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+    }
+    for (const r of results.esm) {
+        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+    }
+    for (const r of results.deltasort) {
+        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+    }
+
     let csv = "key,value\n";
-    csv += `date,${date}\n`;
+    csv += `timestamp,${timestamp}\n`;
     csv += `machine,${machine}\n`;
-    csv += `runtime,Node.js ${process.version}\n`;
     csv += `n,${N}\n`;
-    csv += `iterations,20-1000 (scaled by k)\n`;
+    csv += `max_ci,${maxCiPercent.toFixed(2)}\n`;
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
 }
@@ -702,7 +717,7 @@ async function main(): Promise<void> {
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
         exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverAllCsv(crossoverAllResults, path.join(basePath, "crossover-all.csv"));
-        exportMetadataCsv(path.join(basePath, "benchmark_metadata.csv"));
+        exportMetadataCsv(results, path.join(basePath, "benchmark_metadata.csv"));
     }
 
     console.log();

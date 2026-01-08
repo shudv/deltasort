@@ -1,6 +1,5 @@
 key,value
-date,January 2026
+timestamp,1767858978756
 machine,Apple M3 Pro
-runtime,Node.js v22.21.0
 n,100000
-iterations,20-1000 (scaled by k)
+max_ci,45.38

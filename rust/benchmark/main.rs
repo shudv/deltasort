@@ -2,7 +2,6 @@
 //!
 //! Run with: `cargo run --bin benchmark --release`
 //! Export CSV: `cargo run --bin benchmark --release -- --export`
-
 mod binary_insertion_sort;
 mod data;
 mod extract_sort_merge;
@@ -26,22 +25,22 @@ use std::time::Instant;
 // ============================================================================
 
 /// Array size for main benchmarks
-const N: usize = 50_000;
+const N: usize = 100_000;
 
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;
 
 /// Delta counts to test
 const DELTA_COUNTS: &[usize] = &[
-    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000,
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000
 ];
 
 /// Number of iterations for crossover measurements (higher = more stable but slower)
-const CROSSOVER_ITERATIONS: usize = 5;
+const CROSSOVER_ITERATIONS: usize = 10;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
-    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000//, 1_000_000,
+    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000,
 ];
 
 /// Get number of iterations for a given k value

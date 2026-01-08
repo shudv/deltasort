@@ -1,5 +1,5 @@
 key,value
-date,January 2026
+timestamp,1767861683423
 machine,Apple M3 Pro
-n,50000
-iterations,20-1000 (scaled by k)
+n,100000
+max_ci,9.97

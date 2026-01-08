@@ -183,12 +183,12 @@ Value movement during the repair phase is bounded within each segment: no value 
 \end{lemma}
 
 \begin{proof}
-Let $S$ be a segment with R indices $R_1, \ldots, R_r$ followed by L indices $L_1, \ldots, L_l$ (where $r \ge 0$ and $l \ge 0$, with $r + l \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_1] < \cdots < A[R_r] < A[L_1] < \cdots < A[L_l]$.
+Let $S$ be a segment with R indices $R_0, \ldots, R_{r-1}$ followed by L indices $L_0, \ldots, L_{l-1}$ (where $r \ge 0$ and $l \ge 0$, with $r + l \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_0] < \cdots < A[R_{r-1}] < A[L_0] < \cdots < A[L_{l-1}]$.
 
 \begin{enumerate}
-  \item R values move rightward but cannot pass the first L value $L_1$ (if it exists) or the segment boundary, since $A[R_i] < A[L_1]$ for all $i$.
+  \item R values move rightward but cannot pass the first L value $L_0$ (if it exists) or the segment boundary, since $A[R_i] < A[L_0]$ for all $i$.
 
-  \item L values move leftward but cannot pass the last R value $R_r$ (if it exists) or the segment boundary, since $A[R_r] < A[L_j]$ for all $j$.
+  \item L values move leftward but cannot pass the last R value $R_{r-1}$ (if it exists) or the segment boundary, since $A[R_{r-1}] < A[L_j]$ for all $j$.
 \end{enumerate}
 
 Since no value exits its segment, each segment can be repaired independently. The more segments we have after Phase~1, more localized fixes are possible. Theorem~\ref{thm:movement-bound} establishes an asymptotic bound on number of segments.
@@ -229,9 +229,15 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 \end{proof}
 
 \subsection{Complexity Analysis}
+We first analyze the expected total data movement during Phase~2 under a bounded-range update model where updated values are drawn uniformly from a fixed range. This ensures that there is no inherent structure in the updates that DeltaSort could exploit beyond segmentation.
+
+\begin{remark}
+   We could choose other models such as unbounded-range model (values can be in any arbitrary range) or perturbation model (where values change based on a particular random variance from their existing value). Both these models lead to better expected movement bounds as compared to bounded-range model hence we chose the stricter model for analysis. Given these alternate models have legitimate practical relevance, we will explore them more formally in future work. 
+\end{remark}
+
 \begin{theorem}[Expected Movement Bound]
 \label{thm:movement-bound}
-Under a bounded-range update model where $k$ indices are selected uniformly at random and their values are drawn uniformly from a fixed range, the expected total data movement during DeltaSort's repair phase is $O(n)$.
+Under a bounded-range update model, for an array of size $n$ with $k$ updates, the expected total data movement during DeltaSort's repair phase is $O(n)$ (independent of $k$).
 \end{theorem}
 
 \begin{proof}

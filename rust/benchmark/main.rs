@@ -32,7 +32,7 @@ const BASE_ITERATIONS: usize = 100;
 
 /// Delta counts to test
 const DELTA_COUNTS: &[usize] = &[
-    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000
+    1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000,
 ];
 
 /// Number of iterations for crossover measurements (higher = more stable but slower)
@@ -47,7 +47,7 @@ const CROSSOVER_SIZES: &[usize] = &[
 /// Small k values need more iterations due to timer resolution
 fn timing_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=5 => BASE_ITERATIONS * 50,  // 1000 iterations for k <= 10
+        0..=5 => BASE_ITERATIONS * 50,   // 1000 iterations for k <= 10
         6..=10 => BASE_ITERATIONS * 10,  // 1000 iterations for k <= 10
         11..=50 => BASE_ITERATIONS * 5,  // 500 iterations for k <= 50
         51..=200 => BASE_ITERATIONS * 2, // 200 iterations for k <= 200
@@ -59,8 +59,8 @@ fn timing_iterations_for_k(k: usize) -> usize {
 /// Small k values need more iterations due to timer resolution
 fn comparison_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=50 => BASE_ITERATIONS,  // 1000 iterations for k <= 10
-        _ => BASE_ITERATIONS/5,            // 100 iterations for large k
+        0..=50 => BASE_ITERATIONS, // 1000 iterations for k <= 10
+        _ => BASE_ITERATIONS / 5,  // 100 iterations for large k
     }
 }
 
@@ -263,7 +263,7 @@ fn find_crossover_bis(n: usize) -> usize {
 }
 
 fn find_crossover_esm(n: usize) -> usize {
-    find_crossover_generic(n, if n > 5000 {0.7} else {0.6}, 0.95, esm_is_faster)
+    find_crossover_generic(n, if n > 5000 { 0.7 } else { 0.6 }, 0.95, esm_is_faster)
 }
 
 /// Find crossover where DeltaSort becomes slower than ESM
@@ -464,7 +464,11 @@ fn format_number(n: usize) -> String {
 /// Format value ± ci% with consistent total width
 fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.1}", value);
-    let ci_percent = if value > 0.0 { (ci / value) * 100.0 } else { 0.0 };
+    let ci_percent = if value > 0.0 {
+        (ci / value) * 100.0
+    } else {
+        0.0
+    };
     let content = format!("{} ±{:.1}%", val_str, ci_percent);
     format!("{:>width$}", content, width = total_width)
 }
@@ -472,7 +476,11 @@ fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
 /// Format integer value ± ci% with consistent total width  
 fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.0}", value);
-    let ci_percent = if value > 0.0 { (ci / value) * 100.0 } else { 0.0 };
+    let ci_percent = if value > 0.0 {
+        (ci / value) * 100.0
+    } else {
+        0.0
+    };
     let content = format!("{} ±{:.1}%", val_str, ci_percent);
     format!("{:>width$}", content, width = total_width)
 }

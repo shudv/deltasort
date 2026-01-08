@@ -328,18 +328,18 @@ We discuss 2 key behavioral aspects of DeltaSort:
 %==============================================================================
 
 \subsection{Setup}
-All experiments are run on a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point has a CI of $<5\%$. All measurements are taken after warm-up runs to account for caching effects. We deliberately evaluate DeltaSort on fully random update distributions, which provide no favorable structure to the workload (such as bounded-window or smooth-value updates) which can further amplify DeltaSort's advantages. We use a multi-key comparator that lexicographically compares country (string), age (integer), and name (string) to ensure that we use a realistic comparison scenario. All the results are reproducible using the code and data available in the repository~\cite{deltasort-repo}.
+All experiments are run on a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point has a CI of $<5\%$. All measurements are taken after warm-up runs to account for caching effects. We deliberately evaluate DeltaSort on fully random update distributions, which provide no favorable structure to the workload (such as bounded-window or perturbed updates) which can further amplify DeltaSort's advantages. We use a multi-key comparator that lexicographically compares country (string), age (integer), and name (string) to ensure that we use a realistic comparison scenario. All the results are reproducible using the code and data available in the repository~\cite{deltasort-repo}.
 DeltaSort is evaluated against the following baselines:
 
-\begin{itemize}
+\begin{enumerate}
     \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array. NativeSort is \emph{not} update-aware, but serves as an important baseline to quantify the benefit of exposing update information to the sorting routine. We expect update-aware algorithms to outperform NativeSort only up to a critical batch size $k_c$, beyond which full re-sorting becomes preferable. Benchmarking NativeSort is therefore essential to identify this crossover point.
 
-    \item \textbf{Binary-Insertion-Sort (BIS)}: Extract each updated value and reinsert it independently using binary search. This approach performs $O(k \log n)$ comparisons but may incur $O(kn)$ data movement in the worst case. BIS is highly comparison-efficient and is a common choice for very small update batches.
+    \item \textbf{Binary-Insertion-Sort (BIS)}: Space efficient ($O(1)$), but movement intensive ($O(kn)$).
 
-    \item \textbf{Extract-Sort-Merge (ESM)}: Extract all updated values, sort them separately, and merge them with the remaining sorted portion of the array. This approach performs $O(k \log k + n)$ comparisons and $O(n)$ data movement. ESM is more movement-efficient than BIS for larger $k$, but incurs higher comparison cost.
-\end{itemize}
+    \item \textbf{Extract-Sort-Merge (ESM)}: Movement efficient ($O(n)$), but requires additional space ($O(n)$) for all $k$.
+\end{enumerate}
 
-Together, these baselines provide strong baselines for comparison across the full range of update batch sizes ($k$).
+Together, these provide strong baselines for comparison across the full range of update batch sizes ($k$).
 \input{figures/sorting-algorithms}
 
 \subsection{Correctness}

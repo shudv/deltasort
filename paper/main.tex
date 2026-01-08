@@ -140,10 +140,10 @@ For an updated index $i$, we define its \emph{direction} based on local order:
 \end{definition}
 
 \begin{remark}
-The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate STABLE direction for values already in their correct position. However, this complicates the algorithm:
+The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate S (stable) category for values already in their correct positions. However, this complicates the setup:
 \begin{enumerate}
-  \item STABLE values would be processed identically to R values (both may stay or move right).
-  \item Fixing an R value can shift elements, potentially converting a previously STABLE neighbor into an R violation.
+  \item S values need to be processed identically to R values (both may stay or move right).
+  \item Fixing an R value can shift elements, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
 \end{enumerate}
 The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes during Phase~2}. An L stays L until fixed; an R stays R until fixed. This simplifies both the correctness argument and implementation.
 \end{remark}
@@ -156,7 +156,7 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ satisfying:
   \item Either $j = n - 1$, or $j \in U$ with direction L.
   \item There do not exist updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction L and $q$ has direction R.
 \end{enumerate}
-Intuitively, a segment is a contiguous portion of the array where all R-direction updates precede all L-direction updates. Condition~(3) ensures that no L appears before an R within the segment. Conditions~(1) and~(2) handle boundary cases: a leading segment containing only L's is bounded by the array start, and a trailing segment containing only R's is bounded by the array end. Figure~\ref{fig:segment-structure} illustrates this structure.
+More intuitively, a segment is a contiguous portion of the array where all R-direction updates precede all L-direction updates. Condition~(3) ensures that no L appears before an R within the segment. Conditions~(1) and~(2) handle boundary cases: a leading segment containing only L's is bounded by the array start, and a trailing segment containing only R's is bounded by the array end. Figure~\ref{fig:segment-structure} illustrates this structure.
 \end{definition}
 
 \input{figures/segment-structure}
@@ -183,12 +183,12 @@ Value movement during the repair phase is bounded within each segment: no value 
 \end{lemma}
 
 \begin{proof}
-Let $S$ be a segment with R indices $R_1, \ldots, R_m$ followed by L indices $L_1, \ldots, L_p$ (where $m \ge 0$ and $p \ge 0$, with $m + p \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_1] < \cdots < A[R_m] < A[L_1] < \cdots < A[L_p]$.
+Let $S$ be a segment with R indices $R_1, \ldots, R_r$ followed by L indices $L_1, \ldots, L_l$ (where $r \ge 0$ and $l \ge 0$, with $r + l \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_1] < \cdots < A[R_r] < A[L_1] < \cdots < A[L_l]$.
 
 \begin{enumerate}
   \item R values move rightward but cannot pass the first L value $L_1$ (if it exists) or the segment boundary, since $A[R_i] < A[L_1]$ for all $i$.
 
-  \item L values move leftward but cannot pass the last R value $R_m$ (if it exists) or the segment boundary, since $A[R_m] < A[L_j]$ for all $j$.
+  \item L values move leftward but cannot pass the last R value $R_r$ (if it exists) or the segment boundary, since $A[R_r] < A[L_j]$ for all $j$.
 \end{enumerate}
 
 Since no value exits its segment, each segment can be repaired independently. The more segments we have after Phase~1, more localized fixes are possible. Theorem~\ref{thm:movement-bound} establishes an asymptotic bound on number of segments.

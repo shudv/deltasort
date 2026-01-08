@@ -313,14 +313,28 @@ Thus, the expected total data movement during the repair phase is linear in
 the array size and independent of the number of updates.
 \end{proof}
 
-\subsection{Behavior Analysis}
+\begin{theorem}[Comparison Count]
+\label{thm:comparison-count}
+DeltaSort performs $O(k \log n)$ comparisons.
+\end{theorem}
 
-We discuss 2 key behavioral aspects of DeltaSort:
+\begin{proof}
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated element is repaired using a binary search within its containing segment. By Theorem~\ref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
+\[
+O(k \log k) + O(k \log (n/k))
+= O\!\bigl(k(\log k + \log (n/k))\bigr)
+= O(k \log n).
+\]
+\end{proof}
 
-\begin{enumerate}
-  \item \textbf{Stability}: DeltaSort's stability depends on the underlying sort used in Phase~1. Using a stable sort ensures that equal updated values maintain their relative order, preserving overall stability.
-  \item \textbf{Sensitivity to Updates}: The performance of DeltaSort is sensitive to the number and distribution of updates. As the number of updates $k$ increases, the algorithm adapts by creating more segments, balancing movement and comparison costs.
-\end{enumerate}
+\begin{theorem}[Space Complexity]
+\label{thm:space}
+DeltaSort uses $O(k)$ auxiliary space.
+\end{theorem}
+
+\begin{proof}
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. No $O(n)$ auxiliary structures are required.
+\end{proof}
 
 %==============================================================================
 \section{Experimental Evaluation}
@@ -331,15 +345,13 @@ We discuss 2 key behavioral aspects of DeltaSort:
 All experiments are run on a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point has a CI of $<5\%$. All measurements are taken after warm-up runs to account for caching effects. We deliberately evaluate DeltaSort on fully random update distributions, which provide no favorable structure to the workload (such as bounded-window or perturbed updates) which can further amplify DeltaSort's advantages. We use a multi-key comparator that lexicographically compares country (string), age (integer), and name (string) to ensure that we use a realistic comparison scenario. All the results are reproducible using the code and data available in the repository~\cite{deltasort-repo}.
 DeltaSort is evaluated against the following baselines:
 
-\begin{enumerate}
+\begin{itemize}
     \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array. NativeSort is \emph{not} update-aware, but serves as an important baseline to quantify the benefit of exposing update information to the sorting routine. We expect update-aware algorithms to outperform NativeSort only up to a critical batch size $k_c$, beyond which full re-sorting becomes preferable. Benchmarking NativeSort is therefore essential to identify this crossover point.
 
-    \item \textbf{Binary-Insertion-Sort (BIS)}: Space efficient ($O(1)$), but movement intensive ($O(kn)$).
+    \item Update-aware algorithms: \textbf{Binary-Insertion-Sort (BIS)}, \textbf{Extract-Sort-Merge (ESM)}
+\end{itemize}
 
-    \item \textbf{Extract-Sort-Merge (ESM)}: Movement efficient ($O(n)$), but requires additional space ($O(n)$) for all $k$.
-\end{enumerate}
-
-Together, these provide strong baselines for comparison across the full range of update batch sizes ($k$).
+Together, these provide strong baselines for comparison across the full range of update batch sizes ($k$). 
 \input{figures/sorting-algorithms}
 
 \subsection{Correctness}

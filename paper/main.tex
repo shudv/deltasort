@@ -144,7 +144,7 @@ The definition of direction is deliberately asymmetric: L requires a definite vi
   \item S values need to be processed identically to R values (both may stay or move right).
   \item Fixing an R value can shift values, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
 \end{enumerate}
-The two-way classification avoids this issue by maintaining a useful invariant (Lemma~\ref{lem:fix-invariant}): \emph{the direction of an updated index never changes until it is fixed}. This simplifies the correctness argument and implementation.
+The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes until it is repairedd}. This simplifies the implementation.
 \end{remark}
 
 \begin{definition}[Segment]

@@ -1,0 +1,12 @@
+%==============================================================================
+\section{Related Work}
+\label{sec:related}
+%==============================================================================
+
+Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, assume no explicit knowledge of which values have been updated.
+
+A separate line of work studies incremental computation and view maintenance in database and streaming systems, where updates to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. They treat deltas as first-class citizen and demonstrate the practical value of update-aware computation. However, they do not specifically address the problem of repairing sorted arrays, which is much more specialized lower-level problem.
+
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its associated advantages.
+
+In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. Unlike adaptive sorting algorithms, which need to discover the presortedness, \emph{DeltaSort} already knows which values have been updated and hence can leverage this information to achieve better performance. Unlike incremental view maintenance techniques, which focus on higher-level query results, \emph{DeltaSort} is a low-level sorting primitive for arrays, intended to complement higher-level incremental systems rather than replace them. Unlike dynamic data structures, which sacrifice array layout for update efficiency, \emph{DeltaSort} maintains the contiguous array layout.

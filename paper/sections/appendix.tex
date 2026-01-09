@@ -1,0 +1,50 @@
+\appendix
+
+\section{Full Proof of Expected Linear Movement}
+\label{sec:appendix-proof}
+
+We provide the complete derivation for \thmref{thm:movement-bound}.
+
+\begin{proof}
+Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Let position $i \in \{0, \ldots, k-1\}$ denote the $i$-th updated index. Under the bounded-range update model, an updated value is equally likely to fall anywhere within the global value range. The probability that position $i$ has direction L is proportional to the number of preceding updates, and R proportional to the number following:
+\[
+\Pr[\text{L at position } i] = \frac{i}{k-1},
+\qquad
+\Pr[\text{R at position } i] = \frac{k-1-i}{k-1}.
+\]
+
+Segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions. For adjacent positions $(i, i+1)$:
+\[
+\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \frac{i}{k-1} \cdot \frac{k-2-i}{k-1} = \frac{i(k-2-i)}{(k-1)^2}.
+\]
+
+Summing over all adjacent pairs:
+\[
+\mathbb{E}[\mathrm{LR\ transitions}] = \sum_{i=0}^{k-2} \frac{i(k-2-i)}{(k-1)^2} = \frac{1}{(k-1)^2} \sum_{i=0}^{k-2} i(k-2-i).
+\]
+
+Using the identity $\sum_{i=0}^{m} i(m-i) = \frac{m(m+1)(m-1)}{6}$ with $m = k-2$:
+\[
+\sum_{i=0}^{k-2} i(k-2-i) = \frac{(k-2)(k-1)(k-3)}{6},
+\]
+and therefore:
+\[
+\mathbb{E}[\mathrm{LR\ transitions}] = \frac{(k-2)(k-3)}{6(k-1)} = \Theta(k).
+\]
+
+The expected number of segments is $1 + \Theta(k) = \Theta(k)$. Under uniform index distribution, each segment spans $O(n/k)$ positions. By \lemref{lem:confinement}, movement is confined within segments, so:
+\[
+\mathbb{E}[\text{total movement}] \le k \cdot O(n/k) = O(n). \qedhere
+\]
+\end{proof}
+
+\section{Crossover Thresholds in JavaScript}
+\label{sec:appendix-js}
+
+\figref{fig:js-crossover-all} and~\figref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementation.
+
+\input{\figdir/js/crossover-all}
+
+\input{\figdir/js/crossover-ds-vs-esm}
+
+\paragraph{Observations.} In JavaScript, crossover thresholds are generally lower than in Rust due to the managed runtime's memory movement behavior. BIS and DeltaSort have almost identical behavior in JavaScript, while ESM maintains a higher threshold ($\approx 35$--$40\%$). This implies that for small $k$, BIS is preferable to DeltaSort in JavaScript because of lower space requirement and simpler implementation, unlike in Rust where DeltaSort has a clear measurable advantage.

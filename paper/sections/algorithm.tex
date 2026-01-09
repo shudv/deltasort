@@ -1,0 +1,146 @@
+%==============================================================================
+\section{DeltaSort Algorithm}
+\label{sec:algorithm}
+%==============================================================================
+
+\subsection{Overview}
+
+Before we get to how the algorithm works, let's establish useful terminology-
+
+\begin{definition}[Direction]
+\label{def:direction}
+For an updated index $i$, we define its \emph{direction} based on local order:
+\begin{itemize}
+  \item \textbf{LEFT ($L$)}: Value \textbf{must} move left---$\texttt{cmp}(A[i-1], A[i]) > 0$ (for $i > 0$).
+  \item \textbf{RIGHT ($R$)}: Value \textbf{may} move right and \textbf{cannot} move left.
+\end{itemize}
+\end{definition}
+
+\begin{remark}
+The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate S (stable) category for values already in their correct positions. However, this complicates the setup:
+\begin{enumerate}
+  \item S values need to be processed identically to R values (both may stay or move right).
+  \item Fixing an R value can shift values, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
+\end{enumerate}
+The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes until it is repaired}. This simplifies the implementation.
+\end{remark}
+
+\begin{definition}[Segment]
+\label{def:segment}
+A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ satisfying:
+\begin{enumerate}
+  \item Either $i = 0$, or $i \in U$ with direction R.
+  \item Either $j = n - 1$, or $j \in U$ with direction L.
+  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction L and $q$ has direction R.
+  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ is also a segment.
+\end{enumerate}
+
+More intuitively, a segment is a contiguous portion of the array where all R-direction updates precede all L-direction updates. Condition~(3) ensures that no L appears before an R within the segment. Condition~(4) ensures segments are maximal and non-overlapping. Conditions~(1) and~(2) handle boundary cases: a leading segment containing only L's is bounded by the array start, and a trailing segment containing only R's is bounded by the array end. \figref{fig:segment-structure} illustrates this structure.
+\end{definition}
+
+\input{\figdir/segment-structure}
+
+Armed with these definitions, we can see how DeltaSort works. It operates in two phases:
+
+\begin{enumerate}
+  \item \textbf{Phase 1 (Segment):} Extract updated values, sort them, and write back to updated indices in index order. This establishes segments (\defref{def:segment}) in the array that can be \emph{repaired independently}.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring R indices to a stack until the first L index is encountered. When a L is encountered, first flush and repair all pending R's in LIFO order, then repair the L. Continue left-to-right.
+\end{enumerate}
+
+\figref{fig:delta-sort-example} illustrates the full DeltaSort process on a small example.
+
+\input{\figdir/delta-sort-example}
+
+\subsection{Key Insight: \emph{Sorting updated values forms segments that can be repaired locally}}
+\label{sec:insight}
+
+The key insight behind DeltaSort is that pre-sorting updated values induces a \emph{segmentation} of updates. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross it's segment boundary.
+
+\begin{lemma}[Movement Confinement]
+\label{lem:confinement}
+Value movement during the Phase~2 is bounded within each segment: no value needs to cross a segment boundary.
+\end{lemma}
+
+\begin{proof}
+Let $S$ be a segment with R indices $R_0, \ldots, R_{r-1}$ followed by L indices $L_0, \ldots, L_{l-1}$ (where $r \ge 0$ and $l \ge 0$, with $r + l \ge 1$). After Phase~1, updated values are monotonically ordered by index, so $A[R_0] < \cdots < A[R_{r-1}] < A[L_0] < \cdots < A[L_{l-1}]$.
+
+\begin{enumerate}
+  \item R values move rightward but cannot pass the first L value $L_0$ (if it exists) or the segment boundary, since $A[R_i] < A[L_0]$ for all $i$.
+
+  \item L values move leftward but cannot pass the last R value $R_{r-1}$ (if it exists) or the segment boundary, since $A[R_{r-1}] < A[L_j]$ for all $j$.
+\end{enumerate}
+
+Since no value exits its segment, each segment can be repaired independently. The more segments we have after Phase~1, more localized fixes are possible. \thmref{thm:movement-bound} establishes an asymptotic bound on number of segments.
+\end{proof}
+
+\begin{remark}
+  Note that segmentation also \textbf{opens up opportunities for parallelization}. This has practical implications for improving performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
+\end{remark}
+
+\subsection{Pseudocode}
+
+\input{\figdir/pseudocode}
+
+\subsection{Correctness Proof}
+
+\begin{lemma}[Violation Fix Invariant]
+\label{lem:fix-invariant}
+Each fix operation during Phase~2 resolves an order violation without introducing new ones.
+\end{lemma}
+
+\begin{proof}
+We fix each violation using binary search. For binary search to find the correct insertion point, the search range must contain no violations.
+\begin{itemize}
+    \item \emph{L fix at index $i$}: The search range $[leftBound, i-1]$ contains no L violations because Ls are processed left-to-right, and no R violations because all pending Rs are flushed before any L is fixed.
+    \item \emph{R fix at index $i$}: The search range $[i+1, rightBound]$ contains no R violations because Rs are processed in LIFO order with $rightBound$ narrowing after each fix, and no L violations because $rightBound$ never extends past the first L in the segment.
+\end{itemize}
+\end{proof}
+
+\begin{theorem}[Correctness]
+\label{thm:correctness}
+DeltaSort produces a correctly sorted array.
+\end{theorem}
+
+\begin{proof}
+The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \lemref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
+\end{proof}
+
+\subsection{Complexity Analysis}
+\label{sec:complexity}
+
+We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a bounded-range update model. In this model, updated values are drawn randomly and uniformly from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
+
+\begin{remark}[Choice of Update Model]
+\label{rem:update-model}
+Alternative models may also be considered. For example, under an unbounded-range model where updated values are drawn from an unrestricted domain, or under a perturbation model where updates introduce small random deviations from existing values, DeltaSort exhibits equal or strictly better expected movement behavior. We focus on the bounded-range model as it is conservative and avoids assuming favorable update structure.
+\end{remark}
+
+\begin{theorem}[Expected Linear Movement]
+\label{thm:movement-bound}
+Under the bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's repair phase is $O(n)$, independent of $k$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Under the bounded-range model, the probability of direction L at the $i$-th updated index is $i/(k-1)$, and R is $(k-1-i)/(k-1)$. Segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions. By summing the transition probabilities over adjacent pairs, we show that the expected number of such transitions is $\Theta(k)$, yielding $\Theta(k)$ segments. Each segment spans $O(n/k)$ positions in expectation, and by \lemref{lem:confinement}, movement is confined within segments. Thus, total expected movement is $k \cdot O(n/k) = O(n)$. The full derivation appears in \appref{sec:appendix-proof}.
+\end{proof}
+
+\begin{theorem}[Comparison Count]
+\label{thm:comparison-count}
+DeltaSort performs $O(k \log n)$ comparisons.
+\end{theorem}
+
+\begin{proof}
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is repaired using a binary search within its containing segment. By \thmref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
+\[
+O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
+\]
+\end{proof}
+
+\begin{theorem}[Space Complexity]
+\label{thm:space}
+DeltaSort uses $O(k)$ auxiliary space.
+\end{theorem}
+
+\begin{proof}
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices.
+\end{proof}

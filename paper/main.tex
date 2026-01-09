@@ -394,7 +394,7 @@ Several observations stand out:
 
 The key takeaway is that \emph{DeltaSort’s performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. In such environments, the practical strategy simplifies to:
 \begin{itemize}
-  \item Use Binary-Insertion-Sort (or DeltaSort interchangeably) for very small updates.
+  \item Use Binary-Insertion-Sort for very small updates. There is no measurable benefit of using DeltaSort.
   \item Prefer Extract--Sort--Merge or NativeSort for larger update batches.
 \end{itemize}
 
@@ -472,7 +472,7 @@ The expected number of segments is $1 + \Theta(k) = \Theta(k)$. Under uniform in
 \]
 \end{proof}
 
-\section{JavaScript Crossover Analysis}
+\section{Crossover Thresholds in JavaScript}
 \label{sec:appendix-js}
 
 Figures~\ref{fig:js-crossover-all} and~\ref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementation.
@@ -481,7 +481,7 @@ Figures~\ref{fig:js-crossover-all} and~\ref{fig:js-crossover-ds-vs-esm} show cro
 
 \input{figures/js/crossover-ds-vs-esm}
 
-\paragraph{Observations.} In JavaScript, crossover thresholds are generally lower than in Rust due to the managed runtime's unpredictable memory behavior. BIS and DeltaSort exhibit similar crossover points ($\approx 5$--$30\%$), while ESM maintains a higher threshold ($\approx 35$--$40\%$). The DeltaSort vs ESM crossover (Figure~\ref{fig:js-crossover-ds-vs-esm}) shows a narrower regime where DeltaSort wins, consistent with the observation that DeltaSort's movement optimization provides less benefit in managed environments.
+\paragraph{Observations.} In JavaScript, crossover thresholds are generally lower than in Rust due to the managed runtime's memory movement behavior. BIS and DeltaSort have almost identical behavior in JavaScript, while ESM maintains a higher threshold ($\approx 35$--$40\%$). This implies that for small $k$, BIS is preferable to DeltaSort in JavaScript because of lower space requirement and simpler implementation, unlike in Rust where DeltaSort has a clear measurable advantage.
 
 %==============================================================================
 \end{document}

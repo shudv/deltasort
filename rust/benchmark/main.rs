@@ -302,18 +302,18 @@ fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
 // SEGMENTATION ANALYSIS (NOT USED)
 // ============================================================================
 
-/// Compute segment boundaries for a given array and dirty indices
-///
-/// A segment is defined by its violation types:
-/// - Trailing segment: starts at 0, contains only L violations (no R in between)
-/// - Leading segment: ends at n-1, contains only R violations (no L after)
-/// - Intermediate segment: contains R violations followed by L violations
-///
-/// Algorithm: Start at 0, run past all R's, when L is found run past all L's
-/// keeping track of farthest L encountered. When you hit R or end of array,
-/// record segment from start to farthest L. If hit R, it becomes start of next segment.
-///
-/// Returns (segment_count, total_segment_size)
+// Compute segment boundaries for a given array and dirty indices
+//
+// A segment is defined by its violation types:
+// - Trailing segment: starts at 0, contains only L violations (no R in between)
+// - Leading segment: ends at n-1, contains only R violations (no L after)
+// - Intermediate segment: contains R violations followed by L violations
+//
+// Algorithm: Start at 0, run past all R's, when L is found run past all L's
+// keeping track of farthest L encountered. When you hit R or end of array,
+// record segment from start to farthest L. If hit R, it becomes start of next segment.
+//
+// Returns (segment_count, total_segment_size)
 
 /*
 fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, usize) {
@@ -408,6 +408,7 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
 // ============================================================================
 // RESULTS STORAGE
 // ============================================================================
+
 struct AlgorithmResult {
     k: usize,
     iterations: usize,

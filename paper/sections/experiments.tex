@@ -3,19 +3,17 @@
 \label{sec:experiments}
 %==============================================================================
 
-We evaluate DeltaSort on a MacBook Pro (M3 Max, 36GB RAM) using synthetic benchmarks designed to measure execution time, comparison count, and crossover threshold behavior across varying array sizes and update fractions. The primary implementation is in Rust with the source code available open source~\cite{deltasort-repo}.
+All experiments are conducted on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics, absence of garbage collection and JIT compilation, and low runtime variance. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $\approx 5\%$. The benchmarking routines are provided in the repository for reproducibility~\cite{deltasort-repo}.
 
-We deliberately evaluate DeltaSort under fully random update distributions, which provide no favorable structure to the workload (e.g., bounded-window or perturbed updates). This represents a conservative baseline; structured update patterns would only strengthen DeltaSort's advantages. Comparisons are performed using a multi-key comparator, reflecting a realistic comparison cost.
-
-DeltaSort is evaluated against the following baselines:
+We evaluate these algorithms under fully random update distributions, which provide no favorable structure to any particular algorithm. Comparisons are performed using a multi-key comparator, reflecting a realistic comparison cost. We evaluate following algorithms:
 
 \begin{itemize}
-  \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. Although not update-aware, NativeSort serves as a critical baseline to identify the crossover threshold beyond which full re-sorting becomes preferable.
+  \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. NativeSort serves as a critical baseline to identify the crossover threshold for each update-aware algorithm beyond which full re-sorting becomes preferable.
 
   \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware sorting techniques that represent distinct time--space trade-offs, as described in \secref{sec:introduction}.
-\end{itemize}
 
-Together, these baselines provide coverage across the full range of update batch sizes $k$. \figref{tab:complexity} summarizes the theoretical characteristics of each algorithm.
+  \item \textbf{DeltaSort}: our proposed update-aware sorting algorithm, as described in \secref{sec:algorithm}.
+\end{itemize}
 
 \input{\figdir/sorting-algorithms}
 
@@ -24,7 +22,7 @@ Correctness is formally proven in \thmref{thm:correctness} and also verified by 
 
 \subsection{Execution Time}
 
-\figref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior behavior at low to intermediate of $k$, which is the practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
+\figref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior behavior at lower ranges of $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
 
 \input{\figdir/rust/execution-time}
 

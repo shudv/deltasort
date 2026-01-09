@@ -22,7 +22,7 @@ The definition of direction is deliberately asymmetric: L requires a definite vi
   \item S values need to be processed identically to R values (both may stay or move right).
   \item Fixing an R value can shift values, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
 \end{enumerate}
-The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes until it is repairedd}. This simplifies the implementation.
+The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes until it is repaired}. This simplifies the implementation.
 \end{remark}
 
 \begin{definition}[Segment]
@@ -31,8 +31,8 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ satisfying:
 \begin{enumerate}
   \item Either $i = 0$, or $i \in U$ with direction R.
   \item Either $j = n - 1$, or $j \in U$ with direction L.
-  \item There do not exist updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction L and $q$ has direction R.
-  \item There do not exist updated indices $p < $i and $q > $j such that $(p, q)$ is also a segment.
+  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction L and $q$ has direction R.
+  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ is also a segment.
 \end{enumerate}
 
 More intuitively, a segment is a contiguous portion of the array where all R-direction updates precede all L-direction updates. Condition~(3) ensures that no L appears before an R within the segment. Condition~(4) ensures segments are maximal and non-overlapping. Conditions~(1) and~(2) handle boundary cases: a leading segment containing only L's is bounded by the array start, and a trailing segment containing only R's is bounded by the array end. \figref{fig:segment-structure} illustrates this structure.
@@ -74,7 +74,7 @@ Since no value exits its segment, each segment can be repaired independently. Th
 \end{proof}
 
 \begin{remark}
-  Note that segmentation also \textbf{opens up opportunities for parallelization}. This has practical implications for improving performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this invesitgation for future work.
+  Note that segmentation also \textbf{opens up opportunities for parallelization}. This has practical implications for improving performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
 \end{remark}
 
 \subsection{Pseudocode}

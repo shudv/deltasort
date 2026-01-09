@@ -408,7 +408,6 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
 // ============================================================================
 // RESULTS STORAGE
 // ============================================================================
-
 struct AlgorithmResult {
     k: usize,
     iterations: usize,

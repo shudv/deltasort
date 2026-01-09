@@ -40,13 +40,13 @@
     table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/execution-time.csv};
 
 % Crossover point: bold marker + dashed drop line + label
-\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:16500, 5000) {};
-\draw[red!70!black, thick, dashed] (axis cs:16500, 5000) -- (axis cs:16500, 1);
-\node[font=\scriptsize\bfseries, text=red!70!black, anchor=north east] at (axis cs:14000, 4) {crossover at ${\sim}16.5$K (33\%)};
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:80000, 14000) {};
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:30000, 13000) {};
+\node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:24, 2200) {};
 
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 100$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
+\caption{Execution time comparison for $n = 100$K (log-log scale). The red circles indicate the crossover points where each update-aware algorithm is outperformed by NativeSort.}
 \label{fig:rust-execution-time}
 \end{figure}

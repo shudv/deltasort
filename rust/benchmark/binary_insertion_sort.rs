@@ -171,12 +171,12 @@ mod tests {
         arr[2] = make_user(15);
         arr[5] = make_user(20);
         let dirty: HashSet<usize> = [2, 5].into_iter().collect();
-        
+
         let mut expected_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         expected_ages.sort();
-        
+
         binary_insertion_sort(&mut arr, &dirty, user_cmp);
-        
+
         let actual_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         assert_eq!(actual_ages, expected_ages);
     }

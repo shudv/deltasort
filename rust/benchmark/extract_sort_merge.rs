@@ -224,12 +224,12 @@ mod tests {
         arr[2] = make_user(15);
         arr[5] = make_user(20);
         let dirty: HashSet<usize> = [2, 5].into_iter().collect();
-        
+
         let mut expected_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         expected_ages.sort();
-        
+
         extract_sort_merge(&mut arr, &dirty, user_cmp);
-        
+
         let actual_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         assert_eq!(actual_ages, expected_ages);
     }
@@ -240,9 +240,9 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[3] = make_user(100); // Only index 3 is dirty
         let dirty: HashSet<usize> = [3].into_iter().collect();
-        
+
         extract_sort_merge(&mut arr, &dirty, user_cmp);
-        
+
         // Clean values should still be in their original sorted order
         assert!(is_sorted(&arr));
         // The dirty value should be at the end

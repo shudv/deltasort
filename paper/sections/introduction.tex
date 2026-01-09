@@ -1,0 +1,29 @@
+%==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+%==============================================================================
+
+Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have been updated since the previous sort.
+
+In many practical systems, this assumption is unnecessarily pessimistic. Whenever values in an array are updated, their indices can be easily tracked by using extra space proportional to the number of updates. This is especially true in modern streaming and stateful architectures where updates are processed incrementally and stateful operators maintain metadata about updated records.
+
+As an example, consider an analytics service that materializes and caches query results sorted by a particular field to serve repeat requests efficiently. The underlying data may be distributed across multiple clusters which may see multiple updates, but only a small fraction of those might be relevant for a particular caches query result. A common approach is to invalidate the cached results, which simplifies implementation but forces a full computation the next time, even when updates are sparse.
+
+This pattern also arises in rich client applications. Consider a task management application that shows a large list of tasks sorted by priority or due date. Updates typically affect only a small subset of tasks at a time, such as when user completes a bunch of tasks. In most implementations, these edits trigger a full resort of the list even though the application already knows exactly which tasks were updated. This indicates that there is need for lower-level primitives that treat deltas as a first-class citizen.
+
+Once the indices of the updates are known, a natural question arises: how do we use this extra information and repair the array more efficiently as compared to a full re-sort? Existing approaches (\figref{tab:incremental-sorting-algorithms}) already exploit this extra information, but they force a choice between competing extremes-
+\begin{enumerate}
+  \item \textbf{Binary-Insertion-Sort (BIS):} For each updated index, remove the value and re-insert it at the correct position using binary search to find the insertion point. This approach uses $O(1)$ extra space, but $O(k n)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches.
+  \item \textbf{Extract–Sort–Merge (ESM):} Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(n + k \log k)$ time but $O(n)$ extra space even for small $k$, making it suitable only for larger update batches.
+\end{enumerate}
+
+This naturally raises the question: are there other intermediate strategies between these two extremes? In this paper, we present such a strategy. Specifically, this paper makes following contributions:
+
+\begin{enumerate}
+  \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
+
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = O(n)$).
+
+  \input{\figdir/incremental-sorting-algorithms}
+
+\end{enumerate}

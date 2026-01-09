@@ -392,17 +392,30 @@ The key takeaway is that DeltaSort, like BIS, substantially reduces redundant co
 
 \subsection{Crossover Threshold}
 
-Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, when the cost of processing the updates outweighs the benefits of incremental sorting. We can find the threshold $k_c$ for each algorithm via binary search across the range of $k$. Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort. BIS has the lowest crossover threshold due to its $O(kn)$ time complexity, making it practical only for very small update counts. ESM achieves the highest crossover threshold thanks to its $O(n + k \log k)$ time complexity, but requires $O(n)$ auxiliary space. DeltaSort occupies the middle ground---higher crossover than BIS while using only $O(k)$ space instead of ESM's $O(n)$.
+Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, once the overhead of processing the updates outweighs the benefits of incremental sorting. For each algorithm, we calculate the threshold $k_c$ via binary search across the range of $k$. Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort.
+
+Several patterns emerge:
+
+\begin{enumerate}
+  \item \textbf{BIS has a very low crossover threshold.} Due to its $O(kn)$ data movement cost, BIS is competitive only for very small update sizes.
+
+  \item \textbf{ESM achieves the highest crossover threshold.} ESM remains faster than NativeSort up to $k \approx 60$--$80\%$, consistent with its $O(n + k \log k)$ time complexity, which approaches full sorting only when $k$ is large.
+
+  \item \textbf{DeltaSort exhibits an intermediate threshold.} DeltaSort’s crossover point lies between BIS and ESM, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes.
+
+  \item \textbf{Thresholds are weakly dependent on array size.}
+  Crossover points are largely stable across array sizes, though we observe a decline for large arrays ($n \gtrapprox 200$K). This may be due to cache effects or memory allocation overheads. We will study this behavior in more detail in future work.
+\end{enumerate}
+
+The key takeaway is that DeltaSort occupies a well-defined middle ground among update-aware algorithms. It supports substantially larger update batches than BIS while requiring significantly less auxiliary space than ESM, making it attractive in regimes where both time and space constraints matter.
 
 \input{figures/rust/crossover-all}
 
-Beyond comparing each algorithm to NativeSort, we also measured the crossover threshold for DeltaSort versus ESM directly. This comparison is particularly relevant because ESM is the strongest baseline in terms of asymptotic time complexity.
+An interesting trend in Figure~\ref{fig:rust-execution-time} is that for update sizes up to $\approx 1\%$, DeltaSort consistently outperforms ESM while using significantly less auxiliary space, making it a strictly better choice in this regime. To examine this boundary more closely, we plot the direct crossover between DeltaSort and ESM in Figure~\ref{fig:rust-crossover-ds-vs-esm}.
 
 \input{figures/rust/crossover-ds-vs-esm}
 
-Figure~\ref{fig:rust-crossover-ds-vs-esm} shows that DeltaSort outperforms ESM for update fractions below the crossover curve while using only $O(k)$ space compared to ESM's $O(n)$. This demonstrates that DeltaSort provides both time and space benefits for moderate update sizes---the common case in incremental maintenance scenarios.
-
-The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
+Figure~\ref{fig:rust-crossover-ds-vs-esm} shows that there exists a non-trivial regime in which DeltaSort dominates ESM both in execution time and space usage. For example, for an array of size $n = 100$K, DeltaSort outperforms ESM for up to $\approx 1K$ updates, while using only $\approx 1\%$ of the auxiliary space required by ESM. As array size increases, this regime steadily shrinks. For large arrays, the crossover threshold moves toward smaller fractions, indicating that DeltaSort loses to ESM earlier. Although both algorithms incur $O(n)$ data movement in the worst case, this trend suggests that the constant factors associated with DeltaSort’s movement become more pronounced at larger scales. As a result, ESM’s simpler linear merge begins to dominate for smaller $k$ as $n$ grows.
 
 \subsection{Performance in managed execution environments}
 

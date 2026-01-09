@@ -1,4 +1,4 @@
-% Figure: Comparator invocation count comparison
+% Figure: Comparison counts
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
@@ -6,15 +6,15 @@
     width=0.92\textwidth,
     height=6cm,
     xlabel={Number of updated values ($k$)},
-    ylabel={Comparator invocations},
+    ylabel={Comparisons},
     xmode=log,
     ymode=log,
     log basis x=10,
     log basis y=10,
     xmin=1, xmax=100000,
     ymin=10, ymax=10000000,
-    xtick={1, 10, 100, 1000, 10000},
-    xticklabels={1, 10, 100, 1K, 10K},
+    xtick={1, 10, 100, 1000, 10000, 100000},
+    xticklabels={1, 10, 100, 1K, 10K, 100K},
     ytick={10, 100, 1000, 10000, 100000, 1000000, 10000000},
     yticklabels={10, 100, 1K, 10K, 100K, 1M, 10M},
     legend pos=south east,
@@ -43,9 +43,6 @@
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Comparator invocation count for $n = 50$K. DeltaSort and BIS
-both achieve $O(k \log n)$ comparisons, while NativeSort uses $O(n \log n)$ regardless
-of $k$, and ESM uses $O(k \log k + n)$. The 10--40\% higher comparison counts for DeltaSort
-vs BIS confirm that movement confinement (Lemma~\ref{lem:confinement}) is the major factor in DeltaSort speedup.\rustbenchmarknote}
+\caption{Comparator invocation count chart for $n = 100$K}
 \label{fig:rust-comparator-count}
 \end{figure}

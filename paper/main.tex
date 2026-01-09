@@ -56,7 +56,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge, each providing different time-space tradeoffs. In this paper, we study incremental sorting under an alternative model where the sorting routine is explicitly informed of the indices of updated values since the previous sort. Under this model, we present \emph{DeltaSort}, a new algorithm technique for incremental sorting that offers distinct time-space trade-off. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for practically relevant regimes, while exhibiting clear crossover points beyond which other techniques become preferable.
+Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge, each providing different time-space tradeoffs. In this paper, we study incremental sorting under an alternative model where the sorting routine is explicitly informed of the indices of updated values since the previous sort. Under this model, we present \emph{DeltaSort}, a new algorithm technique for incremental sorting that offers distinct time-space trade-off. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for practically relevant regimes, while exhibiting clear crossover threshold beyond which other techniques become preferable.
 \end{abstract}
 
 %==============================================================================
@@ -330,7 +330,7 @@ We deliberately evaluate DeltaSort under fully random update distributions, whic
 DeltaSort is evaluated against the following baselines:
 
 \begin{itemize}
-  \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. Although not update-aware, NativeSort serves as a critical baseline to identify the crossover point beyond which full re-sorting becomes preferable.
+  \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. Although not update-aware, NativeSort serves as a critical baseline to identify the crossover threshold beyond which full re-sorting becomes preferable.
 
   \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware incremental sorting techniques that represent distinct time--space trade-offs, as described in Section~\ref{sec:introduction}.
 \end{itemize}
@@ -344,7 +344,7 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-Figure~\ref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated elements $k$ on a log--log scale. We use a log--log scale to highlight differences in behavior at small $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover point}), as the overhead of processing updates begins to dominate.
+Figure~\ref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated elements $k$ on a log--log scale. We use a log--log scale to highlight differences in behavior at small $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
 
 \input{figures/rust/execution-time}
 
@@ -370,29 +370,29 @@ These observations suggest that, much like hybrid blind sorting algorithms (e.g.
   \item Fall back to NativeSort for $k \gtrapprox 80\%$.
 \end{enumerate}
 
-The precise crossover points depend on the execution environment, data distribution, and comparator cost, and should be treated as indicative rather than universal. We will explore these hybrid strategies further in future work.
+The precise crossover thresholds depend on the execution environment, data distribution, and comparator cost, and should be treated as indicative rather than universal. We will explore these hybrid strategies further in future work.
 
-\subsection{Comparator Invocation Count}
+\subsection{Comparison Count}
 
-Figure~\ref{fig:rust-comparator-count} shows the number of comparator invocations for each algorithm. DeltaSort and BIS both achieve $O(k \log n)$ comparisons, substantially fewer than NativeSort's $O(n \log n)$ and ESM's $O(k \log k + n)$. The comparison counts for DeltaSort are 10--40\% higher than BIS, indicating that DeltaSort's performance advantage comes from reduced data movement (Lemma~\ref{lem:confinement}). This also suggests that in scenarios with expensive comparators, the speedups from \emph{DeltaSort} over NativeSort may be even greater.
+Figure~\ref{fig:rust-comparator-count} shows the total number of comparisons as a function of update count $k$. We have used a realistic multi-key comparator that compares user objects by (country, age, name) to reflect practical comparison costs.
 
 \input{figures/rust/comparator-count}
 
-We can observe following patterns form the comparator count graph:
+Several clear patterns emerge:
+
 \begin{enumerate}
-  \item NativeSort's comparator count remains roughly constant after $k \gtrapprox 0.2\%$, mirroring its execution time behavior.
-  \item BIS is the most comparison-efficient algorithm.
-  \item ESM's comparator count is consistently high even for small $k$ and approaches that of NativeSort for large $k$.
-  \item DeltaSort's comparator count is similar to BIS for $k \lessapprox 0.1\%$ and is $\approx 10-20\%$ higher for the remaining range.
+  \item \textbf{Asymptotic behavior matches theory.} The observed comparator counts closely follow the  expected asymptotic trends for all algorithms across the full range of $k$.
+
+  \item \textbf{ESM incurs high comparison cost even for small updates.} Due to the full merge step, ESM performs a large number of comparisons even when $k$ is small, which explains its weaker performance when the comparator is expensive.
+
+  \item \textbf{DeltaSort matches BIS asymptotically.} DeltaSort's comparator count closely tracks BIS for $k \lessapprox 1\%$ and remains within $\approx 10$--$20\%$ of BIS for larger $k$, while preserving the same $O(k \log n)$ asymptotic behavior. Note that for large $k$, even though BIS is most comparison-efficient, its data movement cost makes it an impractical choice.
 \end{enumerate}
 
-The key takeway is that as comparator cost grows, DeltaSort's relative advantage over ESM and NativeSort increases while still remaining faster than BIS for $k \lessapprox 1\%$. We chose a typical comparator for our experiments. In future work, we will explore the performance patterns across a range of comparator costs.
+The key takeaway is that DeltaSort, like BIS, substantially reduces redundant comparison work relative to ESM and NativeSort. As comparator cost increases, this advantage becomes more pronounced. For small update ranges, where BIS and DeltaSort have similar comparison counts, DeltaSort’s movement efficiency becomes the dominant factor, and its relative advantage over BIS is expected to persist across a wide range of comparator costs.
 
-\subsection{Crossover Threshold Analysis}
+\subsection{Crossover Threshold}
 
-A key practical question is: at what update count should one switch from an update-aware algorithm to NativeSort? We conducted binary search for the crossover point $k_c$ across array sizes from 1K to 10M values for all update-aware algorithms.
-
-Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort. BIS has the lowest crossover threshold due to its $O(kn)$ time complexity, making it practical only for very small update counts. ESM achieves the highest crossover threshold thanks to its $O(n + k \log k)$ time complexity, but requires $O(n)$ auxiliary space. DeltaSort occupies the middle ground---higher crossover than BIS while using only $O(k)$ space instead of ESM's $O(n)$.
+Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, when the cost of processing the updates outweighs the benefits of incremental sorting. We can find the threshold $k_c$ for each algorithm via binary search across the range of $k$. Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort. BIS has the lowest crossover threshold due to its $O(kn)$ time complexity, making it practical only for very small update counts. ESM achieves the highest crossover threshold thanks to its $O(n + k \log k)$ time complexity, but requires $O(n)$ auxiliary space. DeltaSort occupies the middle ground---higher crossover than BIS while using only $O(k)$ space instead of ESM's $O(n)$.
 
 \input{figures/rust/crossover-all}
 

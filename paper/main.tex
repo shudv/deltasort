@@ -419,37 +419,59 @@ Figure~\ref{fig:rust-crossover-ds-vs-esm} shows that there exists a non-trivial 
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on the V8 engine to evaluate behavior in managed runtimes. Initial results indicate that DeltaSort outperforms NativeSort for some workloads, but the gains are more modest and the crossover point occurs at smaller update sizes. This behavior appears to be driven primarily by the performance characteristics of the native JavaScript sort, which is highly optimized and handles nearly sorted inputs exceptionally well. As a result, the relative advantage of segmented repair is reduced in this environment compared to the Rust implementation. The JavaScript benchmarks are still being refined and will be reported in a later revision. Until then, the Rust implementation provides the primary and authoritative performance characterization.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 to evaluate behavior in managed runtimes to study how factors such as garbade collections, JIT compilation and runtime optimizations impact performance. Figure ~\ref{fig:js-execution-time} shows execution time for $n = 100$K as a function of update size $k$.
+
+\input{figures/js/execution-time}
+
+Several observations stand out:
+
+\begin{enumerate}
+  \item \textbf{DeltaSort and BIS largely overlap for small updates.} For $k \lessapprox 0.1\%$, even though BIS and DeltaSort beat ESM and NativeStore, DeltaSort does not exhibit a clear advantage over Binary-Insertion-Sort. Unlike in Rust, batching updates does not help improve performance meaningfully in this regime.
+
+  \item \textbf{ESM beats NativeSort.} Extract--Sort--Merge performs better than NativeSort up to $\approx 50\%$ update batch size.
+
+  \item \textbf{DeltaSort’s advantage diminishes in managed runtimes.}
+  JavaScript arrays do not guarantee contiguous storage, and element movement
+  costs are not proportional to the number of shifted elements. As a result,
+  DeltaSort’s core optimization---reducing physical data movement through
+  segmentation---does not translate into consistent wall-clock improvements.
+\end{enumerate}
+
+The key takeaway is that \emph{DeltaSort’s performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. In such environments, the practical strategy simplifies to:
+\begin{itemize}
+  \item Use Binary-Insertion-Sort (or DeltaSort interchangeably) for very small updates.
+  \item Prefer Extract--Sort--Merge or NativeSort for larger update batches.
+\end{itemize}
+
+These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. Appendix ~\ref{sec:appendix-js} provides additional data about crossover thesholds in JS.
 
 %==============================================================================
 \section{Future Work}
 \label{sec:future}
 %==============================================================================
 
-This work opens up several directions for future investigation:
+This work opens up several directions for further investigation.
 
-\begin{itemize}
-  \item \textbf{Explore parallelizable segmentation:}
-  The independent segments created in Phase~1 suggest opportunities for parallel repair. Investigating parallel implementations of DeltaSort could yield further performance improvements on multi-core systems or distributed environments.
+First, while our analysis focuses on a bounded-range update model with uniformly random updates, many practical workloads exhibit additional structure. Examples include bounded-window updates, value perturbation models, and temporally correlated updates. These models may further reduce the expected movement and comparison costs of DeltaSort, potentially expanding the regime in which it outperforms existing techniques. A more systematic study of such update models would help characterize when update-aware sorting provides the greatest benefit.
 
-  \item \textbf{Analyze structured workloads:}
-  The current evaluation tests randomized updates, whereas many real workloads exhibit additional structure, such as gradual value changes in leaderboards or localized updates in interactive list views. Studying such patterns may reveal regimes where DeltaSort’s advantages are amplified or diminished.
+Second, DeltaSort’s repair process naturally decomposes the array into independent segments. This segmentation suggests opportunities for parallel execution, where different segments could be repaired concurrently without interference. In contrast, Binary-Insertion-Sort is inherently sequential due to overlapping in-place shifts, and Extract–Sort–Merge parallelizes only partially while incurring substantial auxiliary space costs. Exploring parallel variants of DeltaSort and understanding their scalability on multi-core and NUMA systems is a promising direction for future work.
 
-  \item \textbf{Study managed environments:}
-  Performance variance in managed environments warrants deeper investigation. Understanding the impact of factors such as garbage collection and JIT compilation will help explain the observed performance characteristics.
+Third, our experimental results reveal that crossover thresholds between update-aware algorithms and full re-sorting depend on array size, execution environment, and memory behavior. In particular, we observe a decline in DeltaSort’s advantage for very large arrays, likely due to cache effects and data movement overheads. A deeper investigation into these effects, including cache-aware and memory-bandwidth-aware models, could lead to improved implementations or refined hybrid strategies.
 
-  \item \textbf{Analyze block-structured storage:}
-  Although this work focuses on in-memory arrays, the update-aware model naturally extends to block-structured storage. Exploring how DeltaSort-style segmentation interacts with page- or block-based layouts may clarify its applicability to database and external-memory settings.
-\end{itemize}
+Finally, while this paper treats DeltaSort as a standalone algorithm, practical systems will benefit from adaptive hybrid strategies that select among Binary-Insertion-Sort, DeltaSort, Extract–Sort–Merge, and full re-sorting based on observed update sizes and system constraints. Designing heuristic-based, low-overhead mechanisms for such dynamic selection remains an open challenge.
 
 %==============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 %==============================================================================
 
-This paper introduced \emph{DeltaSort}, an incremental repair algorithm for maintaining sorted arrays. The key insight is that pre-sorting updated values induces segmentation: updated values naturally partition into segments that can be repaired independently. DeltaSort leverages this segmentation through stack-based processing. L-moving values are repaired immediately with progressively narrowed search ranges, while R-moving values are deferred and processed in reverse order to ensure stable target positions. This segmentation avoids redundant comparisons and overlapping value movement that arise from repeated binary insertion. An experimental evaluation in Rust demonstrates that DeltaSort outperforms both blind native sorting and repeated binary insertion across a wide range of array sizes and update volumes.
+This paper studied the problem of maintaining sorted arrays under incremental updates when the indices of updated elements are explicitly known. We argued that this \emph{update-aware} setting arises naturally in many practical systems, yet is not directly addressed by standard blind sorting routines.
 
-More broadly, this work highlights the value of integrating application-level update information into core algorithms. When sorting routines are informed of which values changed, batching and segmentation become possible, enabling performance improvements that blind algorithms cannot realize. DeltaSort illustrates how modest structural insight---segmentation combined with disciplined processing order---can yield substantial practical gains.
+Within this model, we presented \emph{DeltaSort}, an incremental sorting algorithm that batches multiple updates instead of applying them independently. The key idea is to exploit structure created by pre-sorting updated values, which induces directional segmentation and enables localized, non-overlapping fixes. This coordination allows DeltaSort to reduce redundant data movement while preserving the contiguous array layout.
+
+Our theoretical analysis shows that DeltaSort matches the comparison efficiency of binary insertion while providing stronger guarantees on data movement under reasonable update models. Experimental results in Rust demonstrate that DeltaSort occupies a distinct space in the incremental sorting design spectrum: it outperforms Binary-Insertion-Sort for small update batches, is more space-efficient than Extract–Sort–Merge across a wider range of updates, and exhibits clear crossover points beyond which other strategies become preferable. Importantly, the results also highlight the limits of this approach. DeltaSort does not dominate existing techniques across all regimes, and its advantages depend on predictable memory movement costs. In managed runtimes and environments with less transparent memory layouts, these benefits may diminish.
+
+Overall, this work shows that exposing update information to the sorting routine enables new algorithmic trade-offs that are not available to blind sorting algorithms. DeltaSort demonstrates that even within the well-studied domain of sorting, modest changes to the problem formulation can yield practically useful algorithmic techniques for incremental workloads.
 
 %==============================================================================
 \bibliographystyle{plain}

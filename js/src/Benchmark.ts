@@ -126,7 +126,7 @@ function extractSortMerge<T>(arr: T[], dirtyIndices: Set<number>, cmp: Comparato
     // Copy back
     for (let idx = 0; idx < n; idx++) arr[idx] = result[idx]!;
 
-    return arr;
+    return result;
 }
 
 // ============================================================================

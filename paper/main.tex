@@ -2,6 +2,7 @@
 
 \usepackage{amsmath,amssymb}
 \usepackage{amsthm}
+\usepackage{color}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
@@ -15,6 +16,8 @@
 \usepackage{pgfplotstable}
 \usepackage{placeins}
 \usepackage{float}
+\definecolor{avinashcolor}{rgb}{0.37, 0.29, 0.95}
+\newcommand{\avinash}[1]{{\color{avinashcolor} #1}}
 \pgfplotsset{compat=1.18}
 
 % Path to benchmark data (different for article vs SEA version)
@@ -56,7 +59,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted data is a fundamental requirement in almost all data processing systems. When dealing with large sorted datasets that require great read performance, sorting-on-read is not feasible. A standard approach is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, most production systems resort to either full re-sorting or Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we show that these traditional approaches can be significantly improved for certain workloads. This paper also formulates an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We present experimental evidence that shows that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes for our Rust implementation. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable. 
+Reading sorted data is a fundamental requirement in many data processing systems. \avinash{In systems such as XX where data keeps updating, a standard approach is to have a derived sorted read-replica that gets updated with the latest snapshot asynchronously whenever the input gets updated.} For updating read-replicas, most production systems resort to either full re-sorting, Binary-Insertion-Sort or Extract-Sort-Merge. In this paper, we show that these traditional approaches can be significantly improved for certain workloads. This paper also formulates an alternative model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, we present \emph{DeltaSort}, an efficient incremental repair algorithm for arrays. We \avinash{implement DeltaSort in Rust and show} that \emph{DeltaSort} outperforms existing approaches for a wide range of update batch sizes. These results suggest that tighter integration between update pipelines and sorting routines can yield significant performance gains in real incremental-sorting workloads. We also explore limitations of this approach and identify a clear crossover point, depending on array size, where full re-sorting becomes preferable. 
 \end{abstract}
 
 %==============================================================================
@@ -136,7 +139,7 @@ Figure~\ref{fig:delta-sort-example} illustrates the full DeltaSort process on a 
 
 \input{figures/delta-sort-example}
 
-\subsection{Key Insight: \emph{Segmentation enables localized repair}}
+\subsection{Key Insight: \emphOO(n{Segmentation enables localized repair}}
 \label{sec:insight}
 
 The key insight behind DeltaSort is that pre-sorting updated values induces a \emph{segmentation} of updates. After Phase~1, updated indices partition into disjoint segments of the form $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$.

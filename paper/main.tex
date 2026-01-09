@@ -64,13 +64,13 @@ Reading sorted values or records is a fundamental operation in many systems. Whe
 \label{sec:introduction}
 %==============================================================================
 
-Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have changed since the previous sort.
+Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have been updated since the previous sort.
 
 In many practical systems, this assumption is unnecessarily pessimistic. Whenever values in an array are updated, their indices can be easily tracked by using extra space proportional to the number of updates. This is especially true in modern streaming and stateful architectures where updates are processed incrementally and stateful operators maintain metadata about updated records.
 
 As an example, consider an analytics service that materializes and caches query results sorted by a particular field to serve repeat requests efficiently. The underlying data may be distributed across multiple clusters which may see multiple updates, but only a small fraction of those might be relevant for a particular caches query result. A common approach is to invalidate the cached results, which simplifies implementation but forces a full computation the next time, even when updates are sparse.
 
-This pattern also arises in rich client applications. Consider a task management application that shows a large list of tasks sorted by priority or due date. Updates typically affect only a small subset of tasks at a time, such as when user completes a bunch of tasks. In most implementations, these edits trigger a full resort of the list even though the application already knows exactly which tasks were modified. This indicates that there is need for lower-level primitives that treat deltas as a first-class citizen.
+This pattern also arises in rich client applications. Consider a task management application that shows a large list of tasks sorted by priority or due date. Updates typically affect only a small subset of tasks at a time, such as when user completes a bunch of tasks. In most implementations, these edits trigger a full resort of the list even though the application already knows exactly which tasks were updated. This indicates that there is need for lower-level primitives that treat deltas as a first-class citizen.
 
 Once the indices of the updates are known, a natural question arises: how do we use this extra information and repair the array more efficiently as compared to a full re-sort? Existing approaches (Table~\ref{tab:incremental-sorting-algorithms}) already exploit this extra information, but they force a choice between competing extremes-
 \begin{enumerate}
@@ -94,13 +94,13 @@ This naturally raises the question: are there other intermediate strategies betw
 \label{sec:related}
 %==============================================================================
 
-Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, assume no explicit knowledge of which values have changed.
+Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, assume no explicit knowledge of which values have been updated.
 
-A separate line of work studies incremental computation and view maintenance in database and streaming systems, where changes to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. They treat deltas as first-class citizen and demonstrate the practical value of update-aware computation. Howevery, they do not specifically address the problem of repairing sorted arrays, which is much more specialized lower-level problem.
+A separate line of work studies incremental computation and view maintenance in database and streaming systems, where updates to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. They treat deltas as first-class citizen and demonstrate the practical value of update-aware computation. Howevery, they do not specifically address the problem of repairing sorted arrays, which is much more specialized lower-level problem.
 
 Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its associated advantages.
 
-In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. Unlike adaptive sorting algorithms, which need to discover the presortedness, \emph{DeltaSort} already knows which values have changed and hence can leverage this information to achieve better performance. Unlike incremental view maintenance techniques, which focus on higher-level query results, \emph{DeltaSort} is a low-level sorting primitive for arrays, intended to complement higher-level incremental systems rather than replace them. Unlike dynamic data structures, which sacrifice array layout for update efficiency, \emph{DeltaSort} maintains the contiguous array layout.
+In contrast, this work considers maintaining sorted order in arrays where the indices of updated values since the previous sort are explicitly available. Unlike adaptive sorting algorithms, which need to discover the presortedness, \emph{DeltaSort} already knows which values have been updated and hence can leverage this information to achieve better performance. Unlike incremental view maintenance techniques, which focus on higher-level query results, \emph{DeltaSort} is a low-level sorting primitive for arrays, intended to complement higher-level incremental systems rather than replace them. Unlike dynamic data structures, which sacrifice array layout for update efficiency, \emph{DeltaSort} maintains the contiguous array layout.
 
 %==============================================================================
 \section{Problem Model}
@@ -116,7 +116,7 @@ Let $A[0..n-1]$ be an array of size $n$ sorted according to a strict weak orderi
 The above model can be easily extended to account for additions and deletions from the array-
 \begin{itemize}
   \item \textbf{Addition:} For an existing array of size $n$, append new value to end of the array and add $n$ (the new index) to $U$. 
-  \item \textbf{Deletion:} To delete value at index $i$, set its value to a sentinel $\infty$ that is greater than all other values according to $\texttt{cmp}$ and add it to $U$. Once sorted, the array size can be reduced by one removing the last element.
+  \item \textbf{Deletion:} To delete value at index $i$, set its value to a sentinel $\infty$ that is greater than all other values according to $\texttt{cmp}$ and add it to $U$. Once sorted, the array size can be reduced by one removing the last value.
 \end{itemize}
 \end{remark}
 
@@ -142,7 +142,7 @@ For an updated index $i$, we define its \emph{direction} based on local order:
 The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate S (stable) category for values already in their correct positions. However, this complicates the setup:
 \begin{enumerate}
   \item S values need to be processed identically to R values (both may stay or move right).
-  \item Fixing an R value can shift elements, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
+  \item Fixing an R value can shift values, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
 \end{enumerate}
 The two-way classification avoids this issue by maintaining a useful invariant (Lemma~\ref{lem:fix-invariant}): \emph{the direction of an updated index never changes until it is fixed}. This simplifies the correctness argument and implementation.
 \end{remark}
@@ -252,7 +252,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{theorem}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated element is repaired using a binary search within its containing segment. By Theorem~\ref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is repaired using a binary search within its containing segment. By Theorem~\ref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
 \[
 O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
 \]
@@ -285,7 +285,7 @@ DeltaSort is evaluated against the following baselines:
 \begin{itemize}
   \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. Although not update-aware, NativeSort serves as a critical baseline to identify the crossover threshold beyond which full re-sorting becomes preferable.
 
-  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware incremental sorting techniques that represent distinct time--space trade-offs, as described in Section~\ref{sec:introduction}.
+  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware sorting techniques that represent distinct time--space trade-offs, as described in Section~\ref{sec:introduction}.
 \end{itemize}
 
 Together, these baselines provide coverage across the full range of update batch sizes $k$. Table~\ref{tab:complexity} summarizes the theoretical characteristics of each algorithm.
@@ -297,7 +297,7 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-Figure~\ref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated elements $k$ on a log--log scale. We use a log--log scale to highlight differences in behavior at small $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
+Figure~\ref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight differences in behavior at small $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
 
 \input{figures/rust/execution-time}
 
@@ -345,7 +345,7 @@ The key takeaway is that DeltaSort, like BIS, substantially reduces redundant co
 
 \subsection{Crossover Threshold}
 
-Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, once the overhead of processing the updates outweighs the benefits of incremental sorting. For each algorithm, we calculate the threshold $k_c$ via binary search across the range of $k$. Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort.
+Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, once the overhead of processing the updates outweighs its benefits. For each algorithm, we calculate the threshold $k_c$ via binary search across the range of $k$. Figure~\ref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort.
 
 Several patterns emerge:
 
@@ -384,10 +384,7 @@ Several observations stand out:
   \item \textbf{ESM beats NativeSort.} Extract--Sort--Merge performs better than NativeSort up to $\approx 50\%$ update batch size.
 
   \item \textbf{DeltaSort’s advantage diminishes in managed runtimes.}
-  JavaScript arrays do not guarantee contiguous storage, and element movement
-  costs are not proportional to the number of shifted elements. As a result,
-  DeltaSort’s core optimization---reducing physical data movement through
-  segmentation---does not translate into consistent wall-clock improvements.
+  JavaScript runtimes like V8 do not guarantee contiguous array layout~\cite{v8elementskinds}, and movement costs are not proportional to the number of shifted elements. As a result, DeltaSort’s core optimization---reducing physical data movement through segmentation---does not translate into consistent wall-clock improvements.
 \end{enumerate}
 
 The key takeaway is that \emph{DeltaSort’s performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. In such environments, the practical strategy simplifies to:
@@ -418,11 +415,9 @@ Finally, while this paper treats DeltaSort as a standalone algorithm, practical 
 \label{sec:conclusion}
 %==============================================================================
 
-This paper studied the problem of maintaining sorted arrays under incremental updates when the indices of updated elements are explicitly known. We argued that this \emph{update-aware} setting arises naturally in many practical systems, yet is not directly addressed by standard blind sorting routines.
+This paper studied the problem of maintaining sorted arrays under incremental \emph{known} updates. We argued that this \emph{update-aware} setting arises naturally in many practical systems, yet is not directly addressed by standard blind sorting routines. Within this model, we presented \emph{DeltaSort}, an incremental sorting algorithm that batches multiple updates instead of applying them independently. The key idea is to exploit structure created by pre-sorting updated values, which induces directional segmentation and enables localized, non-overlapping fixes. This allows DeltaSort to reduce redundant data movement.
 
-Within this model, we presented \emph{DeltaSort}, an incremental sorting algorithm that batches multiple updates instead of applying them independently. The key idea is to exploit structure created by pre-sorting updated values, which induces directional segmentation and enables localized, non-overlapping fixes. This coordination allows DeltaSort to reduce redundant data movement while preserving the contiguous array layout.
-
-Our theoretical analysis shows that DeltaSort matches the comparison efficiency of binary insertion while providing stronger guarantees on data movement under reasonable update models. Experimental results in Rust demonstrate that DeltaSort occupies a distinct space in the incremental sorting design spectrum: it outperforms Binary-Insertion-Sort for small update batches, is more space-efficient than Extract–Sort–Merge across a wider range of updates, and exhibits clear crossover points beyond which other strategies become preferable. Importantly, the results also highlight the limits of this approach. DeltaSort does not dominate existing techniques across all regimes, and its advantages depend on predictable memory movement costs. In managed runtimes and environments with less transparent memory layouts, these benefits may diminish.
+Our theoretical analysis shows that DeltaSort matches the comparison efficiency of Binary-Insertion-Sort while providing stronger guarantees on data movement under reasonable update models. Experimental results in Rust demonstrate that DeltaSort occupies a distinct space in the incremental sorting design spectrum: it outperforms Binary-Insertion-Sort for small update batches, is more space-efficient than Extract–Sort–Merge across a wider range of updates, and exhibits clear crossover points beyond which other strategies become preferable. Importantly, the results also highlight the limits of this approach. DeltaSort does not dominate existing techniques across all kinds of execution environments, and its advantages depend on predictable memory movement costs. In managed runtimes and environments with less transparent memory layouts, these benefits may diminish.
 
 Overall, this work shows that exposing update information to the sorting routine enables new algorithmic trade-offs that are not available to blind sorting algorithms. DeltaSort demonstrates that even within the well-studied domain of sorting, modest changes to the problem formulation can yield practically useful algorithmic techniques for incremental workloads.
 

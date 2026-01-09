@@ -156,8 +156,9 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ satisfying:
   \item Either $i = 0$, or $i \in U$ with direction R.
   \item Either $j = n - 1$, or $j \in U$ with direction L.
   \item There do not exist updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction L and $q$ has direction R.
-\end{enumerate}
   \item There do not exist updated indices $p < $i and $q > $j such that $(p, q)$ is also a segment.
+\end{enumerate}
+
 More intuitively, a segment is a contiguous portion of the array where all R-direction updates precede all L-direction updates. Condition~(3) ensures that no L appears before an R within the segment. Condition~(4) ensures segments are maximal and non-overlapping. Conditions~(1) and~(2) handle boundary cases: a leading segment containing only L's is bounded by the array start, and a trailing segment containing only R's is bounded by the array end. Figure~\ref{fig:segment-structure} illustrates this structure.
 \end{definition}
 
@@ -243,54 +244,8 @@ Alternative models may also be considered. For example, under an unbounded-range
 Under the bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort’s repair phase is $O(n)$, independent of $k$.
 \end{theorem}
 
-\begin{proof}
-Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Let the updated indices be ordered by increasing index, and let position $i \in \{0, \ldots, k-1\}$ denote the $i$-th updated index. Under the bounded-range update model, an updated value is equally likely to fall anywhere within the global value range. Consequently, the probability that the element at position $i$ must move left (L) is proportional to the number of updated indices preceding it, while the probability that it must move right (R) is proportional to the number following it. We model this as
-\[
-\Pr[\text{L at position } i] = \frac{i}{k-1},
-\qquad
-\Pr[\text{R at position } i] = 1 - \frac{i}{k-1} = \frac{k-1-i}{k-1}.
-\]
-
-By Definition~\ref{def:segment}, segment boundaries occur exactly at transitions of the form $\mathrm{L}\!\to\!\mathrm{R}$ in the direction sequence of updated indices. Therefore, the number of segments equals one plus the number of $\mathrm{LR}$ transitions.
-
-\paragraph{Expected number of $\mathrm{LR}$ transitions.}
-For adjacent positions $(i, i+1)$ with $i \in \{0, \ldots, k-2\}$, the probability
-of an $\mathrm{LR}$ transition is
-\[
-\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \Pr[\mathrm{L \ at\ } i] \cdot \Pr[\mathrm{R \ at\ } i+1] = \frac{i}{k-1} \cdot \frac{k-2-i}{k-1} = \frac{i(k-2-i)}{(k-1)^2}. \]
-
-Summing over all adjacent pairs yields
-\[
-\mathbb{E}[\mathrm{LR\ transitions}] = \sum_{i=0}^{k-2} \frac{i(k-2-i)}{(k-1)^2} = \frac{1}{(k-1)^2} \sum_{i=0}^{k-2} i(k-2-i).
-\]
-
-Using standard summation identities,
-\[
-\sum_{i=0}^{k-2} i(k-2-i) = \frac{(k-1)(k-2)(k-3)}{6},
-\]
-and therefore
-\[
-\mathbb{E}[\mathrm{LR\ transitions}] = \frac{(k-2)(k-3)}{6(k-1)} = \Theta(k).
-\]
-
-\paragraph{Expected number of segments.}
-The expected number of segments is one plus the expected number of
-$\mathrm{LR}$ transitions, which is $\Theta(k)$.
-
-\paragraph{Movement bound.}
-The $\Theta(k)$ segments partition the array into disjoint regions. Under a
-uniform distribution of updated indices, each segment spans $O(n/k)$ array
-positions in expectation. By Lemma~\ref{lem:confinement}, all data movement
-during Phase~2 is confined within segment boundaries.
-
-Each updated element moves at most the width of its containing segment.
-Hence,
-\[
-\mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{k}\right) = O(n)
-\]
-
-Thus, the expected total data movement during the repair phase is linear in
-the array size and independent of the number of updates.
+\begin{proof}[Proof sketch]
+Under the bounded-range model, the probability of direction L at the $i$-th updated index is $i/(k-1)$, and R is $(k-1-i)/(k-1)$. Segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions. By summing the transition probabilities over adjacent pairs, we show that the expected number of such transitions is $\Theta(k)$, yielding $\Theta(k)$ segments. Each segment spans $O(n/k)$ positions in expectation, and by Lemma~\ref{lem:confinement}, movement is confined within segments. Thus, total expected movement is $k \cdot O(n/k) = O(n)$. The full derivation appears in Appendix~\ref{sec:appendix-proof}.
 \end{proof}
 
 \begin{theorem}[Comparison Count]
@@ -476,5 +431,58 @@ Overall, this work shows that exposing update information to the sorting routine
 %==============================================================================
 \bibliographystyle{plain}
 \bibliography{refs}
+
+\appendix
+
+\section{Full Proof of Expected Linear Movement}
+\label{sec:appendix-proof}
+
+We provide the complete derivation for Theorem~\ref{thm:movement-bound}.
+
+\begin{proof}
+Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Let position $i \in \{0, \ldots, k-1\}$ denote the $i$-th updated index. Under the bounded-range update model, an updated value is equally likely to fall anywhere within the global value range. The probability that position $i$ has direction L is proportional to the number of preceding updates, and R proportional to the number following:
+\[
+\Pr[\text{L at position } i] = \frac{i}{k-1},
+\qquad
+\Pr[\text{R at position } i] = \frac{k-1-i}{k-1}.
+\]
+
+Segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions. For adjacent positions $(i, i+1)$:
+\[
+\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \frac{i}{k-1} \cdot \frac{k-2-i}{k-1} = \frac{i(k-2-i)}{(k-1)^2}.
+\]
+
+Summing over all adjacent pairs:
+\[
+\mathbb{E}[\mathrm{LR\ transitions}] = \sum_{i=0}^{k-2} \frac{i(k-2-i)}{(k-1)^2} = \frac{1}{(k-1)^2} \sum_{i=0}^{k-2} i(k-2-i).
+\]
+
+Using the identity $\sum_{i=0}^{m} i(m-i) = \frac{m(m+1)(m-1)}{6}$ with $m = k-2$:
+\[
+\sum_{i=0}^{k-2} i(k-2-i) = \frac{(k-2)(k-1)(k-3)}{6},
+\]
+and therefore:
+\[
+\mathbb{E}[\mathrm{LR\ transitions}] = \frac{(k-2)(k-3)}{6(k-1)} = \Theta(k).
+\]
+
+The expected number of segments is $1 + \Theta(k) = \Theta(k)$. Under uniform index distribution, each segment spans $O(n/k)$ positions. By Lemma~\ref{lem:confinement}, movement is confined within segments, so:
+\[
+\mathbb{E}[\text{total movement}] \le k \cdot O(n/k) = O(n). \qedhere
+\]
+\end{proof}
+
+\section{JavaScript Crossover Analysis}
+\label{sec:appendix-js}
+
+Figures~\ref{fig:js-crossover-all} and~\ref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementation.
+
+\input{figures/js/crossover-all}
+
+\input{figures/js/crossover-ds-vs-esm}
+
+\paragraph{Observations.} In JavaScript, crossover thresholds are generally lower than in Rust due to the managed runtime's unpredictable memory behavior. BIS and DeltaSort exhibit similar crossover points ($\approx 5$--$30\%$), while ESM maintains a higher threshold ($\approx 35$--$40\%$). The DeltaSort vs ESM crossover (Figure~\ref{fig:js-crossover-ds-vs-esm}) shows a narrower regime where DeltaSort wins, consistent with the observation that DeltaSort's movement optimization provides less benefit in managed environments.
+
+%==============================================================================
 \end{document}
 

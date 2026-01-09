@@ -61,6 +61,7 @@ Reading sorted values or records is a fundamental operation in many systems. Whe
 
 %==============================================================================
 \section{Introduction}
+\label{sec:introduction}
 %==============================================================================
 
 Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and PDQSort~\cite{peters2021pdqsort} deliver excellent performance for general inputs by exploiting partial order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have changed since the previous sort.
@@ -256,37 +257,20 @@ By Definition~\ref{def:segment}, segment boundaries occur exactly at transitions
 For adjacent positions $(i, i+1)$ with $i \in \{0, \ldots, k-2\}$, the probability
 of an $\mathrm{LR}$ transition is
 \[
-\Pr[\mathrm{LR} \text{ at } (i, i+1)]
-=
-\Pr[\mathrm{L \ at\ } i] \cdot \Pr[\mathrm{R \ at\ } i+1]
-=
-\frac{i}{k-1} \cdot \frac{k-2-i}{k-1}
-=
-\frac{i(k-2-i)}{(k-1)^2}.
-\]
+\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \Pr[\mathrm{L \ at\ } i] \cdot \Pr[\mathrm{R \ at\ } i+1] = \frac{i}{k-1} \cdot \frac{k-2-i}{k-1} = \frac{i(k-2-i)}{(k-1)^2}. \]
 
 Summing over all adjacent pairs yields
 \[
-\mathbb{E}[\mathrm{LR\ transitions}]
-=
-\sum_{i=0}^{k-2} \frac{i(k-2-i)}{(k-1)^2}
-=
-\frac{1}{(k-1)^2} \sum_{i=0}^{k-2} i(k-2-i).
+\mathbb{E}[\mathrm{LR\ transitions}] = \sum_{i=0}^{k-2} \frac{i(k-2-i)}{(k-1)^2} = \frac{1}{(k-1)^2} \sum_{i=0}^{k-2} i(k-2-i).
 \]
 
 Using standard summation identities,
 \[
-\sum_{i=0}^{k-2} i(k-2-i)
-=
-\frac{(k-2)(k-1)k}{6},
+\sum_{i=0}^{k-2} i(k-2-i) = \frac{(k-1)(k-2)(k-3)}{6},
 \]
 and therefore
 \[
-\mathbb{E}[\mathrm{LR\ transitions}]
-=
-\frac{(k-2)k}{6(k-1)}
-=
-\Theta(k).
+\mathbb{E}[\mathrm{LR\ transitions}] = \frac{(k-2)(k-3)}{6(k-1)} = \Theta(k).
 \]
 
 \paragraph{Expected number of segments.}
@@ -302,11 +286,7 @@ during Phase~2 is confined within segment boundaries.
 Each updated element moves at most the width of its containing segment.
 Hence,
 \[
-\mathbb{E}[\text{total movement}]
-\le
-k \cdot O\!\left(\frac{n}{k}\right)
-=
-O(n).
+\mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{k}\right) = O(n)
 \]
 
 Thus, the expected total data movement during the repair phase is linear in
@@ -321,9 +301,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \begin{proof}
 Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated element is repaired using a binary search within its containing segment. By Theorem~\ref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
 \[
-O(k \log k) + O(k \log (n/k))
-= O\!\bigl(k(\log k + \log (n/k))\bigr)
-= O(k \log n).
+O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
 \]
 \end{proof}
 
@@ -342,16 +320,23 @@ Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a p
 %==============================================================================
 
 \subsection{Setup}
-All experiments are run on a Rust implementation of DeltaSort~\cite{deltasort-repo} on a synthetic dataset of user objects with composite keys (country, age, name) on an M3 Pro MacBook Pro with 18GB RAM. Each data point has a CI of $<5\%$. All measurements are taken after warm-up runs to account for caching effects. We deliberately evaluate DeltaSort on fully random update distributions, which provide no favorable structure to the workload (such as bounded-window or perturbed updates) which can further amplify DeltaSort's advantages. We use a multi-key comparator that lexicographically compares country (string), age (integer), and name (string) to ensure that we use a realistic comparison scenario. All the results are reproducible using the code and data available in the repository~\cite{deltasort-repo}.
+
+All experiments are conducted using a Rust implementation of DeltaSort~\cite{deltasort-repo} on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics, absence of garbage collection and JIT compilation, and low runtime variance.
+
+Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $\approx 5\%$. Exact experimental scripts and datasets are provided in the repository for reproducibility~\cite{deltasort-repo}.
+
+We deliberately evaluate DeltaSort under fully random update distributions, which provide no favorable structure to the workload (e.g., bounded-window or perturbed updates). This represents a conservative baseline; structured update patterns would only strengthen DeltaSort’s advantages. Comparisons are performed using a multi-key comparator, reflecting a realistic comparison cost.
+
 DeltaSort is evaluated against the following baselines:
 
 \begin{itemize}
-    \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation (PDQSort~\cite{peters2021pdqsort}), representing the standard approach of re-sorting the entire array. NativeSort is \emph{not} update-aware, but serves as an important baseline to quantify the benefit of exposing update information to the sorting routine. We expect update-aware algorithms to outperform NativeSort only up to a critical batch size $k_c$, beyond which full re-sorting becomes preferable. Benchmarking NativeSort is therefore essential to identify this crossover point.
+  \item \textbf{NativeSort}: Rust’s \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. Although not update-aware, NativeSort serves as a critical baseline to identify the crossover point beyond which full re-sorting becomes preferable.
 
-    \item Update-aware algorithms: \textbf{Binary-Insertion-Sort (BIS)}, \textbf{Extract-Sort-Merge (ESM)}
+  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware incremental sorting techniques that represent distinct time--space trade-offs, as described in Section~\ref{sec:introduction}.
 \end{itemize}
 
-Together, these provide strong baselines for comparison across the full range of update batch sizes ($k$). 
+Together, these baselines provide coverage across the full range of update batch sizes $k$. Table~\ref{tab:complexity} summarizes the theoretical characteristics of each algorithm.
+
 \input{figures/sorting-algorithms}
 
 \subsection{Correctness}
@@ -359,19 +344,33 @@ Correctness is formally proven in Theorem~\ref{thm:correctness} and also verifie
 
 \subsection{Execution Time}
 
-Figure~\ref{fig:rust-execution-time} shows execution time (in microseconds) for $n = 50$K values as a function of updated count $k$. DeltaSort consistently outperforms all alternatives up to approximately $k = 16.5$K (crossover point), achieving significant speedups of $4$--$20\times$ over NativeSort in the intermediate range. Also note the orders-of-magnitude gap between DeltaSort and the baseline incremental algorithms (BIS and ESM) across the full range of $k$ values.
+Figure~\ref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated elements $k$ on a log--log scale. We use a log--log scale to highlight differences in behavior at small $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover point}), as the overhead of processing updates begins to dominate.
 
 \input{figures/rust/execution-time}
 
-There are many interesting observations from the execution time graph:
+Several observations emerge from the execution-time profile:
+
 \begin{enumerate}
-  \item Even though NativeSort (PDQSort~\cite{peters2021pdqsort}) is slower than update-aware algorithms (which is expected), it is able to effectively leverage partial order for small $k$ values, resulting in sub-linear time complexity in that range. After $k \gtrapprox 0.2\%$, NativeSort takes roughly the same amount of time irrespective of $k$.
-  \item BIS performs well for $k \lessapprox 0.004\% $ (still not the fastest) but quickly degrades into the worst performing algorithm due to high data movement cost ($O(kn)$).
-  \item ESM is the best performing baseline for most of the range $(1\% \gtrapprox k \lessapprox 80\%)$. So if updates are known and in this range, ESM is the fastest option at the cost of $O(n)$ auxiliary space. 
-  \item DeltaSort outperforms both BIS and ESM by $\approx$ $2$--$5$$\times$ for $k \lessapprox 1\%$. It uses $O(k)$ auxiliary space which is more than BIS ($O(1)$) but less than ESM ($(O(n)$)). Also, even though the range is small in absolute terms, in real-world scenarios the typical udpate sizes fall in this range.
+  \item \textbf{Asymptotic trend is consistent.} For larger values of $k$, the observed execution times for all algorithms closely follow their expected asymptotic trends. In particular, BIS exhibits superlinear growth consistent with its $O(kn)$ movement cost, while ESM and NativeSort converge toward $O(n \log n)$ behavior, respectively.
+
+  \item \textbf{NativeSort performs well for very small updates.} Although NativeSort (PDQSort~\cite{peters2021pdqsort}) is blind to updates, it effectively exploits presortedness for extremely small $k$, achieving up to $\approx 10\times$ better performance for $k \lessapprox 1\%$.
+
+  \item \textbf{Binary-Insertion-Sort degrades rapidly.} BIS outperforms ESM and NativeSort for very small update sizes ($k \lessapprox 0.01\%$) but quickly becomes the worst-performing algorithm as $k$ increases due to its $O(kn)$ data movement cost.
+
+  \item \textbf{Extract--Sort--Merge dominates the mid-range.} ESM is the fastest baseline across most of the intermediate range ($1\% \lessapprox k \lessapprox 80\%$), provided sufficient memory is available. Its performance comes at the cost of $O(n)$ auxiliary space.
+
+  \item \textbf{DeltaSort occupies a narrow but meaningful regime.} DeltaSort outperforms both BIS and ESM for $k \lessapprox 1\%$. It uses $O(k)$ auxiliary space—more than BIS ($O(1)$) but substantially less than ESM ($O(n)$). While this regime is small in absolute terms, it aligns well with practical workloads where deltas are usually a small percentage of the full dataset.
 \end{enumerate}
 
-The above observations indicate that just like we have hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}) that adapt to input structure, we can also have hybrid \emph{update-aware} sorting algorithms that adapt to update size depending on the kind of execution environment we are in (memory-constrained or compute-constrained). We will explore this direction further in future work.
+These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}), it is beneficial to employ \emph{hybrid update-aware} strategies that adapt to update size and execution environment. For the Rust implementation evaluated here, an optimal strategy for an environment with no memory constraints could be:
+
+\begin{enumerate}
+  \item Use DeltaSort for $k \lessapprox 1\%$.
+  \item Use ESM for $1\% \lessapprox k \lessapprox 80\%$.
+  \item Fall back to NativeSort for $k \gtrapprox 80\%$.
+\end{enumerate}
+
+The precise crossover points depend on the execution environment, data distribution, and comparator cost, and should be treated as indicative rather than universal. We will explore these hybrid strategies further in future work.
 
 \subsection{Comparator Invocation Count}
 

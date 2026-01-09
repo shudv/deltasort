@@ -6,7 +6,7 @@
 \toprule
 Algorithm & Comparisons (C) & Movement (M) & Space (S) & Time (C + M) \\
 \midrule
-NativeSort* & $O(n \log n)$ & $O(n)$ & $O(n)$ & $O(n \log n)$ \\
+NativeSort* & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ & $O(n \log n)$ \\
 Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ & $O(kn)$ \\
 Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ & $O(k \log k + n)$ \\
 \textbf{DeltaSort} & $O(k \log n)$ & $O(n)$ & $O(k)$ & $O(k \log n + n)$ \\
@@ -14,5 +14,5 @@ Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ & $O(k \log k + n)$ \\
 \end{tabular}
 
 \vspace{0.3em}
-{\small *Not update-aware; hence complexity is a function of only $n$.}
+{\small *Not update-aware; hence complexity is a function of only $n$. The complexity could differ based on the choice of algorithm}
 \end{table}

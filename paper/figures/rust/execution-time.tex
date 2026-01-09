@@ -14,7 +14,7 @@
     xmin=1, xmax=100000,
     ymin=5, ymax=100000,
     xtick={1, 10, 100, 1000, 10000, 100000},
-    xticklabels={1, 10, 100, 1K, 10K, 100K},
+    xticklabels={1, 10 (0.01\%), 100 (0.1\%), 1K (1\%), 10K (10\%), 100K},
     legend pos=north west,
     legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
     grid=major,
@@ -47,6 +47,6 @@
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 50$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.\rustbenchmarknote}
+\caption{Execution time comparison for $n = 100$K (log-log scale). The vertical dashed line marks the crossover point ($k \approx 16.5$K) where DeltaSort's advantage over NativeSort diminishes.}
 \label{fig:rust-execution-time}
 \end{figure}

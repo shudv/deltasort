@@ -43,22 +43,22 @@ More intuitively, a segment is a contiguous portion of the array where all R-dir
 Armed with these definitions, we can see how DeltaSort works. It operates in two phases:
 
 \begin{enumerate}
-  \item \textbf{Phase 1 (Segment):} Extract updated values, sort them, and write back to updated indices in index order. This establishes segments (\defref{def:segment}) in the array that are disjoint and can be \emph{repaired independently}.
-  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring R indices to a stack until the first L index is encountered. When a L is encountered, first flush and repair all pending Rs in LIFO order, then repair the L. Continue left-to-right.
+  \item \textbf{Phase 1 (Segment):} Extract updated values, sort them, and write back to updated indices in index order. This establishes segments (\defref{def:segment}) in the array that can be \emph{repaired independently}.
+  \item \textbf{Phase 2 (Repair):} Repair each segment left-to-right, deferring R indices to a stack until the first L index is encountered. When a L is encountered, first flush and repair all pending R's in LIFO order, then repair the L. Continue left-to-right.
 \end{enumerate}
 
 \figref{fig:delta-sort-example} illustrates the full DeltaSort process on a small example.
 
 \input{\figdir/delta-sort-example}
 
-\subsection{Key Insight: \emph{Segmentation enables localized repair}}
+\subsection{Key Insight: \emph{Sorting updated values forms segments that can be repaired locally}}
 \label{sec:insight}
 
-The key insight behind DeltaSort is that pre-sorting updated values induces a \emph{segmentation} of updates. After Phase~1, updated indices partition into disjoint segments.
+The key insight behind DeltaSort is that pre-sorting updated values induces a \emph{segmentation} of updates. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross it's segment boundary.
 
 \begin{lemma}[Movement Confinement]
 \label{lem:confinement}
-Value movement during the repair phase is bounded within each segment: no value needs to cross a segment boundary.
+Value movement during the Phase~2 is bounded within each segment: no value needs to cross a segment boundary.
 \end{lemma}
 
 \begin{proof}
@@ -74,7 +74,7 @@ Since no value exits its segment, each segment can be repaired independently. Th
 \end{proof}
 
 \begin{remark}
-  Note that segmentation also opens up opportunities for parallelization since segments can be repaired independently. This has practical implications for improving performance on multi-core systems or distributed environments. To avoid scope creep, we leave parallelization implications for future work.
+  Note that segmentation also \textbf{opens up opportunities for parallelization}. This has practical implications for improving performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this invesitgation for future work.
 \end{remark}
 
 \subsection{Pseudocode}
@@ -108,11 +108,11 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 \subsection{Complexity Analysis}
 \label{sec:complexity}
 
-We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a bounded-range update model. In this model, updated values are drawn independently and uniformly from a fixed value range. This choice ensures that updates do not introduce additional structure beyond what is captured by the directional segmentation created in Phase~1.
+We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a bounded-range update model. In this model, updated values are drawn randomly and uniformly from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Alternative models may also be considered. For example, under an unbounded-range model where updated values are drawn from an unrestricted domain, or under a perturbation model where updates introduce small random deviations from existing values, DeltaSort exhibits equal or strictly better expected movement behavior. We focus on the bounded-range model as it is conservative and avoids assuming favorable update structure. A more detailed treatment of alternative models is left to future work.
+Alternative models may also be considered. For example, under an unbounded-range model where updated values are drawn from an unrestricted domain, or under a perturbation model where updates introduce small random deviations from existing values, DeltaSort exhibits equal or strictly better expected movement behavior. We focus on the bounded-range model as it is conservative and avoids assuming favorable update structure.
 \end{remark}
 
 \begin{theorem}[Expected Linear Movement]
@@ -142,5 +142,5 @@ DeltaSort uses $O(k)$ auxiliary space.
 \end{theorem}
 
 \begin{proof}
-Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. No $O(n)$ auxiliary structures are required.
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices.
 \end{proof}

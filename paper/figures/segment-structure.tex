@@ -1,93 +1,104 @@
 % Figure: Segment structure diagram
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    cell/.style={minimum width=0.55cm, minimum height=0.45cm, draw, font=\scriptsize},
-    dotcell/.style={minimum width=0.45cm, minimum height=0.45cm, font=\scriptsize},
-    right/.style={cell, fill=red!20},
-    left/.style={cell, fill=blue!20},
-    clean/.style={cell, fill=gray!8},
-    boundary/.style={very thick, black!60},
-    segbrace/.style={decorate, decoration={brace, amplitude=4pt}},
-    subbrace/.style={decorate, decoration={brace, amplitude=2.5pt, mirror}},
-    seglabel/.style={font=\footnotesize, text=black!80},
-    faded/.style={opacity=0.5}
+    cell/.style={minimum width=0.6cm, minimum height=0.5cm, draw, font=\scriptsize},
+    dotcell/.style={minimum width=0.5cm, minimum height=0.5cm, font=\scriptsize},
+    indexcell/.style={minimum width=0.6cm, font=\tiny, text=black!70},
+    right/.style={cell, fill=red!25},
+    left/.style={cell, fill=blue!25},
+    clean/.style={cell, fill=gray!10, font=\scriptsize},
+    segbrace/.style={decorate, decoration={brace, amplitude=5pt}},
+    segbracem/.style={decorate, decoration={brace, amplitude=4pt, mirror}},
+    seglabel/.style={font=\footnotesize},
+    condlabel/.style={font=\tiny, text=black!60},
+    faded/.style={opacity=0.4}
 ]
 
-% === PREVIOUS SEGMENT (faded) ===
-\begin{scope}[faded]
-  \node[dotcell] at (-1.3, 0) {$\cdots$};
-  \node[right] (pr1) at (-0.65, 0) {R};
-  \node[clean] at (0, 0) {$\cdots$};
-  \node[left] (pl1) at (0.65, 0) {L};
-\end{scope}
+% Array indices (shown below)
+\def\yidx{-0.55}
+\def\yarr{0}
 
-% Boundary: previous segment | inter-segment clean
-\draw[boundary] (0.97, 0.5) -- (0.97, -0.35);
+% === ARRAY START ===
+\node[clean] at (-0.9, \yarr) {};
+\node[indexcell] at (-0.9, \yidx) {$0$};
+\node[clean] at (-0.3, \yarr) {\dots};
 
-% Inter-segment clean values
-\node[clean] at (1.3, 0) {$\cdots$};
+% === LEADING SEGMENT (L's only, bounded by array start) ===
+\node[left] (l0) at (0.3, \yarr) {L};
+\node[indexcell] at (0.3, \yidx) {$u_1$};
+\node[clean] at (0.9, \yarr) {\dots};
+\node[left] (l1) at (1.5, \yarr) {L};
+\node[indexcell] at (1.5, \yidx) {$u_2$};
 
-% Boundary: inter-segment clean | current segment
-\draw[boundary] (1.63, 0.5) -- (1.63, -0.35);
+% Inter-segment clean region
+\node[clean] at (2.1, \yarr) {\dots};
 
-% === CURRENT SEGMENT (main focus) ===
-% RIGHT region: R [...] R [...] R
-\node[right] (r1) at (1.95, 0) {R};
-\node[clean] at (2.6, 0) {$\cdots$};
-\node[right] (r2) at (3.25, 0) {R};
-\node[clean] at (3.9, 0) {$\cdots$};
-\node[right] (r3) at (4.55, 0) {R};
+% === MIDDLE SEGMENT (R's then L's) ===
+\node[right] (r1) at (2.7, \yarr) {R};
+\node[indexcell] at (2.7, \yidx) {$u_3$};
+\node[clean] at (3.3, \yarr) {\dots};
+\node[right] (r2) at (3.9, \yarr) {R};
+\node[indexcell] at (3.9, \yidx) {$u_4$};
+\node[clean] at (4.5, \yarr) {\dots};
+\node[right] (r3) at (5.1, \yarr) {R};
+\node[indexcell] at (5.1, \yidx) {$u_5$};
+\node[clean] at (5.7, \yarr) {\dots};
+\node[left] (l2) at (6.3, \yarr) {L};
+\node[indexcell] at (6.3, \yidx) {$u_6$};
+\node[clean] at (6.9, \yarr) {\dots};
+\node[left] (l3) at (7.5, \yarr) {L};
+\node[indexcell] at (7.5, \yidx) {$u_7$};
 
-% LEFT region: [...] L [...] L
-\node[clean] at (5.2, 0) {$\cdots$};
-\node[left] (l1) at (5.85, 0) {L};
-\node[clean] at (6.5, 0) {$\cdots$};
-\node[left] (l2) at (7.15, 0) {L};
+% Inter-segment clean region
+\node[clean] at (8.1, \yarr) {\dots};
 
-% Boundary: current segment | inter-segment clean
-\draw[boundary] (7.47, 0.5) -- (7.47, -0.35);
+% === TRAILING SEGMENT (R's only, bounded by array end) ===
+\node[right] (r4) at (8.7, \yarr) {R};
+\node[indexcell] at (8.7, \yidx) {$u_8$};
+\node[clean] at (9.3, \yarr) {\dots};
+\node[right] (r5) at (9.9, \yarr) {R};
+\node[indexcell] at (9.9, \yidx) {$u_9$};
 
-% Inter-segment clean values
-\node[clean] at (7.8, 0) {$\cdots$};
+% === ARRAY END ===
+\node[clean] at (10.5, \yarr) {\dots};
+\node[clean] at (11.1, \yarr) {};
+\node[indexcell] at (11.1, \yidx) {$n{-}1$};
 
-% Boundary: inter-segment clean | next segment
-\draw[boundary] (8.13, 0.5) -- (8.13, -0.35);
+% === SEGMENT BRACES (top) ===
+% Leading segment
+\draw[segbrace] (-1.2, 0.38) -- (1.8, 0.38);
+\node[seglabel] at (0.3, 0.85) {$S_1$: Leading};
 
-% === NEXT SEGMENT (faded) ===
-\begin{scope}[faded]
-  \node[right] (nr1) at (8.45, 0) {R};
-  \node[clean] at (9.1, 0) {$\cdots$};
-  \node[right] (nr2) at (9.75, 0) {R};
-  \node[dotcell] at (10.3, 0) {$\cdots$};
-\end{scope}
+% Middle segment
+\draw[segbrace] (2.4, 0.38) -- (7.8, 0.38);
+\node[seglabel] at (5.1, 0.85) {$S_2$: Intermediate};
 
-% === ANNOTATIONS ===
-% Main segment brace (top)
-\draw[segbrace] (1.63, 0.47) -- (7.47, 0.47) 
-    node[midway, above=5pt, font=\small] {Segment $S_i$: $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$};
+% Trailing segment
+\draw[segbrace] (8.4, 0.38) -- (11.4, 0.38);
+\node[seglabel] at (9.9, 0.85) {$S_3$: Trailing};
 
-% Sub-braces (bottom)
-\draw[subbrace] (1.63, -0.32) -- (4.87, -0.32) 
-    node[midway, below=4pt, seglabel, align=center] {$(\mathrm{R})^*$};
-\draw[subbrace] (4.87, -0.32) -- (7.47, -0.32) 
-    node[midway, below=4pt, seglabel, align=center] {$\mathrm{L}^+$};
+% === SUB-BRACES for middle segment (bottom) ===
+\draw[segbracem] (2.4, -1.1) -- (5.4, -1.1);
+\node[condlabel, anchor=north] at (3.9, -1.2) {R-direction indices};
+\draw[segbracem] (5.4, -1.1) -- (7.8, -1.1);
+\node[condlabel, anchor=north] at (6.6, -1.2) {L-direction indices};
 
-% Adjacent segment labels (above, smaller)
-\draw[segbrace, faded] (-1.0, 0.47) -- (0.97, 0.47) 
-    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i-1}$};
-\draw[segbrace, faded] (8.13, 0.47) -- (10.1, 0.47) 
-    node[midway, above=4pt, font=\scriptsize, opacity=0.6] {$S_{i+1}$};
+% === ANNOTATIONS for boundary conditions ===
+% Condition markers (centered on cells)
+\node[condlabel] at (2.7, -0.75) {$\uparrow$};
+\node[condlabel] at (2.7, -0.9) {starts R};
 
-% Legend
-\node[right, scale=0.75] at (10.7, 0.25) {R};
-\node[font=\scriptsize, anchor=west] at (11.1, 0.25) {= RIGHT};
-\node[left, scale=0.75] at (10.7, -0.15) {L};
-\node[font=\scriptsize, anchor=west] at (11.1, -0.15) {= LEFT};
-\node[clean, scale=0.75] at (10.7, -0.55) {$\cdots$};
-\node[font=\scriptsize, anchor=west] at (11.1, -0.55) {= clean};
+\node[condlabel] at (7.5, -0.75) {$\uparrow$};
+\node[condlabel] at (7.5, -0.9) {ends L};
+
+% === LEGEND ===
+\node[right, scale=0.8] at (11.8, 0.15) {R};
+\node[font=\scriptsize, anchor=west] at (12.15, 0.15) {= RIGHT};
+\node[left, scale=0.8] at (11.8, -0.25) {L};
+\node[font=\scriptsize, anchor=west] at (12.15, -0.25) {= LEFT};
 
 \end{tikzpicture}
-\caption{Segment structure after Phase~1. Each segment follows the pattern $(\mathrm{R})^*(\mathrm{L}^+ \mid \epsilon)$: zero or more RIGHT violations followed by one or more LEFT violations (or end of array).}
+\caption{A segment $(i,j)$ starts at either index $0$ or an R-direction updated index, and ends at either index $n{-}1$ or an L-direction updated index, with all R's preceding all L's within. Leading and trailing segments may or may not be present.}
 \label{fig:segment-structure}
 \end{figure}

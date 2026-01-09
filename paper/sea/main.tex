@@ -287,9 +287,9 @@ Correctness is formally proven in \cref{thm:correctness} and also verified by an
 
 A key practical question is: at what update count should one switch from DeltaSort to NativeSort? A binary search was conducted for the crossover point $k_c$ across array sizes from 1K to 10M values.
 
-\cref{fig:rust-crossover-threshold} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ${\sim}33\%$ for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
+\cref{fig:rust-crossover-all} visualizes how the crossover ratio $k_c / n$ varies with array size. The ratio peaks around ${\sim}33\%$ for medium-sized arrays ($n \approx 50$K) and declines rapidly for very large arrays ($n > 500$K), suggesting that DeltaSort's advantage narrows as arrays grow very large. This could be because the segmentation does not grow linearly with array size and hence advantages diminish at larger scales. More study is needed to understand this trend fully.
 
-\input{../figures/rust/crossover-threshold}
+\input{../figures/rust/crossover-all}
 
 The key takeaway is that DeltaSort offers the best incremental sort performance for \textbf{large} ranges of update sizes (0--30\% for the dataset we tested). The exact crossover threshold depends on the specific scenario (array size, data types, comparator cost, etc.).
 

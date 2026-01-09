@@ -8,10 +8,10 @@
 Let $A[0..n-1]$ be an array of size $n$ sorted according to a strict weak ordering defined by a comparator $\texttt{cmp}$. Let $U = \langle u_0, u_1, \dots, u_{k-1} \rangle$ be a sequence of $k$ indices such that \[ 0 \le u_0 < u_1 < \dots < u_{k-1} \le n-1, \] and the values at these indices may have been arbitrarily updated, while values at all other indices remain unchanged. The \emph{update-aware sorting problem} is to restore $A$ to a state that is sorted with respect to $\texttt{cmp}$, given explicit knowledge of the set $U$.
 \end{definition}
 
-\begin{remark}
 The above model can be easily extended to account for additions and deletions from the array-
 \begin{itemize}
   \item \textbf{Addition:} For an existing array of size $n$, append new value to end of the array and add $n$ (the new index) to $U$. 
   \item \textbf{Deletion:} To delete value at index $i$, set its value to a sentinel $\infty$ that is greater than all other values according to $\texttt{cmp}$ and add it to $U$. Once sorted, the array size can be reduced by one removing the last value.
 \end{itemize}
-\end{remark}
+
+The update-aware model assumes that the indices of updated values are available to the sorting routine, which requires the caller to record the $k$ updated indices and thus incurs an O(k) space overhead. This overhead is modest and aligns with how updates are applied in practice: locating and modifying a value already requires identifying its position, and recording that position incurs only constant additional cost per update. In contrast, avoiding this bookkeeping typically forces the system to fall back to blind strategies such as full re-sorting, which incurs $O(n \log n)$ time, or Binary-Insertion-Sort, which is comparison-efficient but suffers from $O(kn)$ data movement. Modern streaming and stateful processing systems routinely track update deltas as part of their execution pipeline, making the update-aware model a natural and practical abstraction rather than an artificial one.

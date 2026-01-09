@@ -47,9 +47,9 @@ const LAST_NAMES: &[&str] = &[
 
 #[derive(Clone, Debug, Default)]
 pub struct User {
-    name: String,
-    age: u32,
-    country: String,
+    pub name: String,
+    pub age: u32,
+    pub country: String,
 }
 
 impl User {

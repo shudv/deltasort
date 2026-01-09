@@ -56,7 +56,7 @@
 \maketitle
 
 \begin{abstract}
-Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge, each providing different time-space tradeoffs. In this paper, we study incremental sorting under an alternative model where the sorting routine is explicitly informed of the indices of updated values since the previous sort. Under this model, we present \emph{DeltaSort}, a new algorithm technique for incremental sorting that offers distinct time-space trade-off. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for practically relevant regimes, while exhibiting clear crossover threshold beyond which other techniques become preferable.
+Reading sorted values or records is a fundamental operation in many systems. When records need to be read in a particular order, sorting-on-read incurs repeated $O(n \log n)$ cost which can become a bottleneck in read-heavy systems. A standard solution is to have a derived sorted read-replica that is updated with the latest snapshot asynchronously whenever the system-of-record gets updated. For updating read-replicas, existing approaches rely on either full re-sorting or incremental techniques such as Binary-Insertion-Sort or Extract–Sort–Merge, each providing different time-space tradeoffs. In this paper, we study incremental sorting under an alternative model where the sorting routine is explicitly informed of the indices of updated values since the previous sort. Under this model, we present \emph{DeltaSort}, a new algorithm for incremental sorting that offers distinct time-space trade-off. We present theoretical analysis and experimental evidence that show that \emph{DeltaSort} outperforms existing approaches for practically relevant regimes, while exhibiting clear crossover threshold beyond which other techniques become preferable.
 \end{abstract}
 
 %==============================================================================
@@ -81,11 +81,9 @@ Once the indices of the updates are known, a natural question arises: how do we 
 This naturally raises the question: are there other intermediate strategies between these two extremes? In this paper, we present such a strategy. Specifically, this paper makes following contributions:
 
 \begin{enumerate}
-  \item \textbf{Update-aware sorting model:}
-  We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
+  \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
 
-  \item \textbf{DeltaSort algorithm:}
-  We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (Table~\ref{tab:incremental-sorting-algorithms}) as compared to the existing approaches. It outperforms Binary-Insertion-Sort in execution time for small update batches ($k \llless n$) and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k \approx O(n)$).
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (Table~\ref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = O(n)$).
 
   \input{figures/incremental-sorting-algorithms}
 

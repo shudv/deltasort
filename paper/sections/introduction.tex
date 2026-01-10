@@ -11,7 +11,7 @@ As an example, consider an analytics service that materializes and caches query 
 
 This pattern also arises in rich client applications. Consider a task management application that shows a large list of tasks sorted by priority or due date. Updates typically affect only a small subset of tasks at a time, such as when user completes a bunch of tasks. In most implementations, these edits trigger a full resort of the list even though the application already knows exactly which tasks were updated. This indicates that there is need for lower-level primitives that treat deltas as a first-class citizen.
 
-Once the indices of the updates are known, a natural question arises: how do we use this extra information and repair the array more efficiently as compared to a full re-sort? Existing approaches (\figref{tab:incremental-sorting-algorithms}) already exploit this extra information, but they force a choice between competing extremes:
+Once the indices of the updates are known, a natural question arises: how do we use this extra information and repair the array more efficiently as compared to a full re-sort? Existing approaches already exploit this extra information, but they force a choice between competing extremes:
 \begin{enumerate}
   \item \textbf{Binary-Insertion-Sort (BIS):} For each updated index, remove the value and re-insert it at the correct position using binary search to find the insertion point. This approach uses $O(1)$ extra space, but $O(k n)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches.
   \item \textbf{Extract–Sort–Merge (ESM):} Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time but $O(n)$ extra space even for small $k$, making it suitable only for larger update batches.
@@ -22,7 +22,7 @@ This naturally raises the question: are there other intermediate strategies betw
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
 
-  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k \approx O(n)$).
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = \Theta (n)$).
 
   \input{\figdir/incremental-sorting-algorithms}
 

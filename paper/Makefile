@@ -1,13 +1,12 @@
 .PHONY: all clean rebuild
 
-all: main.pdf
+all: article.pdf
 
-main.pdf: main.tex refs.bib figures/**/* sections/*.tex
-	pdflatex -interaction=nonstopmode main.tex
-	bibtex main
-	pdflatex -interaction=nonstopmode main.tex
-	pdflatex -interaction=nonstopmode main.tex
-
+article.pdf: article/main.tex content.tex refs.bib figures/**/* sections/*.tex
+	pdflatex -interaction=nonstopmode article/main.tex
+	bibtex article/main
+	pdflatex -interaction=nonstopmode article/main.tex
+	pdflatex -interaction=nonstopmode article/main.tex
 rebuild: clean all
 
 clean:

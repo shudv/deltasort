@@ -23,9 +23,9 @@
 
 use std::collections::HashSet;
 
-/// Violation types for updated indices
+/// Directions for updated indices
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Violation {
+enum Direction {
     /// Element must move left
     Left,
     /// Element may move right (or is stable)
@@ -123,66 +123,66 @@ where
 
     // Phase 2: Scan updated indices left to right
 
-    // Stack for pending RIGHT violations
-    let mut pending_right_violations: Vec<usize> = Vec::with_capacity(dirty.len());
+    // Stack for pending RIGHT directions
+    let mut pending_right_directions: Vec<usize> = Vec::with_capacity(dirty.len());
 
     // Left boundary for fixing LEFT violations
     let mut left_bound = 0;
 
     for &i in &dirty {
-        // Determine violation direction (sentinel is treated as LEFT to trigger final flush)
+        // Determine direction (sentinel is treated as LEFT to trigger final flush)
         let direction = if i == arr.len() {
-            Violation::Left
+            Direction::Left
         } else {
             get_direction(arr, i, &cmp)
         };
 
         match direction {
-            Violation::Left => {
-                // Fix all pending RIGHT violations before fixing LEFT
+            Direction::Left => {
+                // Fix all pending RIGHT directions before fixing LEFT
                 let mut right_bound = i.saturating_sub(1);
-                while let Some(idx) = pending_right_violations.pop() {
-                    // Fix RIGHT violation at idx if needed
+                while let Some(idx) = pending_right_directions.pop() {
+                    // Fix RIGHT direction at idx if needed
                     if idx < arr.len() - 1
                         && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
                     {
                         right_bound =
-                            fix_right_violation(arr, idx, right_bound, &cmp).saturating_sub(1);
+                            fix_right(arr, idx, right_bound, &cmp).saturating_sub(1);
                     }
                 }
 
-                // Fix actual (non-sentinel) LEFT violations
+                // Fix actual (non-sentinel) LEFT directions
                 if i < arr.len() {
-                    left_bound = fix_left_violation(arr, i, left_bound, &cmp) + 1;
+                    left_bound = fix_left(arr, i, left_bound, &cmp) + 1;
                 }
             }
-            Violation::Right => {
-                pending_right_violations.push(i);
+            Direction::Right => {
+                pending_right_directions.push(i);
             }
         }
     }
 }
 
-/// Determines the violation direction at updated index i.
+/// Determines the direction at updated index i.
 ///
 /// This should only be called for an updated index.
 #[inline]
-fn get_direction<T, F>(arr: &[T], i: usize, cmp: &F) -> Violation
+fn get_direction<T, F>(arr: &[T], i: usize, cmp: &F) -> Direction
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     if i > 0 && cmp(&arr[i - 1], &arr[i]) == std::cmp::Ordering::Greater {
-        Violation::Left
+        Direction::Left
     } else {
-        Violation::Right
+        Direction::Right
     }
 }
 
-/// Fixes a RIGHT violation at i by moving it to the correct position
+/// Fixes a RIGHT direction at i by moving it to the correct position
 /// between i and right_bound.
 ///
 /// Returns the new index of the moved element.
-fn fix_right_violation<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F) -> usize
+fn fix_right<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F) -> usize
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
@@ -206,11 +206,11 @@ where
     target
 }
 
-/// Fixes a LEFT violation at i by moving it to the correct position
+/// Fixes a LEFT direction at i by moving it to the correct position
 /// between left_bound and i.
 ///
 /// Returns the target position.
-fn fix_left_violation<T, F>(arr: &mut [T], i: usize, left_bound: usize, cmp: &F) -> usize
+fn fix_left<T, F>(arr: &mut [T], i: usize, left_bound: usize, cmp: &F) -> usize
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {

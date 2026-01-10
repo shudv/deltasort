@@ -1,10 +1,10 @@
 /**
- * Violation types
+ * Directions for updated indices
  */
-const enum Violation {
-    /** Violation where the updated element must move left */
+const enum Direction {
+    /** Value must move left */
     LEFT = 0,
-    /** Violation where the updated element may move right */
+    /** Value may move right and cannot move left */
     RIGHT = 1,
 }
 
@@ -38,8 +38,8 @@ export function deltaSort<T>(
 
     // Phase 2: Scan updated indices left to right
 
-    // Stack for pending RIGHT violations
-    const pendingRightViolations = new Array<number>(updated.length);
+    // Stack for pending RIGHT directions
+    const pendingRightDirections = new Array<number>(updated.length);
     let stackTop = 0;
 
     // Left boundary for fixing LEFT violations, everything before the leftBound is already fixed
@@ -48,29 +48,29 @@ export function deltaSort<T>(
     for (let p = 0; p < updated.length; p++) {
         const i = updated[p]!;
 
-        // Determine violation direction (sentinel is considered LEFT to trigger final flush)
-        const direction = i == arr.length ? Violation.LEFT : getDirection(arr, i, cmp);
+        // Determine direction (sentinel is considered LEFT to trigger final flush)
+        const direction = i == arr.length ? Direction.LEFT : getDirection(arr, i, cmp);
 
         switch (direction) {
-            case Violation.LEFT: {
+            case Direction.LEFT: {
                 // Fix all pending indices before fixing LEFT
                 let rightBound = i - 1;
                 while (stackTop > 0) {
-                    const ri = pendingRightViolations[--stackTop]!;
-                    // Fix RIGHT violation at ri if needed
+                    const ri = pendingRightDirections[--stackTop]!;
+                    // Fix RIGHT direction at ri if needed
                     if (ri < arr.length - 1 && cmp(arr[ri]!, arr[ri + 1]!) > 0) {
-                        rightBound = fixRightViolation(arr, ri, rightBound, cmp) - 1;
+                        rightBound = fixRight(arr, ri, rightBound, cmp) - 1;
                     }
                 }
 
-                // Fix actual (non-sentinel) LEFT violations
+                // Fix actual (non-sentinel) LEFT directions
                 if (i < arr.length) {
-                    leftBound = fixLeftViolation(arr, i, leftBound, cmp) + 1;
+                    leftBound = fixLeft(arr, i, leftBound, cmp) + 1;
                 }
                 break;
             }
-            case Violation.RIGHT:
-                pendingRightViolations[stackTop++] = i;
+            case Direction.RIGHT:
+                pendingRightDirections[stackTop++] = i;
                 break;
         }
     }
@@ -79,36 +79,31 @@ export function deltaSort<T>(
 }
 
 /**
- * Determines the violation direction at updated index i
+ * Determines the direction at updated index i
  *
  * @param arr The array
  * @param i The updated index
  * @param cmp The comparator function
- * @returns The violation direction
+ * @returns The direction
  *
  * @comment This should only be called for an updated index (it does not have any meaning for non-updated indices)
  */
-function getDirection<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Violation {
-    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0 ? Violation.LEFT : Violation.RIGHT;
+function getDirection<T>(arr: T[], i: number, cmp: (a: T, b: T) => number): Direction {
+    return i > 0 && cmp(arr[i - 1]!, arr[i]!) > 0 ? Direction.LEFT : Direction.RIGHT;
 }
 
 /**
- * Fixes a RIGHT violation at i by moving it to the correct position
+ * Fixes a RIGHT direction at i by moving it to the correct position
  * between index and rightBound.
  *
  * @param arr The array
- * @param i The index of the RIGHT violation
+ * @param i The index of the RIGHT direction
  * @param rightBound The right boundary for search
  * @param cmp The comparator function
  *
- * @return The new index of the moved element
+ * @return The new index of the moved value
  */
-function fixRightViolation<T>(
-    arr: T[],
-    i: number,
-    rightBound: number,
-    cmp: (a: T, b: T) => number,
-): number {
+function fixRight<T>(arr: T[], i: number, rightBound: number, cmp: (a: T, b: T) => number): number {
     const value = arr[i]!;
 
     // Binary search for target position on the right
@@ -126,22 +121,17 @@ function fixRightViolation<T>(
 }
 
 /**
- * Fixes a LEFT violation at i by moving it to the correct position
+ * Fixes a LEFT direction at i by moving it to the correct position
  * between leftBound and i.
  *
  * @param arr The array
- * @param i The index of the LEFT violation
+ * @param i The index of the LEFT direction
  * @param leftBound The left boundary for search
  * @param cmp The comparator function
  *
- * @return The new index of the moved element
+ * @return The new index of the moved value
  */
-function fixLeftViolation<T>(
-    arr: T[],
-    i: number,
-    leftBound: number,
-    cmp: (a: T, b: T) => number,
-): number {
+function fixLeft<T>(arr: T[], i: number, leftBound: number, cmp: (a: T, b: T) => number): number {
     const value = arr[i]!;
 
     // Binary search for target position on the left
@@ -159,7 +149,7 @@ function fixLeftViolation<T>(
 }
 
 /**
- * Moves element from i `from` to i `to` in the array.
+ * Moves value from i `from` to i `to` in the array.
  */
 function move<T>(arr: T[], from: number, to: number) {
     // splice-based move implementation (turns out to be faster than copyWithin)

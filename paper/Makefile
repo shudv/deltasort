@@ -2,13 +2,13 @@
 
 all: main.pdf sea/main.pdf
 
-main.pdf: main.tex refs.bib figures/**/*
+main.pdf: main.tex refs.bib figures/**/* sections/*.tex
 	pdflatex -interaction=nonstopmode main.tex
 	bibtex main
 	pdflatex -interaction=nonstopmode main.tex
 	pdflatex -interaction=nonstopmode main.tex
 
-sea/main.pdf: sea/main.tex refs.bib figures/**/*
+sea/main.pdf: sea/main.tex refs.bib figures/**/* sections/*.tex
 	cd sea && pdflatex -interaction=nonstopmode main.tex
 	cd sea && bibtex main
 	cd sea && pdflatex -interaction=nonstopmode main.tex

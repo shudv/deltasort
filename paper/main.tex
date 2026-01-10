@@ -30,17 +30,6 @@
 \newcommand{\defref}[1]{Definition~\ref{#1}}
 \newcommand{\appref}[1]{Appendix~\ref{#1}}
 
-% Load benchmark metadata from CSV
-\pgfplotstableread[col sep=comma]{\rootdir/figures/rust/metadata.csv}\rustmetadata
-\pgfplotstablegetelem{0}{value}\of\rustmetadata \let\rustbenchmarkdate\pgfplotsretval
-\pgfplotstablegetelem{1}{value}\of\rustmetadata \let\rustbenchmarkmachine\pgfplotsretval
-\pgfplotstablegetelem{2}{value}\of\rustmetadata \let\rustbenchmarkn\pgfplotsretval
-\pgfplotstablegetelem{3}{value}\of\rustmetadata \let\rustbenchmarkiterations\pgfplotsretval
-
-% Command to add benchmark note to figures
-\newcommand{\rustbenchmarknote}{\par\vspace{2pt}\noindent{\scriptsize\textit{Benchmarked on \rustbenchmarkmachine\ (\rustbenchmarkdate), $n=\rustbenchmarkn$, \rustbenchmarkiterations\ iterations.}}}
-\usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing,pgfplots.fillbetween}
-
 \geometry{margin=1in}
 
 % Theorem environments

@@ -16,14 +16,7 @@ For an updated index $i$, we define its \emph{direction} based on local order:
 \end{itemize}
 \end{definition}
 
-\begin{remark}
-The definition of direction is deliberately asymmetric: L requires a definite violation ($A[i-1] > A[i]$), while R encompasses both violations and non-violations. One might consider a three-way classification with a separate S (stable) category for values already in their correct positions. However, this complicates the setup:
-\begin{enumerate}
-  \item S values need to be processed identically to R values (both may stay or move right).
-  \item Fixing an R value can shift values, potentially converting a previously S neighbor into an R violation. Example: consider array $[20, 30, 10]$ where indexes $0$ and $1$ were updated. Index $0 (20)$ is initially S because it is correctly places w.r.t index $1$ $(30)$, but once index $1$ is fixed, index $0$ becomes an R violation since $20 > 10$. 
-\end{enumerate}
-The two-way classification avoids this issue by maintaining a useful invariant: \emph{the direction of an updated index never changes until it is repaired}. This simplifies the implementation.
-\end{remark}
+The definition of direction is deliberately asymmetric. LEFT requires a strict violation ($A[i-1] > A[i]$), while RIGHT includes both violating and non-violating cases. DeltaSort treats all RIGHT elements identically, so distinguishing these cases offers no benefit.
 
 \begin{definition}[Segment]
 \label{def:segment}

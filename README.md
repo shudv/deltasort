@@ -4,7 +4,7 @@
 
 An incremental soting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
-📄 **[Read the pre-print](https://doi.org/10.5281/zenodo.18132075)**
+📄 **[Read the pre-print](https://doi.org/10.5281/zenodo.18132074)**
 
 ## Quick Start
 

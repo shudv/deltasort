@@ -123,26 +123,15 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 \subsection{Complexity Analysis}
 \label{sec:complexity}
 
-We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a bounded-range update model. In this model, updated values are drawn randomly and uniformly from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
+We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a random bounded-range update model. In this model, updated values are drawn randomly and uniformly from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank
-displacement} model constrains updates such that for every updated element
-$|R_{\text{new}} - R_{\text{old}}| \le b$ for some bound $b$, while a
-\emph{clustered update} model restricts updated indices to a contiguous region
-$[u_{\min}, u_{\max}]$ with $u_{\max} - u_{\min} \le c$. Different models interact
-with DeltaSort’s structure in different ways: bounded displacement localizes
-movement by design, whereas clustering can either localize repairs or increase
-cross-segment interaction depending on direction patterns.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated element $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits
+movement and is therefore favorable, whereas clustered updates may either help
+or hinder performance depending on the induced directional pattern.
 
-In this work, we adopt a fully random update model as a neutral baseline.
-Specifically, updated indices are chosen uniformly at random from
-$\{0, \ldots, n-1\}$, and updated values are drawn independently from the same
-distribution as the original array. This model introduces no additional
-structure that the algorithm can explicitly exploit, nor does it adversarially
-bias updates toward worst-case configurations. Analyzing DeltaSort under more
-structured update models, including bounded displacement and clustered updates,
+In this work, we adopt a fully random update model as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can explicitly exploit, nor does it adversarially bias updates towards worst-case configurations (see Appendix~\appref{sec:appendix-ds-worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models, including bounded displacement and clustered updates,
 is left to future work.
 \end{remark}
 

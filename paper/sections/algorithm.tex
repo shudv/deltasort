@@ -30,8 +30,8 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ such that:
 \begin{enumerate}
   \item Either $i = 0$, or $i \in U$ has direction $R$.
   \item Either $j = n - 1$, or $j \in U$ has direction $L$.
-  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction $L$ and $q$ has direction $R$.
-  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ also satisfies the above conditions.
+  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ is $L$ and $q$ is $R$.
+  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ is also a segment.
 \end{enumerate}
 \end{definition}
 
@@ -81,7 +81,7 @@ $R_0,\ldots,R_{r-1}$ followed by $L$-indices
 $L_0,\ldots,L_{l-1}$, where $r+l \ge 1$.
 After Phase~1,
 \[
-A[R_0] < \cdots < A[R_{r-1}] < A[L_0] < \cdots < A[L_{l-1}].
+A[R_0] \le \cdots \le A[R_{r-1}] \le A[L_0] \le \cdots \le A[L_{l-1}].
 \]
 
 By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-values move only leftward. An $R$-value cannot cross $L_0$ (if it exists), and an $L$-value cannot cross $R_{r-1}$ (if it exists), since the above ordering is preserved. Therefore, no value exits its segment.

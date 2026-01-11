@@ -27,6 +27,9 @@ use std::time::Instant;
 /// Array size for main benchmarks
 const N: usize = 100_000;
 
+/// Maximum k value for BIS benchmarks (BIS is O(kn) for moves, too slow for large k)
+const BIS_MAX_K: usize = 2000;
+
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;
 
@@ -259,7 +262,7 @@ fn find_crossover(n: usize) -> usize {
 }
 
 fn find_crossover_bis(n: usize) -> usize {
-    find_crossover_generic(n, 0.0, if n < 5000 { 0.1 } else { 0.01 }, bis_is_faster)
+    find_crossover_generic(n, 0.0, 0.1, bis_is_faster)
 }
 
 fn find_crossover_esm(n: usize) -> usize {
@@ -424,7 +427,7 @@ struct AlgorithmResult {
 
 struct BenchmarkResults {
     native: Vec<AlgorithmResult>,
-    bis: Vec<AlgorithmResult>,
+    bis: Vec<Option<AlgorithmResult>>,
     esm: Vec<AlgorithmResult>,
     deltasort: Vec<AlgorithmResult>,
 }
@@ -494,6 +497,10 @@ fn print_execution_time_table(results: &BenchmarkResults) {
     println!("│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │");
     println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
     for i in 0..results.native.len() {
+        let bis_str = match &results.bis[i] {
+            Some(bis) => format_with_ci(bis.time_us, bis.time_ci, COL_WIDTH),
+            None => format!("{:>width$}", "-", width = COL_WIDTH),
+        };
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
@@ -502,7 +509,7 @@ fn print_execution_time_table(results: &BenchmarkResults) {
                 results.native[i].time_ci,
                 COL_WIDTH
             ),
-            format_with_ci(results.bis[i].time_us, results.bis[i].time_ci, COL_WIDTH),
+            bis_str,
             format_with_ci(results.esm[i].time_us, results.esm[i].time_ci, COL_WIDTH),
             format_with_ci(
                 results.deltasort[i].time_us,
@@ -523,6 +530,10 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
     println!("│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │");
     println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
     for i in 0..results.native.len() {
+        let bis_str = match &results.bis[i] {
+            Some(bis) => format_int_with_ci(bis.comparisons, bis.comparisons_ci, COL_WIDTH),
+            None => format!("{:>width$}", "-", width = COL_WIDTH),
+        };
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
@@ -531,11 +542,7 @@ fn print_comparator_count_table(results: &BenchmarkResults) {
                 results.native[i].comparisons_ci,
                 COL_WIDTH
             ),
-            format_int_with_ci(
-                results.bis[i].comparisons,
-                results.bis[i].comparisons_ci,
-                COL_WIDTH
-            ),
+            bis_str,
             format_int_with_ci(
                 results.esm[i].comparisons,
                 results.esm[i].comparisons_ci,
@@ -596,18 +603,22 @@ fn print_crossover_table_ds_vs_esm(results: &[CrossoverResultDeltaVsEsm]) {
 fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
     let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
+        let bis_cols = match &results.bis[i] {
+            Some(bis) => format!(
+                "{:.1},{:.1},{:.1},{:.1}",
+                bis.time_us, bis.time_sd, bis.time_ci, bis.time_cv
+            ),
+            None => ",,,".to_string(),
+        };
         csv.push_str(&format!(
-            "{},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
+            "{},{},{:.1},{:.1},{:.1},{:.1},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
             results.native[i].k,
             results.native[i].iterations,
             results.native[i].time_us,
             results.native[i].time_sd,
             results.native[i].time_ci,
             results.native[i].time_cv,
-            results.bis[i].time_us,
-            results.bis[i].time_sd,
-            results.bis[i].time_ci,
-            results.bis[i].time_cv,
+            bis_cols,
             results.esm[i].time_us,
             results.esm[i].time_sd,
             results.esm[i].time_ci,
@@ -625,18 +636,22 @@ fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
 fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
     let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
+        let bis_cols = match &results.bis[i] {
+            Some(bis) => format!(
+                "{:.0},{:.0},{:.0},{:.1}",
+                bis.comparisons, bis.comparisons_sd, bis.comparisons_ci, bis.comparisons_cv
+            ),
+            None => ",,,".to_string(),
+        };
         csv.push_str(&format!(
-            "{},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
+            "{},{},{:.0},{:.0},{:.0},{:.1},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
             results.native[i].k,
             results.native[i].iterations,
             results.native[i].comparisons,
             results.native[i].comparisons_sd,
             results.native[i].comparisons_ci,
             results.native[i].comparisons_cv,
-            results.bis[i].comparisons,
-            results.bis[i].comparisons_sd,
-            results.bis[i].comparisons_ci,
-            results.bis[i].comparisons_cv,
+            bis_cols,
             results.esm[i].comparisons,
             results.esm[i].comparisons_sd,
             results.esm[i].comparisons_ci,
@@ -707,7 +722,7 @@ fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
             max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
         }
     }
-    for r in &results.bis {
+    for r in results.bis.iter().flatten() {
         if r.time_us > 0.0 {
             max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
         }
@@ -780,19 +795,24 @@ fn main() {
             comparisons_cv: native.comparisons_cv,
         });
 
-        let bis = run_benchmark(&base_users, k, binary_insertion_sort);
-        results.bis.push(AlgorithmResult {
-            k,
-            iterations: bis.iterations,
-            time_us: bis.time_us,
-            time_sd: bis.time_sd,
-            time_ci: bis.time_ci,
-            time_cv: bis.time_cv,
-            comparisons: bis.comparisons,
-            comparisons_sd: bis.comparisons_sd,
-            comparisons_ci: bis.comparisons_ci,
-            comparisons_cv: bis.comparisons_cv,
-        });
+        // Skip BIS for large k (O(kn) movement cost makes it too slow)
+        if k <= BIS_MAX_K {
+            let bis = run_benchmark(&base_users, k, binary_insertion_sort);
+            results.bis.push(Some(AlgorithmResult {
+                k,
+                iterations: bis.iterations,
+                time_us: bis.time_us,
+                time_sd: bis.time_sd,
+                time_ci: bis.time_ci,
+                time_cv: bis.time_cv,
+                comparisons: bis.comparisons,
+                comparisons_sd: bis.comparisons_sd,
+                comparisons_ci: bis.comparisons_ci,
+                comparisons_cv: bis.comparisons_cv,
+            }));
+        } else {
+            results.bis.push(None);
+        }
 
         let esm = run_benchmark(&base_users, k, extract_sort_merge);
         results.esm.push(AlgorithmResult {

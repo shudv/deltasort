@@ -1,19 +1,21 @@
 \begin{table}[h]
 \centering
-\caption{Algorithms for the update-aware sorting model}
+\caption{Algorithms for the update-aware sorting}
 \label{tab:incremental-sorting-algorithms}
 \begin{tabular}{l c c}
 \toprule
-Algorithm & Time & Space \\
+Algorithm & Time (Expected / Worst) & Space \\
 \midrule
-Binary-Insertion-Sort & $O(kn)$ & $O(1)$ \\
-Extract-Sort-Merge$^{*}$ & $O(k \log k + n)$ & $O(n)$ \\
-\textbf{DeltaSort}$^{*}$ & $O(k \log n + n)$ & $O(k)$ \\
+Binary-Insertion-Sort$^{\dagger}$ & $O(kn)$ & $O(1)$ \\
+Extract-Sort-Merge$^{*}$$^{\dagger}$ & $O(k \log k + n)$ & $O(n)$ \\
+\textbf{DeltaSort}$^{*}$ & $O(k \log n + n)\,/\,O(kn)$ & $O(k)$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
 {$n$ = array size, $k$ = number of updates}
 
-\small *These algorithms rely on a sort primitive assumed to run in $O(k \log k)$ time and $\le O(k)$ space.
+\small $^{*}$These use a full sort primitive internally assumed to run in $O(k \log k)$ time and $\le O(k)$ space.
+
+\small $^{\dagger}$These have the same expected and worst case time complexity.
 \end{table}

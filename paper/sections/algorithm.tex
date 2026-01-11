@@ -37,6 +37,8 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ such that:
 
 Intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
 
+\input{\figdir/segment-structure}
+
 \paragraph{Phase 2: Sort.}
 With the above structure in place, DeltaSort repairs the array segment by segment. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two repair boundaries:
 a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.

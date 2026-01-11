@@ -20,7 +20,7 @@ This raises the question: are there other intermediate strategies between these 
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
 
-  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = \Theta (n)$).
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, for random updates, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = \Theta (n)$).
 
   \input{\figdir/incremental-sorting-algorithms}
 

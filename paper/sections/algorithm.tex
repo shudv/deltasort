@@ -135,25 +135,51 @@ In this work, we adopt a fully random update model as a neutral baseline. Specif
 is left to future work.
 \end{remark}
 
-\begin{theorem}[Expected Linear Movement]
-\label{thm:movement-bound}
-Under the bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's repair phase is $O(n)$, independent of $k$.
-\end{theorem}
-
-\begin{proof}[Proof sketch]
-Under the bounded-range model, the probability of direction L at the $i$-th updated index is $i/(k-1)$, and R is $(k-1-i)/(k-1)$. Segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions. By summing the transition probabilities over adjacent pairs, we show that the expected number of such transitions is $\Theta(k)$, yielding $\Theta(k)$ segments. Each segment spans $O(n/k)$ positions in expectation, and by \lemref{lem:confinement}, movement is confined within segments. Thus, total expected movement is $k \cdot O(n/k) = O(n)$. The full derivation appears in \appref{sec:appendix-proof}.
-\end{proof}
-
-\begin{theorem}[Comparison Count]
-\label{thm:comparison-count}
-DeltaSort performs $O(k \log n)$ comparisons, which is asymptotically optimal.
-\end{theorem}
+\begin{lemma}[Expected Linear Movement]
+\label{lem:movement-bound}
+Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's repair phase is $O(n)$, independent of $k$.
+\end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is repaired using a binary search within its containing segment. By \thmref{thm:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives-
+Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces monotonicity among updated values: for consecutive updated indices $u_{i-1} < u_i < u_{i+1}$, the value at $u_i$ must lie between the values written at $u_{i-1}$ and $u_{i+1}$.
+
+For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformally at random, both these intervals are expected to be of equal size on an average. Each updated values which is randomly chosen has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+
+It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
+\[
+\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \Pr[\text{L at } i] \cdot \Pr[\text{R at } i+1] = \frac{1}{2} \cdot \frac{1}{2} = \frac{1}{4}.
+\]
+
+With $k-1$ adjacent pairs, the expected number of $\mathrm{L}\!\to\!\mathrm{R}$ transitions is:
+\[
+\mathbb{E}[\text{LR transitions}] = (k-1) \cdot \frac{1}{4} = \frac{k-1}{4} = \Theta(k).
+\]
+
+The expected number of segments is therefore $1 + \Theta(k) = \Theta(k)$. Under uniform index distribution, each segment spans $O(n/k)$ positions in expectation. By \lemref{lem:confinement}, movement is confined within segments, so each updated value moves at most $O(n/k)$ positions. Thus:
+\[
+\mathbb{E}[\text{total movement}] \le k \cdot O(n/k) = O(n). \qedhere
+\]
+\end{proof}
+
+\begin{lemma}[Comparison Count]
+\label{lem:comparison-count}
+DeltaSort performs $O(k \log n)$ comparisons.
+\end{lemma}
+
+\begin{proof}
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is repaired using a binary search within its containing segment. By \lemref{lem:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives:
 \[
 O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
 \]
+\end{proof}
+
+\begin{theorem}[Time Complexity]
+\label{thm:time-complexity}
+Under the random bounded-range update model, DeltaSort runs in $O(n + k \log n)$ expected time.
+\end{theorem}
+
+\begin{proof}
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n)$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(n + k \log n)$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

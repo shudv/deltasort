@@ -3,7 +3,7 @@
 \label{sec:experiments}
 %==============================================================================
 
-All experiments are conducted on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics, absence of garbage collection and JIT compilation, and low runtime variance. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $\approx 5\%$. The benchmarking routines are provided in the repository for reproducibility~\cite{deltasort-repo}. We used fully random update distributions, which provide no favorable structure to any particular algorithm. We evaluated following algorithms:
+All experiments are conducted on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics, due to absence of garbage collection or JIT compilation. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $5\%$. The benchmarking routines are provided in the repository for reproducibility~\cite{deltasort-repo}. We used fully random update distributions, which provide no favorable structure to any particular algorithm. We evaluated following algorithms:
 
 \begin{itemize}
   \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. NativeSort serves as a critical baseline to identify the crossover threshold for each update-aware algorithm beyond which full re-sorting becomes preferable.
@@ -29,38 +29,20 @@ Several observations emerge from the execution-time profile:
 \begin{enumerate}
   \item \textbf{Asymptotic trend is consistent}: For larger values of $k$, the observed execution times for all algorithms closely follow their expected asymptotic trends. In particular, BIS exhibits superlinear growth consistent with its $O(kn)$ movement cost, while ESM and NativeSort converge toward $O(n \log n)$ behavior, respectively.
 
-  \item \textbf{Binary-Insertion-Sort degrades rapidly}: BIS outperforms ESM and NativeSort for very small update sizes ($k \lessapprox 0.01\%$) but quickly becomes the worst-performing algorithm as $k$ increases due to its $O(kn)$ data movement cost.
+  \item \textbf{Binary-Insertion-Sort degrades rapidly}: BIS outperforms ESM and NativeSort for very small update sizes ($k \lesssim 0.01\%$) but quickly becomes the worst-performing algorithm as $k$ increases due to its $O(kn)$ data movement cost.
 
-  \item \textbf{Extract--Sort--Merge dominates the mid-range}: ESM is the fastest baseline across most of the intermediate range ($1\% \lessapprox k \lessapprox 80\%$), provided sufficient memory is available. Its performance comes at the cost of $O(n)$ auxiliary space.
+  \item \textbf{Extract--Sort--Merge dominates the mid-range}: ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 80\%$), provided sufficient memory is available. Its performance comes at the cost of $O(n)$ auxiliary space.
 
-  \item \textbf{DeltaSort dominates a narrow but meaningful regime}: DeltaSort outperforms both BIS and ESM for $k \lessapprox 1\%$. It uses $O(k)$ auxiliary space—more than BIS ($O(1)$) but substantially less than ESM ($O(n)$). While this regime is small in absolute terms, it aligns well with practical workloads where deltas are usually a small percentage of the full dataset.
+  \item \textbf{DeltaSort dominates a narrow but meaningful regime}: DeltaSort outperforms both BIS and ESM for $k \lesssim 1\%$. It uses $O(k)$ auxiliary space—more than BIS ($O(1)$) but substantially less than ESM ($O(n)$). While this regime is small in absolute terms, it aligns well with practical workloads where deltas are usually a small percentage of the full dataset.
 \end{enumerate}
 
 These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}), it would be beneficial to construct \emph{hybrid update-aware} strategies that adapt to update size and execution environment. For the Rust implementation evaluated here, an optimal strategy for an environment with no memory constraints could be:
 
 \begin{center}
-  Use DeltaSort for $k \lessapprox 1\%$, ESM for $1\% \lessapprox k \lessapprox 80\%$, and NativeSort for $k \gtrapprox 80\%$.
+  Use DeltaSort for $k \lesssim 1\%$, ESM for $1\% \lesssim k \lesssim 80\%$, and NativeSort for $k \lesssim 80\%$.
 \end{center}
 
-The precise crossover thresholds depend on the execution environment, data distribution, and comparator cost, and should be treated as indicative rather than universal. We will explore these hybrid strategies further in future work.
-
-\subsection{Comparison Count}
-
-\figref{fig:rust-comparator-count} shows the total number of comparisons as a function of update count $k$. We have used a realistic multi-key comparator that compares user objects by (country, age, name) to reflect practical comparison costs.
-
-\input{\figdir/rust/comparator-count}
-
-Several clear patterns emerge:
-
-\begin{enumerate}
-  \item \textbf{Asymptotic behavior matches theory}: The observed comparator counts closely follow the  expected asymptotic trends for all algorithms across the full range of $k$.
-
-  \item \textbf{ESM incurs high comparison cost even for small updates}: Due to the full merge step, ESM performs a large number of comparisons even when $k$ is small.
-
-  \item \textbf{DeltaSort matches BIS asymptotically}: DeltaSort's comparator count closely tracks BIS for $k \lessapprox 1\%$ and remains within $\approx 10$--$20\%$ of BIS for larger $k$, while preserving the same $O(k \log n)$ asymptotic behavior. Note that for large $k$, even though BIS is most comparison-efficient, its data movement cost makes it an impractical choice.
-\end{enumerate}
-
-The key takeaway is that DeltaSort, like BIS, substantially reduces redundant comparison work relative to ESM and NativeSort. As comparator cost increases, this advantage would becomes more pronounced. For small update ranges, where BIS and DeltaSort have similar comparison counts, DeltaSort's movement efficiency becomes the dominant factor, and its relative advantage over BIS will persist across a wide range of comparator costs.
+The precise crossover thresholds depend on several factors, including the cost of the comparator. Our experiments show that DeltaSort’s comparator invocation count closely tracks that of Binary-Insertion-Sort, consistent with the $O(k \log n)$ theoretical bound. As a result, when comparator cost dominates, DeltaSort retains its advantage over Binary-Insertion-Sort while further widening its gap relative to Extract–Sort–Merge, whose comparison overhead is higher. This shifts the crossover thresholds in favor of DeltaSort and expands the regimes where it is the preferred choice. Detailed comparison counts for all algorithms are provided in Appendix~\ref{sec:appendix-comparisons}.
 
 \subsection{Crossover Threshold}
 
@@ -75,19 +57,14 @@ Several patterns emerge:
   \item \textbf{ESM achieves the highest crossover threshold}: ESM remains faster than NativeSort up to $k \approx 60$--$80\%$, consistent with its $O(n + k \log k)$ time complexity, which approaches full sorting only when $k$ is large.
 
   \item \textbf{DeltaSort exhibits an intermediate threshold}: DeltaSort's crossover point lies between BIS and ESM, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes.
+  
+  \item \textbf{DeltaSort vs ESM}: For $k \lesssim 1\%$, DeltaSort outperforms ESM while using significantly less auxiliary space, making it a \emph{strictly better choice} in this regime. Appendix~\ref{sec:appendix-rust-ds-vs-esm} shows how this boundary shifts with array size.
 
   \item \textbf{Thresholds are weakly dependent on array size}:
-  Crossover points are largely stable across array sizes, though we observe a decline for large arrays ($n \gtrapprox 200$K). This may be due to cache effects or memory allocation overheads. We will study this behavior in more detail in future work.
+  Crossover points are largely stable across array sizes, though we observe a decline for large arrays ($n \lesssim 200$K). This may be due to cache effects or memory allocation overheads. We will study this behavior in more detail in future work.
 \end{enumerate}
 
 The key takeaway is that DeltaSort occupies a well-defined middle ground among update-aware algorithms. It supports substantially larger update batches than BIS while requiring significantly less auxiliary space than ESM, making it attractive in regimes where both time and space constraints matter.
-
-
-An interesting trend in \figref{fig:rust-execution-time} is that for $k \lessapprox 1\%$, DeltaSort consistently outperforms ESM while using significantly less auxiliary space, making it a \emph{strictly better choice} in this regime. To examine this boundary more closely, we plot the direct crossover between DeltaSort and ESM in \figref{fig:rust-crossover-ds-vs-esm}.
-
-\input{\figdir/rust/crossover-ds-vs-esm}
-
-\figref{fig:rust-crossover-ds-vs-esm} shows that there exists a non-trivial regime in which DeltaSort dominates ESM both in execution time and space usage. For example, for an array of size $n = 100$K, DeltaSort outperforms ESM for up to $\approx 1K$ updates, while using only $\approx 1\%$ of the auxiliary space required by ESM. As array size increases, this regime steadily shrinks. For large arrays, the crossover threshold moves toward smaller fractions, indicating that DeltaSort loses to ESM earlier. Although both algorithms incur $O(n)$ data movement in the worst case, this trend suggests that the constant factors associated with DeltaSort's movement become more pronounced at larger scales. As a result, ESM's simpler linear merge begins to dominate for smaller $k$ as $n$ grows.
 
 \subsection{Performance in managed execution environments}
 
@@ -98,7 +75,7 @@ DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmark
 Several observations stand out:
 
 \begin{enumerate}
-  \item \textbf{DeltaSort and BIS largely overlap for small updates}: For $k \lessapprox 0.1\%$, even though BIS and DeltaSort beat ESM and NativeSort, DeltaSort does not exhibit a clear advantage over Binary-Insertion-Sort. Unlike in Rust, batching updates does not help improve performance meaningfully in this regime.
+  \item \textbf{DeltaSort and BIS largely overlap for small updates}: For $k \lesssim 0.1\%$, even though BIS and DeltaSort beat ESM and NativeSort, DeltaSort does not exhibit a clear advantage over Binary-Insertion-Sort. Unlike in Rust, batching updates does not help improve performance meaningfully in this regime.
 
   \item \textbf{ESM beats NativeSort}: Extract--Sort--Merge performs better than NativeSort for $k$ up to $\approx 50\%$.
 

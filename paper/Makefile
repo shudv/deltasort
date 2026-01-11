@@ -17,5 +17,5 @@ sea/main.pdf: sea/main.tex refs.bib figures/**/*
 rebuild: clean all
 
 clean:
-	rm -f *.aux *.bbl *.blg *.log *.out *.toc *.fls *.fdb_latexmk *.synctex.gz main.pdf
-	rm -f sea/*.aux sea/*.bbl sea/*.blg sea/*.log sea/*.out sea/*.toc sea/*.fls sea/*.fdb_latexmk sea/*.synctex.gz sea/main.pdf
+	rm -rf *.aux *.bbl *.blg *.log *.out *.toc *.fls *.fdb_latexmk *.synctex.gz *.vtc main.pdf out/*
+	rm -rf sea/*.aux sea/*.bbl sea/*.blg sea/*.log sea/*.out sea/*.toc sea/*.fls sea/*.fdb_latexmk sea/*.synctex.gz sea/*.vtc sea/main.pdf sea/out/*

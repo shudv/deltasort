@@ -1,4 +1,4 @@
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Algorithm complexity comparison}
 \label{tab:complexity}
@@ -9,10 +9,13 @@ Algorithm & Comparisons (C) & Movement (M) & Space (S) & Time (C + M) \\
 NativeSort$^{*}$ $(\texttt{sort\_by})$ & $O(n \log n)$ & - & - & $O(n \log n)$ \\
 Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ & $O(kn)$ \\
 Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ & $O(k \log k + n)$ \\
-\textbf{DeltaSort} & $O(k \log n)$ & $O(n)$ & $O(k)$ & $O(k \log n + n)$ \\
+\textbf{DeltaSort} & $O(k \log n)$ & $O(n)$ & $O(k)$ & $O(k \log n + n)$$^{\dagger}$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
-{\small *Not update-aware; hence complexity is a function of only $n$. The exact movement and space complexity are implementation-dependent and not required for the present discussion.}
+{\small $^{*}$Not update-aware; hence complexity is a function of only $n$. The exact movement and space complexity are implementation-dependent and not required for the present discussion.}
+
+
+{\small $^{\dagger}$Expected. Worst-case time is $O(kn)$}
 \end{table}

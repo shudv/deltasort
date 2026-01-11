@@ -146,8 +146,7 @@ where
                     if idx < arr.len() - 1
                         && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
                     {
-                        right_bound =
-                            fix_right(arr, idx, right_bound, &cmp).saturating_sub(1);
+                        right_bound = fix_right(arr, idx, right_bound, &cmp).saturating_sub(1);
                     }
                 }
 

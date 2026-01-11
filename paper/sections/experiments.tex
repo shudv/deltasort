@@ -44,18 +44,18 @@ The optimal crossover thresholds for a scenario would depend on several factors 
 \figref{fig:rust-crossover-all} shows the crossover thresholds ($k_c$) for all the update-aware algorithms. A larger threshold means that the algorithm remains faster than full re-sorting for larger update sizes. Several observations stand out:
 
 \begin{enumerate}
-  \item BIS has a very low crossover threshold due to it's $O(kn)$ data movement cost, whereas ESM achieves the highest crossover threshold consistent with its $O(n + k \log k)$ time complexity, which is asymptotically the best among all alternatives.
+  \item BIS has a very low crossover threshold due to its $O(kn)$ data movement cost, whereas ESM achieves the highest crossover threshold consistent with its $O(n + k \log k)$ time complexity, which is asymptotically the best among all alternatives.
 
   \item DeltaSort exhibits an \emph{intermediate threshold}, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes. Additionally, 
   
-  \item Thresholds are largely stable across different scales (DeltaSort $20--35\%$, ESM $60--80\%$), although we observe a decline for very large arrays ($n \lesssim 200$K). This may be an artifact of practical limits on devices. More study is needed to understand this behavior in detail.
+  \item Thresholds are largely stable across different scales (DeltaSort $20--35\%$, ESM $60--80\%$), although we observe a decline for very large arrays ($n \gtrsim 200$K). This may be an artifact of practical limits on devices. More study is needed to understand this behavior in detail.
 \end{enumerate}
 
 The key takeaway is that DeltaSort occupies a well-defined ground among update-aware algorithms. It supports much larger update batches than BIS while requiring much lesser auxiliary space than ESM, making it a compelling choice where both time and space constraints matter.
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes to evaluate how update-aware algorithhms behave. \figref{fig:js-execution-time} shows execution time for $n = 100$K as a function of update size $k$.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes to evaluate how update-aware algorithms behave. \figref{fig:js-execution-time} shows execution time for $n = 100$K as a function of update size $k$.
 
 \input{\figdir/js/execution-time}
 
@@ -72,4 +72,4 @@ The key takeaway is that \emph{DeltaSort's performance benefits rely on a predic
 Use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
 \end{center}
 
-These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thesholds in JS.
+These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thresholds in JS.

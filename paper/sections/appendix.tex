@@ -3,7 +3,7 @@
 \section{DeltaSort Worst-Case Movement}
 \label{sec:appendix-ds-worst-case}
 
-% TODO: Add worst-case example
+The worst-case data movement for DeltaSort occurs when all $k$ updated elements are moved to the beginning or end of the array (R..RC..C or C..CL..L where C are the values that weren't updated), resulting in a single large segment that requires shifting all $n$ elements. In this scenario, DeltaSort must shift $O(n)$ elements to accommodate the updated values, leading to a total data movement of $O(kn)$ in the worst case.
 
 \section{Comparison Count}
 \label{sec:appendix-comparisons}
@@ -12,19 +12,6 @@
 \figref{fig:rust-comparator-count} shows the total number of comparisons as a function of update count $k$. We have used a realistic multi-key comparator that compares user objects by (country, age, name) to reflect practical comparison costs.
 
 \input{\figdir/rust/comparator-count}
-
-Several clear patterns emerge:
-
-\begin{enumerate}
-  \item \textbf{Asymptotic behavior matches theory}: The observed comparator counts closely follow the  expected asymptotic trends for all algorithms across the full range of $k$.
-
-  \item \textbf{ESM incurs high comparison cost even for small updates}: Due to the full merge step, ESM performs a large number of comparisons even when $k$ is small.
-
-  \item \textbf{DeltaSort matches BIS asymptotically}: DeltaSort's comparator count closely tracks BIS for $k \lesssim 1\%$ and remains within $\approx 10$--$20\%$ of BIS for larger $k$, while preserving the same $O(k \log n)$ asymptotic behavior. Note that for large $k$, even though BIS is most comparison-efficient, its data movement cost makes it an impractical choice.
-\end{enumerate}
-
-The key takeaway is that DeltaSort, like BIS, substantially reduces redundant comparison work relative to ESM and NativeSort. As comparator cost increases, this advantage would becomes more pronounced. For small update ranges, where BIS and DeltaSort have similar comparison counts, DeltaSort's movement efficiency becomes the dominant factor, and its relative advantage over BIS will persist across a wide range of comparator costs.
-
 
 \section{DeltaSort vs ESM Crossover Threshold}
 \label{sec:appendix-rust-ds-vs-esm}

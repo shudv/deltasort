@@ -13,8 +13,8 @@ DeltaSort operates in two phases. The first phase establishes a structure among 
 \label{def:direction}
 For an updated index $i$, we define its \emph{direction} based on local order:
 \begin{itemize}
-  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to it's left neighbour: $i > 0 \text{ and } \texttt{cmp}(A[i-1], A[i]) > 0$
-  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t it's neighbours or ordered incorrectly to its right neighbour: $i = 0 \text{ or } \texttt{cmp}(A[i-1], A[i]) \le 0$
+  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbour: $i > 0 \text{ and } \texttt{cmp}(A[i-1], A[i]) > 0$
+  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t its neighbours or ordered incorrectly to its right neighbour: $i = 0 \text{ or } \texttt{cmp}(A[i-1], A[i]) \le 0$
 \end{itemize}
 \end{definition}
 
@@ -49,21 +49,21 @@ With the above structure in place, DeltaSort fixes the array segment by segment.
   \item After all deferred $R$ values have been fixed, $L$ values are fixed in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
 \end{enumerate}
 
-Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries.Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
+Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries. Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
 
 \input{\figdir/delta-sort-example}
 
 \subsection{Key Insight: Segments can be fixed locally and independently}
 \label{sec:insight}
 
-The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross it's segment boundary. We formally prove this property next.
+The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross its segment boundary. We formally prove this property next.
 
 \begin{lemma}[Direction Invariance]
 \label{lem:direction-invariance}
 After Phase~1, each updated value moves only in the direction indicated by its direction label:
 \begin{itemize}
   \item Values with direction $L$ \textbf{must} move to the left.
-  \item Values with direction $R$ \textbf{may} \footnote{This assymetry follows from the definition of direction (Definition~\ref{def:direction}).} move to the right.
+  \item Values with direction $R$ \textbf{may} \footnote{This asymmetry follows from the definition of direction (Definition~\ref{def:direction}).} move to the right.
 \end{itemize}
 \end{lemma}
 
@@ -142,7 +142,7 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \begin{proof}
 Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces monotonicity among updated values: for consecutive updated indices $u_{i-1} < u_i < u_{i+1}$, the value at $u_i$ must lie between the values written at $u_{i-1}$ and $u_{i+1}$.
 
-For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformally at random, both these intervals are expected to be of equal size on an average. Each updated values which is randomly chosen has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on an average. Each updated values which is randomly chosen has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
 
 It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
 \[

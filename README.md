@@ -1,6 +1,6 @@
 # DeltaSort
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18132075.svg)](https://doi.org/10.5281/zenodo.18132075)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18132074.svg)](https://doi.org/10.5281/zenodo.18132074)
 
 An incremental soting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 

@@ -55,21 +55,4 @@ The key takeaway is that DeltaSort occupies a well-defined ground among update-a
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes to evaluate how update-aware algorithms behave. \figref{fig:js-execution-time} shows execution time for $n = 100$K as a function of update size $k$.
-
-\input{\figdir/js/execution-time}
-
-Several observations stand out:
-
-\begin{enumerate}
-  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost model in V8 is not proportional to the number of shifted elements}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
-  \item ESM is $\sim 40\%$ faster than NativeSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that even in managed runtimes, we can leverage information of updated indices to unlock better performance.
-\end{enumerate}
-
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, the practical strategy for achieving faster execution times simplifies to:
-
-\begin{center}
-Use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
-\end{center}
-
-These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thresholds in JS.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8~\cite{v8elementskinds} (see ~\appref{sec:appendix-js-deltasort} for more details).

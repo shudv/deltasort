@@ -1,0 +1,22 @@
+%==============================================================================
+\section{Related Work}
+\label{sec:related}
+%==============================================================================
+
+Adaptive sorting algorithms exploit existing order in the input to improve performance on nearly sorted data. TimSort~\cite{timsort} and natural merge sort~\cite{knuth1998art} dynamically identify monotonic runs and merge them efficiently, while a substantial body of work formalizes measures of presortedness and analyzes sorting complexity as a function of these measures rather than input size alone~\cite{mannila1985measures}. These approaches, however, assume no explicit knowledge of which values have been updated.
+
+Prior work has also used the term \emph{incremental sorting} in different contexts. Aydin and Anderson~\cite{7184878} study incremental sorting of large, dynamic data sets in distributed systems, where new records are continuously appended and sorted along multiple dimensions using batch processing frameworks such as Hadoop. Their focus is on scalable index construction and query-time performance rather than on fixing a sorted array after in-place updates. As a result, their approach does not consider the cost of local data movement, nor does it exploit explicit knowledge of which array positions have been updated.
+
+Closer to the algorithmic literature, Paredes and Navarro~\cite{paredes2006optimal} present an optimal online algorithm for incremental \emph{selection}, which outputs the next smallest element of a set on demand. While related in spirit, their work addresses partial sorting and selection rather than maintaining a fully sorted array under updates.
+
+A separate line of work studies incremental computation and view maintenance in database and streaming systems, where updates to input data are propagated to derived results using explicit delta representations~\cite{gupta1995maintenance, nikolic2014incremental, akidau2015dataflow}. These techniques focus on maintaining query results, aggregates, and materialized views, and operate at the level of relational or dataflow operators rather than array-based sorting primitives. They treat deltas as first-class citizens and demonstrate the practical value of update-aware computation. However, they do not specifically address the problem of incrementally sorting arrays, which is a much more specialized, lower-level problem.
+
+Dynamic data structures offer a different trade-off. Self-balancing trees such as AVL trees~\cite{avl1962}, red--black trees~\cite{guibas1978dichromatic}, B-trees~\cite{bayer1972organization}, and skip lists~\cite{pugh1990skip} support efficient ordered updates with logarithmic cost, but abandon contiguous array layout and its associated advantages.
+
+In contrast, this work focuses on a more specialized but fundamental problem:
+maintaining sorted order in contiguous arrays after a batch of in-place updates,
+under the assumption that the indices of updated values are explicitly available.
+This setting is not addressed by adaptive sorting algorithms, system-level incremental
+indexing techniques, or selection-based incremental algorithms. \emph{DeltaSort}
+operates as a low-level sorting primitive that complements higher-level incremental
+systems, while preserving the cache locality and simplicity of array-based layouts.

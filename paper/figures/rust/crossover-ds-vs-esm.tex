@@ -1,0 +1,41 @@
+% Figure: DeltaSort vs ESM crossover threshold
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6.5cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=1000, xmax=1000000,
+    ymin=0, ymax=10,
+    ytick={0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+    xtick={1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000},
+    xticklabels={1K, 2K, 5K, 10K, 20K, 50K, 100K, 200K, 500K, 1M},
+    legend pos=north east,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% Shaded region below the curve (DeltaSort wins)
+\addplot[name path=curve, color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] 
+    table[col sep=comma, x=n, y=crossover_ratio] {\rootdir/figures/rust/crossover-ds-vs-esm.csv};
+\path[name path=bottom] (axis cs:1000,0) -- (axis cs:10000000,0);
+\addplot[green!15, opacity=0.6] fill between[of=curve and bottom];
+
+% Annotation for the regions
+\node[font=\footnotesize, text=green!50!black] at (axis cs:50000, 15) {DeltaSort faster};
+\node[font=\footnotesize, text=purple!50!black] at (axis cs:50000, 85) {ESM faster};
+
+\legend{\textbf{DeltaSort} vs ESM}
+\end{axis}
+\end{tikzpicture}
+\caption{Crossover threshold for Rust implementation before which DeltaSort performs better than ESM}
+\label{fig:rust-crossover-ds-vs-esm}
+\end{figure}

@@ -1,0 +1,47 @@
+% Figure: Crossover ratio vs array size (all algorithms vs native) - JavaScript
+\begin{figure}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=6cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover ratio $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=1000, xmax=100000,
+    ymin=0, ymax=80,
+    ytick={0, 10, 20, 30, 40, 50, 60, 70, 80},
+    xtick={1000, 2000, 5000, 10000, 20000, 50000, 100000},
+    xticklabels={1K, 2K, 5K, 10K, 20K, 50K, 100K},
+    legend pos=north west,
+    legend style={font=\small, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% BIS crossover
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2.5pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=bis] {\rootdir/figures/js/crossover-all.csv};
+
+% ESM crossover
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2.5pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=esm] {\rootdir/figures/js/crossover-all.csv};
+
+% DeltaSort crossover
+\addplot[color=green!70!black, mark=*, thick, mark size=2.5pt, line width=1.5pt] 
+    table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/js/crossover-all.csv};
+
+% DeltaSort Rust crossover (for reference)
+\addplot[color=gray, mark=star, thick, mark size=3pt, line width=1.5pt] 
+    table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
+
+\legend{BIS, ESM, \textbf{DeltaSort}, \textbf{DeltaSort (Rust)}}
+\end{axis}
+\end{tikzpicture}
+\caption{JavaScript: Crossover thresholds for update-aware algorithms versus NativeSort. The gray curve shows DeltaSort's crossover in Rust for reference.}
+\label{fig:js-crossover-all}
+\end{figure}

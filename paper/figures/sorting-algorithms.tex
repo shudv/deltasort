@@ -1,18 +1,21 @@
-\begin{table}[h]
+\begin{table}
 \centering
 \caption{Algorithm complexity comparison}
 \label{tab:complexity}
-\begin{tabular}{l c c c}
+\begin{tabular}{l c c c c}
 \toprule
-Algorithm & Comparisons & Movement & Space \\
+Algorithm & Comparisons (C) & Movement (M) & Space (S) & Time (C + M) \\
 \midrule
-NativeSort & $O(n \log n)$ & $O(n \log n)$ & $O(n)$ \\
-Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ \\
-Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
-\textbf{DeltaSort} & $O(k \log n)$ & $O(kn)$* & $O(k)$ \\
+NativeSort$^{*}$ $(\texttt{sort\_by})$ & $O(n \log n)$ & - & - & $O(n \log n)$ \\
+Binary-Insertion-Sort & $O(k \log n)$ & $O(kn)$ & $O(1)$ & $O(kn)$ \\
+Extract-Sort-Merge & $O(k \log k + n)$ & $O(n)$ & $O(n)$ & $O(k \log k + n)$ \\
+\textbf{DeltaSort} & $O(k \log n)$ & $O(n)$ & $O(k)$ & $O(k \log n + n)$$^{\dagger}$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
-{\small *Worst case; average case is empirically much smaller.}
+{\small $^{*}$Not update-aware; hence complexity is a function of only $n$. The exact movement and space complexity are implementation-dependent and not required for the present discussion.}
+
+
+{\small $^{\dagger}$Expected. Worst-case time is $O(kn)$}
 \end{table}

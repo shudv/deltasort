@@ -40,21 +40,20 @@ Intuitively, a segment is a maximal contiguous region of the array in which all 
 \input{\figdir/segment-structure}
 
 \paragraph{Phase 2: Sort.}
-With the above structure in place, DeltaSort repairs the array segment by segment. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two repair boundaries:
-a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.
+With the above structure in place, DeltaSort fixes the array segment by segment. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two boundaries: a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.
 
 \begin{enumerate}
   \item At the start of a segment, the left boundary $\ell$ is initialized to the segment's left endpoint.
   \item As the algorithm scans updated indices from left to right, indices with direction $R$ are pushed onto a stack.
-  \item When the first $L$-direction index at position $i$ is encountered or the end of the segment is reached, the right boundary $r$ is initialized to $i$. All deferred $R$ indices are then repaired in LIFO order. Each $R$ value with index $i$ is fixed using binary insertion within the range $[i, r]$, after which $r$ is advanced to the left beyond the insertion position.
-  \item After all deferred $R$ values have been repaired, $L$ values are repaired in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
+  \item When the first $L$-direction index at position $i$ is encountered or the end of the segment is reached, the right boundary $r$ is initialized to $i$. All deferred $R$ indices are then fixed in LIFO order. Each $R$ value with index $i$ is fixed using binary insertion within the range $[i, r]$, after which $r$ is advanced to the left beyond the insertion position.
+  \item After all deferred $R$ values have been fixed, $L$ values are fixed in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
 \end{enumerate}
 
 Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries.Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
 
 \input{\figdir/delta-sort-example}
 
-\subsection{Key Insight: Segments can be repaired locally and independently}
+\subsection{Key Insight: Segments can be fixed locally and independently}
 \label{sec:insight}
 
 The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross it's segment boundary. We formally prove this property next.
@@ -89,7 +88,7 @@ By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be repaired independently in any order. This opens up opportunities for \textbf{parallelization}, which can improve performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization}, which can improve performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
 \end{remark}
 
 \subsection{Pseudocode}
@@ -137,7 +136,7 @@ is left to future work.
 
 \begin{lemma}[Expected Linear Movement]
 \label{lem:movement-bound}
-Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's repair phase is $O(n)$, independent of $k$.
+Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's Phase~2 is $O(n)$, independent of $k$.
 \end{lemma}
 
 \begin{proof}
@@ -167,7 +166,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is repaired using a binary search within its containing segment. By \lemref{lem:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each repair requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each fix requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives:
 \[
 O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
 \]

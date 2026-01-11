@@ -5,7 +5,7 @@
 \Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
 \Ensure $A$ is sorted
 \Statex
-\State \textbf{Phase 1: Segment}
+\State \textbf{Phase 1: Establish segments}
 \State $\texttt{updatedIndices} \gets \text{sort}(U)$;
 \State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
 \For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
@@ -13,7 +13,7 @@
 \EndFor
 \State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
 \Statex
-\State \textbf{Phase 2: Repair}
+\State \textbf{Phase 2: Sort within segments}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
     \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$

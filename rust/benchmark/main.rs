@@ -282,7 +282,7 @@ fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
     let mut lo: usize = 1;
     let mut hi: usize = n;
 
-    let min_range = (n / 1000).min(10) as usize;
+    let min_range = (n / 1000).min(10);
 
     while lo < hi {
         if hi - lo < min_range {

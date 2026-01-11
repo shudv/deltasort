@@ -3,8 +3,8 @@
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    width=0.92\textwidth,
-    height=7.5cm,
+    width=0.8\textwidth,
+    height=5cm,
     xlabel={Number of updated values ($k$)},
     ylabel={Execution time (\textmu s)},
     xmode=log,
@@ -41,6 +41,6 @@
 \legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 100$K (log-log scale).}
+\caption{Execution time comparison for JavaScript implementations for $n = 100$K (log-log scale).}
 \label{fig:js-execution-time}
 \end{figure}

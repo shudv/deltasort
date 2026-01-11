@@ -3,90 +3,56 @@
 \label{sec:experiments}
 %==============================================================================
 
-All experiments are conducted on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics, due to absence of garbage collection or JIT compilation. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $5\%$. The benchmarking routines are provided in the repository for reproducibility~\cite{deltasort-repo}. We used fully random update distributions, which provide no favorable structure to any particular algorithm. We evaluated following algorithms:
+All experiments \footnote{Along with experiments, we also validated correctness by an extensive set of randomized tests~\cite{deltasort-repo} across various scales of $n$ and full range of $k$.} are conducted on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country), and executed on an Apple M3 Pro. We use Rust as the primary evaluation language due to its predictable performance characteristics \footnote{In contrast, managed execution environments like JavaScript on V8 have various factors like garbage collection, non-contiguous memory layouts~\cite{v8elementskinds} etc. that impact the underlying cost model.}. We used a realistic multi-key comparator to simulate a practical workload. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $5\%$. The benchmarking routines are provided in the repository for reproducibility~\cite{deltasort-repo}. We used fully random update distributions, which provide no favorable structure to any particular algorithm. We evaluated the following algorithms:
 
 \begin{itemize}
-  \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. NativeSort serves as a critical baseline to identify the crossover threshold for each update-aware algorithm beyond which full re-sorting becomes preferable.
+  \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. NativeSort serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which full re-sorting becomes preferable.
 
-  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract--Sort--Merge (ESM)}: standard update-aware sorting algorithms that represent distinct time--space trade-offs, as described in \secref{sec:introduction}.
+  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract-Sort-Merge (ESM)}: standard update-aware sorting algorithms that represent distinct time--space trade-offs, as described in \secref{sec:introduction}.
 
   \item \textbf{DeltaSort}: our proposed update-aware sorting algorithm, as described in \secref{sec:algorithm}.
 \end{itemize}
 
 \input{\figdir/sorting-algorithms}
 
-\subsection{Correctness}
-Correctness is formally proven in \thmref{thm:correctness} and also verified by an extensive set of randomized tests~\cite{deltasort-repo} across various scales and update sizes. The test routine generates a sorted base array of size $n$, applies $k$ random updates at random indices, runs DeltaSort, and asserts that the final array is sorted and contains all original values with updated values.
-
 \subsection{Execution Time}
 
-\figref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior at lower ranges of $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (the \emph{crossover threshold}), as the overhead of processing updates begins to dominate.
+\figref{fig:rust-execution-time} shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior at lower ranges of $k$, which is the most practically relevant regime. As $k$ increases, all update-aware algorithms eventually lose to NativeSort (\emph{crossover threshold}), as the overhead of processing updates begins to overshadow any benefit from harnessing the presortedness.
 
 \input{\figdir/rust/execution-time}
 
 Several observations emerge from the execution-time profile:
 
 \begin{enumerate}
-  \item \textbf{Asymptotic trend is consistent}: For larger values of $k$, the observed execution times for all algorithms closely follow their expected asymptotic trends. In particular, BIS exhibits superlinear growth consistent with its $O(kn)$ movement cost, while ESM and NativeSort converge toward $O(n \log n)$ behavior, respectively.
+  \item The asymptotic behavior for each algorithm aligns with theoretical expectations. BIS exhibits superlinear growth consistent with its $O(kn)$ movement cost, while ESM and DeltaSort converge toward $O(n \log n)$ behavior as $k$ approaches $n$.
+  \item \textbf{DeltaSort is the fastest baseline for} $k \lesssim 1\%$. It uses more auxiliary space than BIS ($O(k)$ vs $O(1)$) but substantially less than ESM ($O(k)$ vs $O(n)$). This regime is small in absolute terms, but aligns well with practical workloads where deltas are usually a small percentage of the full dataset.
 
-  \item \textbf{Binary-Insertion-Sort degrades rapidly}: BIS outperforms ESM and NativeSort for very small update sizes ($k \lesssim 0.01\%$) but quickly becomes the worst-performing algorithm as $k$ increases due to its $O(kn)$ data movement cost.
-
-  \item \textbf{Extract--Sort--Merge dominates the mid-range}: ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 80\%$), provided sufficient memory is available. Its performance comes at the cost of $O(n)$ auxiliary space.
-
-  \item \textbf{DeltaSort dominates a narrow but meaningful regime}: DeltaSort outperforms both BIS and ESM for $k \lesssim 1\%$. It uses $O(k)$ auxiliary space—more than BIS ($O(1)$) but substantially less than ESM ($O(n)$). While this regime is small in absolute terms, it aligns well with practical workloads where deltas are usually a small percentage of the full dataset.
+  \item ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 80\%$). However, its performance comes at the cost of $O(n)$ auxiliary space. DeltaSort provides a more space-efficient alternative to ESM for $k \lesssim 30\%$, albeit with higher execution time.
 \end{enumerate}
 
-These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}), it would be beneficial to construct \emph{hybrid update-aware} strategies that adapt to update size and execution environment. For the Rust implementation evaluated here, an optimal strategy for an environment with no memory constraints could be:
+These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, PDQSort~\cite{peters2021pdqsort}), it would be beneficial to construct \emph{hybrid update-aware} strategies that are adaptive. As an example, for the Rust implementation evaluated here, a balanced strategy for an environment that requires fast execution without excessive space usage would be:
 
 \begin{center}
-  Use DeltaSort for $k \lesssim 1\%$, ESM for $1\% \lesssim k \lesssim 80\%$, and NativeSort for $k \lesssim 80\%$.
+  Use DeltaSort for $k \lesssim 10\%$, ESM for $10\% \lesssim k \lesssim 80\%$, and NativeSort for $k \gtrsim 80\%$.
 \end{center}
 
-The precise crossover thresholds depend on several factors, including the cost of the comparator. Our experiments show that DeltaSort’s comparator invocation count closely tracks that of Binary-Insertion-Sort, consistent with the $O(k \log n)$ theoretical bound. As a result, when comparator cost dominates, DeltaSort retains its advantage over Binary-Insertion-Sort while further widening its gap relative to Extract–Sort–Merge, whose comparison overhead is higher. This shifts the crossover thresholds in favor of DeltaSort and expands the regimes where it is the preferred choice. Detailed comparison counts for all algorithms are provided in Appendix~\ref{sec:appendix-comparisons}.
+The optimal crossover thresholds for a scenario would depend on several factors like memory availability, distribution of update sizes, comparator cost etc. While we haven't analyzed each of these factors, we did evaluate the comparison count for all algorithms. Empirically, DeltaSort’s comparator invocation count closely tracks that of Binary-Insertion-Sort, consistent with its $O(k \log n)$ theoretical bound. Consequently, in regimes where comparator cost dominates, DeltaSort preserves its advantage over Binary-Insertion-Sort while further widening the performance gap relative to Extract–Sort–Merge, whose comparison overhead is substantially higher. This effect \emph{shifts crossover thresholds in favor of DeltaSort} and expands the range of update sizes for which it is the preferred strategy. Detailed comparison counts for all algorithms are reported in Appendix~\ref{sec:appendix-comparisons}.
 
 \subsection{Crossover Threshold}
 
-Every update-aware algorithm would eventually be beaten by NativeSort as $k$ increases, once the overhead of processing the updates outweighs its benefits. For each algorithm, we calculate the threshold $k_c$ via binary search across the range of $k$. \figref{fig:rust-crossover-all} shows the crossover thresholds for all three update-aware algorithms versus NativeSort.
-
 \input{\figdir/rust/crossover-all}
-Several patterns emerge:
+\figref{fig:rust-crossover-all} shows the crossover thresholds ($k_c$) for all the update-aware algorithms. A larger threshold means that the algorithm remains faster than full re-sorting for larger update sizes. Several observations stand out:
 
 \begin{enumerate}
-  \item \textbf{BIS has a very low crossover threshold}: Due to its $O(kn)$ data movement cost, BIS is competitive only for very small update sizes.
+  \item BIS has a very low crossover threshold due to its $O(kn)$ data movement cost, whereas ESM achieves the highest crossover threshold consistent with its $O(n + k \log k)$ time complexity, which is asymptotically the best among all alternatives.
 
-  \item \textbf{ESM achieves the highest crossover threshold}: ESM remains faster than NativeSort up to $k \approx 60$--$80\%$, consistent with its $O(n + k \log k)$ time complexity, which approaches full sorting only when $k$ is large.
-
-  \item \textbf{DeltaSort exhibits an intermediate threshold}: DeltaSort's crossover point lies between BIS and ESM, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes.
+  \item DeltaSort exhibits an \emph{intermediate threshold}, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes.
   
-  \item \textbf{DeltaSort vs ESM}: For $k \lesssim 1\%$, DeltaSort outperforms ESM while using significantly less auxiliary space, making it a \emph{strictly better choice} in this regime. Appendix~\ref{sec:appendix-rust-ds-vs-esm} shows how this boundary shifts with array size.
-
-  \item \textbf{Thresholds are weakly dependent on array size}:
-  Crossover points are largely stable across array sizes, though we observe a decline for large arrays ($n \lesssim 200$K). This may be due to cache effects or memory allocation overheads. We will study this behavior in more detail in future work.
+  \item Thresholds are largely stable across different scales (DeltaSort $20--35\%$, ESM $60--80\%$), although we observe a decline for very large arrays ($n \gtrsim 200$K). This may be an artifact of practical limits on devices. More study is needed to understand this behavior in detail.
 \end{enumerate}
 
-The key takeaway is that DeltaSort occupies a well-defined middle ground among update-aware algorithms. It supports substantially larger update batches than BIS while requiring significantly less auxiliary space than ESM, making it attractive in regimes where both time and space constraints matter.
+The key takeaway is that DeltaSort occupies a well-defined ground among update-aware algorithms. It supports much larger update batches than BIS while requiring much less auxiliary space than ESM, making it a compelling choice where both time and space constraints matter.
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 to evaluate behavior in managed runtimes to study how factors such as garbade collections, JIT compilation and runtime optimizations impact performance. \figref{fig:js-execution-time} shows execution time for $n = 100$K as a function of update size $k$.
-
-\input{\figdir/js/execution-time}
-
-Several observations stand out:
-
-\begin{enumerate}
-  \item \textbf{DeltaSort and BIS largely overlap for small updates}: For $k \lesssim 0.1\%$, even though BIS and DeltaSort beat ESM and NativeSort, DeltaSort does not exhibit a clear advantage over Binary-Insertion-Sort. Unlike in Rust, batching updates does not help improve performance meaningfully in this regime.
-
-  \item \textbf{ESM beats NativeSort}: Extract--Sort--Merge performs better than NativeSort for $k$ up to $\approx 50\%$.
-
-  \item \textbf{DeltaSort's advantage diminishes in managed runtimes}:
-  JavaScript runtimes like V8 do not guarantee contiguous array layout~\cite{v8elementskinds}, and movement costs are not proportional to the number of shifted elements. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into consistent wall-clock improvements.
-\end{enumerate}
-
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. In such environments, the practical strategy simplifies to:
-
-\begin{center}
-Use Binary-Insertion-Sort for $k \llless n$. Use Extract--Sort--Merge or NativeSort for $k \approx O(n)$.
-\end{center}
-
-These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thesholds in JS.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8~\cite{v8elementskinds} (see \appref{sec:appendix-js-deltasort} for more details).

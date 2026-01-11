@@ -3,28 +3,14 @@
 \section{DeltaSort Worst-Case Movement}
 \label{sec:appendix-ds-worst-case}
 
-% TODO: Add worst-case example
+The worst-case data movement for DeltaSort occurs when all $k$ updated elements are moved to the beginning or end of the array (R..RC..C or C..CL..L where C are the values that weren't updated), resulting in a single large segment that requires shifting all $n$ elements. In this scenario, DeltaSort must shift $O(n)$ elements to accommodate the updated values, leading to a total data movement of $O(kn)$ in the worst case.
 
 \section{Comparison Count}
 \label{sec:appendix-comparisons}
 
-
 \figref{fig:rust-comparator-count} shows the total number of comparisons as a function of update count $k$. We have used a realistic multi-key comparator that compares user objects by (country, age, name) to reflect practical comparison costs.
 
 \input{\figdir/rust/comparator-count}
-
-Several clear patterns emerge:
-
-\begin{enumerate}
-  \item \textbf{Asymptotic behavior matches theory}: The observed comparator counts closely follow the  expected asymptotic trends for all algorithms across the full range of $k$.
-
-  \item \textbf{ESM incurs high comparison cost even for small updates}: Due to the full merge step, ESM performs a large number of comparisons even when $k$ is small.
-
-  \item \textbf{DeltaSort matches BIS asymptotically}: DeltaSort's comparator count closely tracks BIS for $k \lesssim 1\%$ and remains within $\approx 10$--$20\%$ of BIS for larger $k$, while preserving the same $O(k \log n)$ asymptotic behavior. Note that for large $k$, even though BIS is most comparison-efficient, its data movement cost makes it an impractical choice.
-\end{enumerate}
-
-The key takeaway is that DeltaSort, like BIS, substantially reduces redundant comparison work relative to ESM and NativeSort. As comparator cost increases, this advantage would becomes more pronounced. For small update ranges, where BIS and DeltaSort have similar comparison counts, DeltaSort's movement efficiency becomes the dominant factor, and its relative advantage over BIS will persist across a wide range of comparator costs.
-
 
 \section{DeltaSort vs ESM Crossover Threshold}
 \label{sec:appendix-rust-ds-vs-esm}
@@ -32,6 +18,26 @@ The key takeaway is that DeltaSort, like BIS, substantially reduces redundant co
 \input{\figdir/rust/crossover-ds-vs-esm}
 
 \figref{fig:rust-crossover-ds-vs-esm} shows that there exists a non-trivial regime in which DeltaSort dominates ESM both in execution time and space usage. For example, for an array of size $n = 100$K, DeltaSort outperforms ESM for up to $\approx 1K$ updates, while using only $\approx 1\%$ of the auxiliary space required by ESM. As array size increases, this regime steadily shrinks. For large arrays, the crossover threshold moves toward smaller fractions, indicating that DeltaSort loses to ESM earlier. Although both algorithms incur $O(n)$ data movement in the worst case, this trend suggests that the constant factors associated with DeltaSort's movement become more pronounced at larger scales. As a result, ESM's simpler linear merge begins to dominate for smaller $k$ as $n$ grows.
+
+\section{DeltaSort in JavaScript/V8}
+\label{sec:appendix-js-deltasort}
+
+\input{\figdir/js/execution-time}
+
+Several observations stand out:
+
+\begin{enumerate}
+  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost model in V8 is not proportional to the number of shifted elements}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
+  \item ESM is $\sim 40\%$ faster than NativeSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that even in managed runtimes, we can leverage information of updated indices to unlock better performance.
+\end{enumerate}
+
+The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, the practical strategy for achieving faster execution times simplifies to:
+
+\begin{center}
+Use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
+\end{center}
+
+These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thresholds in JS.
 
 \section{Crossover Thresholds in JavaScript}
 \label{sec:appendix-js}

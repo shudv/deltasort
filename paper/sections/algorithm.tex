@@ -13,8 +13,8 @@ DeltaSort operates in two phases. The first phase establishes a structure among 
 \label{def:direction}
 For an updated index $i$, we define its \emph{direction} based on local order:
 \begin{itemize}
-  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to it's left neighbour: $i > 0 \text{ and } \texttt{cmp}(A[i-1], A[i]) > 0$
-  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t it's neighbours or ordered incorrectly to its right neighbour: $i = 0 \text{ or } \texttt{cmp}(A[i-1], A[i]) \le 0$
+  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbor: $i > 0 \text{ and } \texttt{cmp}(A[i-1], A[i]) > 0$
+  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t its neighbors or ordered incorrectly to its right neighbor: $i = 0 \text{ or } \texttt{cmp}(A[i-1], A[i]) \le 0$
 \end{itemize}
 \end{definition}
 
@@ -30,8 +30,8 @@ A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ such that:
 \begin{enumerate}
   \item Either $i = 0$, or $i \in U$ has direction $R$.
   \item Either $j = n - 1$, or $j \in U$ has direction $L$.
-  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ has direction $L$ and $q$ has direction $R$.
-  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ also satisfies the above conditions.
+  \item There exist no updated indices $p, q \in U$ with $i < p < q < j$ such that $p$ is $L$ and $q$ is $R$.
+  \item There exist no updated indices $p < i$ and $q > j$ such that $(p, q)$ is also a segment.
 \end{enumerate}
 \end{definition}
 
@@ -49,21 +49,21 @@ With the above structure in place, DeltaSort fixes the array segment by segment.
   \item After all deferred $R$ values have been fixed, $L$ values are fixed in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
 \end{enumerate}
 
-Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries.Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
+Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries. Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
 
 \input{\figdir/delta-sort-example}
 
 \subsection{Key Insight: Segments can be fixed locally and independently}
 \label{sec:insight}
 
-The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross it's segment boundary. We formally prove this property next.
+The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike Binary-Insertion-Sort, where each insertion can be at any point in the array, an updated value in a segment cannot cross its segment boundary. We formally prove this property next.
 
 \begin{lemma}[Direction Invariance]
 \label{lem:direction-invariance}
 After Phase~1, each updated value moves only in the direction indicated by its direction label:
 \begin{itemize}
   \item Values with direction $L$ \textbf{must} move to the left.
-  \item Values with direction $R$ \textbf{may} \footnote{This assymetry follows from the definition of direction (Definition~\ref{def:direction}).} move to the right.
+  \item Values with direction $R$ \textbf{may} \footnote{This asymmetry follows from the definition of direction (Definition~\ref{def:direction}).} move to the right.
 \end{itemize}
 \end{lemma}
 
@@ -81,7 +81,7 @@ $R_0,\ldots,R_{r-1}$ followed by $L$-indices
 $L_0,\ldots,L_{l-1}$, where $r+l \ge 1$.
 After Phase~1,
 \[
-A[R_0] < \cdots < A[R_{r-1}] < A[L_0] < \cdots < A[L_{l-1}].
+A[R_0] \le \cdots \le A[R_{r-1}] \le A[L_0] \le \cdots \le A[L_{l-1}].
 \]
 
 By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-values move only leftward. An $R$-value cannot cross $L_0$ (if it exists), and an $L$-value cannot cross $R_{r-1}$ (if it exists), since the above ordering is preserved. Therefore, no value exits its segment.
@@ -126,12 +126,7 @@ We analyze the expected total data movement incurred during Phase~2 of DeltaSort
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated element $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits
-movement and is therefore favorable, whereas clustered updates may either help
-or hinder performance depending on the induced directional pattern.
-
-In this work, we adopt a fully random update model as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can explicitly exploit, nor does it adversarially bias updates towards worst-case configurations (see Appendix~\appref{sec:appendix-ds-worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models, including bounded displacement and clustered updates,
-is left to future work.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated element $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see Appendix~\appref{sec:appendix-ds-worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models, including bounded displacement and clustered updates, is left to future work.
 \end{remark}
 
 \begin{lemma}[Expected Linear Movement]
@@ -142,7 +137,7 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \begin{proof}
 Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces monotonicity among updated values: for consecutive updated indices $u_{i-1} < u_i < u_{i+1}$, the value at $u_i$ must lie between the values written at $u_{i-1}$ and $u_{i+1}$.
 
-For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformally at random, both these intervals are expected to be of equal size on an average. Each updated values which is randomly chosen has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
 
 It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
 \[

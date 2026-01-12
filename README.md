@@ -26,7 +26,7 @@ pnpm install && pnpm test
 
 ## Sample Benchmark Run (n = 100K, Rust)
 
-| k             | Native (µs)   | BIS (µs)        | ESM (µs)      | DeltaSort (µs) |
+| k             | Full (µs)     | BIS (µs)        | ESM (µs)      | DeltaSort (µs) |
 | ------------- | ------------- | --------------- | ------------- | -------------- |
 | 1 (0.001%)    | 1039.9 ±1.2%  | 101.2 ±3.2%     | 667.3 ±0.8%   | 11.8 ±10.0%    |
 | 10 (0.01%)    | 1720.7 ±0.7%  | 962.2 ±1.0%     | 849.7 ±0.6%   | 80.7 ±3.1%     |
@@ -37,7 +37,7 @@ pnpm install && pnpm test
 | 50000 (50%)   | 13002.7 ±0.8% | 3389991.9 ±0.5% | 10335.7 ±3.4% | 18364.3 ±1.1%  |
 | 100000 (100%) | 13844.5 ±0.2% | 3911565.0 ±0.8% | 16238.7 ±0.6% | 32921.1 ±2.7%  |
 
-_Results from Rust implementation on M3 Pro. The crossover threshold is about ~30%. Numbers are environment specific — results will vary in other runtimes (e.g., JavaScript on v8 has a [much lower crossover threshold](paper/benchmarks/js/crossover-threshold.csv) because of highly optimized native sort)._
+_Results for Rust implementation on an Apple M series chip. The crossover threshold is about ~30%. Numbers are environment specific — results will vary in other runtimes (e.g., JavaScript on v8 has a [much lower crossover threshold](paper/benchmarks/js/crossover-threshold.csv) because of highly optimized native sort)._
 
 ## How It Works
 

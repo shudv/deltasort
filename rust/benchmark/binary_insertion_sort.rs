@@ -15,6 +15,7 @@ pub fn binary_insertion_sort(
     sorted_desc.sort_unstable_by(|a, b| b.cmp(a));
 
     // Extract dirty values from back to front - O(kn) but cache-friendly
+    // NOTE: Auxiliary space is still O(1) (and not O(k)) because we put a value in extracted only after it's removed
     let mut extracted: Vec<User> = Vec::with_capacity(sorted_desc.len());
     for &idx in &sorted_desc {
         extracted.push(arr.remove(idx));

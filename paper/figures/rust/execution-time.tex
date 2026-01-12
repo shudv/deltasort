@@ -23,7 +23,7 @@
     label style={font=\small},
 ]
 
-% NativeSort
+% FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=2pt] 
     table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/execution-time.csv};
 
@@ -44,9 +44,9 @@
 \node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:30000, 13000) {};
 \node[circle, fill=red!70!black, inner sep=2.5pt] at (axis cs:24, 2200) {};
 
-\legend{NativeSort, BIS, ESM, \textbf{DeltaSort}}
+\legend{FullSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
-\caption{Execution time comparison for $n = 100$K (log-log scale). The red circles indicate the crossover points where each update-aware algorithm is outperformed by NativeSort.}
+\caption{Execution time comparison for $n = 100$K (log-log scale). The red circles indicate the crossover points where each update-aware algorithm is outperformed by FullSort.}
 \label{fig:rust-execution-time}
 \end{figure}

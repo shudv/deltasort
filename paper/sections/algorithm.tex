@@ -129,9 +129,9 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \end{lemma}
 
 \begin{proof}
-Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces monotonicity among updated values: for consecutive updated indices $u_{i-1} < u_i < u_{i+1}$, the value at $u_i$ must lie between the values written at $u_{i-1}$ and $u_{i+1}$.
+Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces the correct order among updated values: for consecutive updated indices $u_\ell < u_i < u_r$, the value at $u_i$ must lie between $A[u_{\ell}]$ and $A[u_r]$.
 
-For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_{i-1}], A[u_i-1])$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_i+1])$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_\ell], A[u_i-1]]$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_r])$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
 
 It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
 \[
@@ -168,11 +168,11 @@ O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log
 
 \begin{theorem}[Time Complexity]
 \label{thm:time-complexity}
-Under the random bounded-range update model, DeltaSort runs in $O(n + k \log n)$ expected time.
+Under the random bounded-range update model, DeltaSort runs in $O(k \log n + n)$ expected time.
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n)$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(n + k \log n)$.
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n)$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(k \log n + n)$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]
@@ -181,7 +181,7 @@ DeltaSort uses $O(k)$ auxiliary space.
 \end{theorem}
 
 \begin{proof}
-Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices.
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. The internal sorting routing is also assumed to use $O(k)$ space. Therefore, the total auxiliary space is $O(k)$.
 \end{proof}
 
 \subsection{Pseudocode}

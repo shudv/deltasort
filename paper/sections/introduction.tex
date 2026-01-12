@@ -9,20 +9,18 @@ As an example, consider a task management application that displays a large list
 
 Once the indices of the updates are known, a natural question arises: how can we exploit this extra information to restore order more efficiently than performing a full re-sort? While this question arises across a wide range of systems, in this paper we deliberately focus on a core and widely used abstraction: maintaining sorted order in in-memory arrays which have a contiguous memory layout. Arrays underpin many higher-level systems—including in-memory caches, materialized views, and index representations—and serve as the execution substrate for most sorting primitives. By restricting attention to arrays, we can isolate the algorithmic consequences of exposing update indices to the sorting routine and study the resulting trade-offs in a clean and concrete setting.
 
-Existing approaches for incrementally sorting arrays already exploit this information, but they force a choice between competing extremes:
+Existing approaches for incrementally sorting arrays already exploit this information, but they force a choice between following extremes:
 \begin{enumerate}
-  \item \textbf{Binary-Insertion-Sort (BIS):} For each updated index, remove the value and re-insert it at the correct position using binary search to find the insertion point. This approach uses $O(1)$ extra space, but $O(k n)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches.
-  \item \textbf{Extract–Sort–Merge (ESM):} Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time but $O(n)$ extra space even for small $k$, making it suitable only for larger update batches.
+  \item \textbf{Binary-Insertion-Sort (BIS):} Remove all updated values from the array and insert them back one by one using binary search. This approach uses $O(1)$ extra space, but $O(k n)$ data movement for $k$ updates in an array of size $n$, making it suitable only when $k \ll n$.
+  \item \textbf{Extract–Sort–Merge (ESM):} Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time, but $O(n)$ extra space even for small $k$, making it suitable only for large update batches.
 \end{enumerate}
 
 This raises the question: are there other intermediate strategies between these two extremes? In this paper, we present such a strategy. Specifically, this paper makes the following contributions:
 
 \begin{enumerate}
-  \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, Binary-Insertion-Sort and Extract-Sort-Merge serve as the baseline algorithms because they assume knowledge of what has been updated. 
+  \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, BIS and ESM serve as the baseline algorithms because they assume knowledge of what has been updated. 
 
-  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, for random updates, \emph{DeltaSort} outperforms Binary-Insertion-Sort in execution time for small update batches ($k \ll n$), and provides a more space-efficient alternative to Extract-Sort-Merge for larger update batches ($k = \Theta (n)$).
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers a different set of trade-offs (\figref{tab:incremental-sorting-algorithms}) compared to existing approaches. In our experimental evaluation, for random updates, \emph{DeltaSort} outperforms BIS in execution time, and provides a more space-efficient alternative to ESM for intermediate update batch sizes. Although we study DeltaSort as a standalone algorithm for clarity, for practical application, it is best viewed as a \emph{building block} in a hybrid strategy that combines multiple update-aware techniques.
 
   \input{\figdir/incremental-sorting-algorithms}
 \end{enumerate}
-
-We view DeltaSort not as a replacement for existing incremental sorting techniques, but as a complementary primitive that occupies a previously unexplored point in the time–space trade-off spectrum and can serve as a building block for hybrid strategies.

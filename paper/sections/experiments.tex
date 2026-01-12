@@ -8,7 +8,7 @@ All experiments \footnote{Along with experiments, we also validated correctness 
 \begin{itemize}
   \item \textbf{NativeSort}: Rust's \texttt{sort\_by} implementation based on PDQSort~\cite{peters2021pdqsort}, representing full re-sorting of the array. NativeSort serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which full re-sorting becomes preferable.
 
-  \item \textbf{Binary-Insertion-Sort (BIS)} and \textbf{Extract-Sort-Merge (ESM)}: standard update-aware sorting algorithms that represent distinct time--space trade-offs, as described in \secref{sec:introduction}.
+  \item \textbf{BIS} and \textbf{ESM}: standard update-aware sorting algorithms that represent distinct time--space trade-offs, as described in \secref{sec:introduction}.
 
   \item \textbf{DeltaSort}: our proposed update-aware sorting algorithm, as described in \secref{sec:algorithm}.
 \end{itemize}
@@ -36,7 +36,7 @@ These observations suggest that, much like hybrid blind sorting algorithms (e.g.
   Use DeltaSort for $k \lesssim 10\%$, ESM for $10\% \lesssim k \lesssim 80\%$, and NativeSort for $k \gtrsim 80\%$.
 \end{center}
 
-The optimal crossover thresholds for a scenario would depend on several factors like memory availability, distribution of update sizes, comparator cost etc. While we haven't analyzed each of these factors, we did evaluate the comparison count for all algorithms. Empirically, DeltaSort’s comparator invocation count closely tracks that of Binary-Insertion-Sort, consistent with its $O(k \log n)$ theoretical bound. Consequently, in regimes where comparator cost dominates, DeltaSort preserves its advantage over Binary-Insertion-Sort while further widening the performance gap relative to Extract–Sort–Merge, whose comparison overhead is substantially higher. This effect \emph{shifts crossover thresholds in favor of DeltaSort} and expands the range of update sizes for which it is the preferred strategy. Detailed comparison counts for all algorithms are reported in Appendix~\ref{sec:appendix-comparisons}.
+The optimal crossover thresholds for a scenario would depend on several factors like memory availability, distribution of update sizes, comparator cost etc. While we haven't analyzed each of these factors, we did evaluate the comparison count for all algorithms. Empirically, DeltaSort’s comparator invocation count closely tracks that of BIS, consistent with its $O(k \log n)$ theoretical bound. Consequently, in regimes where comparator cost dominates, DeltaSort preserves its advantage over BIS while further widening the performance gap relative to Extract–Sort–Merge, whose comparison overhead is substantially higher. This effect \emph{shifts crossover thresholds in favor of DeltaSort} and expands the range of update sizes for which it is the preferred strategy. Detailed comparison counts for all algorithms are reported in Appendix~\ref{sec:appendix-comparisons}.
 
 \subsection{Crossover Threshold}
 

@@ -24,7 +24,7 @@ All benchmarks \footnote{Along with benchmarks, we also validated correctness by
 Several observations emerge from the execution-time profile:
 
 \begin{enumerate}
-  \item The asymptotic behavior for each algorithm aligns with theoretical expectations. BIS exhibits superlinear growth consistent with its $O(kn)$ movement cost. ESM and DeltaSort converge toward $O(n \log n)$ behavior as $k$ approaches $n$, which is expected as they internall use the FullSort routine for sorting all the $k$ updated values.
+  \item The \textbf{asymptotic behavior for each algorithm aligns with theoretical expectations}. BIS exhibits steep growth consistent with its $O(kn)$ movement cost, quickly becoming impractical as $k$ increases. ESM is relatively flat for small $k$, where linear merge cost dominates and is largely independent of the number of updates. DeltaSort exhibits intermediate growth because its execution time scales linearly in $k$ (the $O(k \log n)$ term). ESM and DeltaSort both converge toward $O(n \log n)$ behavior as $k$ approaches $n$, which is expected as they internall use the FullSort routine for sorting all the $k$ updated values.
 
   \item \textbf{DeltaSort is the fastest baseline for} $k \lesssim 1\%$. It uses more auxiliary space than BIS ($O(k)$ vs $O(1)$) but substantially less than ESM ($O(k)$ vs $O(n)$). Even though $1\%$ is small in absolute terms, it aligns very well with practical workloads where updates are usually a small percentage of the full dataset.
 

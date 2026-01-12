@@ -116,7 +116,7 @@ The only violations in the array after Phase~1 are at updated indices. Phase~2 p
 \subsection{Complexity Analysis}
 \label{sec:complexity}
 
-We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a random bounded-range update model. In this model, updated values are drawn randomly and uniformly from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
+We analyze the expected total data movement incurred during Phase~2 of DeltaSort under a random bounded-range update model. In this model, updated values are drawn uniformaly at random from a \emph{fixed} value range. Choosing values at random avoids introducing any special structure that could bias the analysis.
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
@@ -131,7 +131,7 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \begin{proof}
 Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces the correct order among updated values: for consecutive updated indices $u_\ell < u_i < u_r$, the value at $u_i$ must lie between $A[u_{\ell}]$ and $A[u_r]$.
 
-For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_\ell], A[u_i-1]]$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_r])$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_\ell], A[u_i-1]]$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_r]]$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
 
 It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
 \[
@@ -181,7 +181,7 @@ DeltaSort uses $O(k)$ auxiliary space.
 \end{theorem}
 
 \begin{proof}
-Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. The internal sorting routing is also assumed to use $O(k)$ space. Therefore, the total auxiliary space is $O(k)$.
+Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices. The internal sorting routine is also assumed to use $O(k)$ space. Therefore, the total auxiliary space is $O(k)$.
 \end{proof}
 
 \subsection{Pseudocode}

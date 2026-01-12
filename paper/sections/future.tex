@@ -3,7 +3,7 @@
 \label{sec:future}
 %==============================================================================
 
-while our analysis focuses on a bounded-range update model with uniformly random updates, many practical workloads exhibit additional structure. Examples include bounded-window updates, value perturbation models, temporally correlated or clustered updates. These models may improve or regress the expected movement and comparison costs of DeltaSort, potentially impacting the range in which it is applicable. Hence, a more systematic study of such update models is important.
+While our analysis focuses on a bounded-range update model with uniformly random updates, many practical workloads exhibit additional structure. Examples include bounded-window updates, value perturbation models, temporally correlated or clustered updates. These models may improve or regress the expected movement and comparison costs of DeltaSort, potentially impacting the range in which it is applicable. Hence, a more systematic study of such update models is important.
 
 Additionally, we showed how segments can be fixed locally and \emph{independently}. This strongly suggests opportunities for parallel execution, where different segments could be fixed concurrently without interference. In contrast, BIS is inherently sequential due to overlapping in-place shifts, and even though ESM parallelizes quite well it uses substantial space. Exploring parallel variants of DeltaSort and understanding their scalability on multi-core systems is a promising direction for future work.
 

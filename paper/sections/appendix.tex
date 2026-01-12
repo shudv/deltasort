@@ -7,7 +7,7 @@
 
 \input{\figdir/rust/comparator-count}
 
-\section{DeltaSort vs ESM Crossover Threshold}
+\section{DeltaSort vs. ESM Crossover Threshold}
 \label{sec:appendix-rust-ds-vs-esm}
 
 \input{\figdir/rust/crossover-ds-vs-esm}
@@ -35,7 +35,7 @@ These results highlight that update-aware sorting algorithms must be evaluated t
 \section{Crossover Thresholds in JavaScript}
 \label{sec:appendix-js}
 
-\figref{fig:js-crossover-all} and~\figref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementations. The thresholds are generally lower than in Rust due to the managed runtime's memory movement behavior. BIS and DeltaSort have almost identical behavior in JavaScript, while ESM maintains a higher threshold ($\approx 35$--$40\%$). This implies that for small $k$, BIS is preferable to DeltaSort in JavaScript because of lower space requirement and simpler implementation, unlike in Rust where DeltaSort has a clear measurable advantage.
+\figref{fig:js-crossover-all} and~\figref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementations. The thresholds are generally lower than in Rust due to the managed runtime's memory movement behavior. BIS and DeltaSort have almost identical behavior in JavaScript, while ESM maintains a higher threshold ($\approx 35$--$40\%$). This implies that for small $k$, BIS is preferable to DeltaSort in JavaScript because of its lower space requirement and simpler implementation, unlike in Rust where DeltaSort has a clear measurable advantage.
 
 \input{\figdir/js/crossover-all}
 

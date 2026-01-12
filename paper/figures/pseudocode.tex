@@ -6,7 +6,7 @@
 \Ensure $A$ is sorted
 \Statex
 \State \textbf{Phase 1: Establish segments}
-\State $\texttt{updatedIndices} \gets \text{sort}(U)$;
+\State $\texttt{updatedIndices} \gets \text{sort}(U)$
 \State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
 \For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
 \State $A[\texttt{updatedIndices}[i]] \gets \texttt{updatedValues}[i]$
@@ -63,7 +63,7 @@
 \begin{algorithmic}[1]
 \Function{FixRight}{$A$, $i$, $\texttt{rightBound}$}
     \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
-    \State \Call{Move}{A, i, t};
+    \State \Call{Move}{A, i, t}
     \State \Return $t$
 \EndFunction
 \end{algorithmic}

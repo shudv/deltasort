@@ -7,7 +7,7 @@
 
 DeltaSort operates in two phases. The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
-\paragraph{Phase 1: Establish structure.} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back to the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their neighbors. Moreover, it induces a simple directional structure on the updated indices, which we formalize next.
+\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back to the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their neighbors. Moreover, it induces a simple directional structure on the updated indices, which we formalize next.
 
 \begin{definition}[Direction]
 \label{def:direction}
@@ -37,7 +37,7 @@ Intuitively, a segment is a maximal contiguous region of the array in which all 
 
 \input{\figdir/segment-structure}
 
-\paragraph{Phase 2: Sort.}
+\paragraph{Phase 2: Fix segments}
 With the above structure in place, DeltaSort fixes the array segment by segment. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two boundaries: a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.
 
 \begin{enumerate}
@@ -86,12 +86,10 @@ By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization}, which can improve performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} with degree of parallelism proportional to the number of segments. This can improve performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
 \end{remark}
 
-\subsection{Pseudocode}
 
-\input{\figdir/pseudocode}
 
 \subsection{Correctness Proof}
 
@@ -182,3 +180,7 @@ DeltaSort uses $O(k)$ auxiliary space.
 \begin{proof}
 Phase~1 stores $k$ updated indices and $k$ updated values. Phase~2 maintains a pending stack of at most $k$ indices.
 \end{proof}
+
+\subsection{Pseudocode}
+
+\input{\figdir/pseudocode}

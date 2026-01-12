@@ -1,10 +1,5 @@
 \appendix
 
-\section{DeltaSort Worst-Case Movement}
-\label{sec:appendix-ds-worst-case}
-
-The worst-case data movement for DeltaSort occurs when all $k$ updated values are moved to the beginning or end of the array (R..RC..C or C..CL..L where C are the values that weren't updated), resulting in a single large segment that requires shifting all $n$ values. In this scenario, DeltaSort must shift $O(n)$ values to accommodate the updated values, leading to a total data movement of $O(kn)$ in the worst case.
-
 \section{Comparison Count}
 \label{sec:appendix-comparisons}
 

@@ -13,7 +13,7 @@
 \EndFor
 \State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
 \Statex
-\State \textbf{Phase 2: Sort within segments}
+\State \textbf{Phase 2: Fix segments}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
     \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
@@ -22,11 +22,11 @@
         \While{$\texttt{pendingRight} \neq \emptyset$}
             \State $j \gets \texttt{pendingRight.pop}()$
             \If{$\texttt{cmp}(A[j], A[j+1]) > 0$}
-                \State $\texttt{rightBound} \gets \Call{FixRightViolation}{A, j, \texttt{rightBound}} - 1$
+                \State $\texttt{rightBound} \gets \Call{FixRight}{A, j, \texttt{rightBound}} - 1$
             \EndIf
         \EndWhile
         \If{$i < n$} \Comment{Skip dummy LEFT sentinel}
-            \State $\texttt{leftBound} \gets \Call{FixLeftViolation}{A, i, \texttt{leftBound}} + 1$
+            \State $\texttt{leftBound} \gets \Call{FixLeft}{A, i, \texttt{leftBound}} + 1$
         \EndIf
     \Else
         \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT violation}
@@ -49,7 +49,7 @@
 
 \noindent\begin{minipage}{\linewidth}
 \begin{algorithmic}[1]
-\Function{FixLeftViolation}{$A$, $i$, $\texttt{leftBound}$}
+\Function{FixLeft}{$A$, $i$, $\texttt{leftBound}$}
     \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
     \State \Call{Move}{A, i, t}
     \State \Return $t$
@@ -61,7 +61,7 @@
 
 \noindent\begin{minipage}{\linewidth}
 \begin{algorithmic}[1]
-\Function{FixRightViolation}{$A$, $i$, $\texttt{rightBound}$}
+\Function{FixRight}{$A$, $i$, $\texttt{rightBound}$}
     \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
     \State \Call{Move}{A, i, t};
     \State \Return $t$

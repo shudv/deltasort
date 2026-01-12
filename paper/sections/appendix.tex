@@ -3,7 +3,7 @@
 \section{DeltaSort Worst-Case Movement}
 \label{sec:appendix-ds-worst-case}
 
-The worst-case data movement for DeltaSort occurs when all $k$ updated elements are moved to the beginning or end of the array (R..RC..C or C..CL..L where C are the values that weren't updated), resulting in a single large segment that requires shifting all $n$ elements. In this scenario, DeltaSort must shift $O(n)$ elements to accommodate the updated values, leading to a total data movement of $O(kn)$ in the worst case.
+The worst-case data movement for DeltaSort occurs when all $k$ updated values are moved to the beginning or end of the array (R..RC..C or C..CL..L where C are the values that weren't updated), resulting in a single large segment that requires shifting all $n$ values. In this scenario, DeltaSort must shift $O(n)$ values to accommodate the updated values, leading to a total data movement of $O(kn)$ in the worst case.
 
 \section{Comparison Count}
 \label{sec:appendix-comparisons}
@@ -27,7 +27,7 @@ The worst-case data movement for DeltaSort occurs when all $k$ updated elements 
 Several observations stand out:
 
 \begin{enumerate}
-  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost model in V8 is not proportional to the number of shifted elements}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
+  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost model in V8 is not proportional to the number of shifted values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
   \item ESM is $\sim 40\%$ faster than NativeSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that even in managed runtimes, we can leverage information of updated indices to unlock better performance.
 \end{enumerate}
 

@@ -34,7 +34,7 @@ Several observations emerge from the execution-time profile:
 These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, DriftSort~\cite{driftsort}), it would be beneficial to construct \emph{hybrid adaptive update-aware} strategies. As an example, for the Rust implementation evaluated here, a hybrid strategy for an environment that requires fast execution without excessive space usage could be:
 
 \begin{center}
-  Use DeltaSort for $k \lesssim 10\%$, ESM for $20\% \lesssim k \lesssim 80\%$, and FullSort for $k \gtrsim 80\%$.
+  Use DeltaSort for $k \lesssim 10\%$, ESM for $20\% \lesssim k \lesssim 70\%$, and FullSort for $k \gtrsim 70\%$.
 \end{center}
 
 The optimal crossover thresholds for a scenario would depend on several factors like memory availability, distribution of update sizes, comparator cost etc. While we haven't analyzed each of these factors, we did evaluate the comparison count for all algorithms. Empirically, DeltaSort’s comparator invocation count closely tracks that of BIS, consistent with its $O(k \log n)$ theoretical bound. Consequently, \emph{in scenarios where comparator cost dominates, DeltaSort preserves its advantage over BIS while further widening the performance gap relative to Extract–Sort–Merge, whose comparison overhead is substantially higher}. This effect \emph{shifts crossover thresholds in favor of DeltaSort} and expands the range of update sizes for which it is the preferred strategy. Detailed comparison counts for all algorithms are reported in Appendix~\ref{sec:appendix-comparisons}.

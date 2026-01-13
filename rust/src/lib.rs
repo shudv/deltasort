@@ -124,7 +124,7 @@ where
     // Phase 2: Scan updated indices left to right
 
     // Stack for pending RIGHT directions
-    let mut pending_right_directions: Vec<usize> = Vec::with_capacity(dirty.len());
+    let mut pending_right: Vec<usize> = Vec::with_capacity(dirty.len());
 
     // Left boundary for fixing LEFT violations
     let mut left_bound = 0;
@@ -140,13 +140,13 @@ where
         match direction {
             Direction::Left => {
                 // Fix all pending RIGHT directions before fixing LEFT
-                let mut right_bound = i.saturating_sub(1);
-                while let Some(idx) = pending_right_directions.pop() {
+                let mut right_bound = i - 1;
+                while let Some(idx) = pending_right.pop() {
                     // Fix RIGHT direction at idx if needed
                     if idx < arr.len() - 1
                         && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
                     {
-                        right_bound = fix_right(arr, idx, right_bound, &cmp).saturating_sub(1);
+                        right_bound = fix_right(arr, idx, right_bound, &cmp) - 1;
                     }
                 }
 
@@ -156,7 +156,12 @@ where
                 }
             }
             Direction::Right => {
-                pending_right_directions.push(i);
+                if pending_right.len() == 0 {
+                    // First RIGHT in segment extends right bound
+                    left_bound = i;
+                }
+
+                pending_right.push(i);
             }
         }
     }

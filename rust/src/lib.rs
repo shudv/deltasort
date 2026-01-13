@@ -1,4 +1,4 @@
-//! DeltaSort: Efficient incremental repair of sorted arrays.
+//! DeltaSort: Incremental sorting of arrays with known updates.
 //!
 //! When a small number of values in a sorted array change, DeltaSort
 //! restores sorted order more efficiently than a full re-sort by exploiting

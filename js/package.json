@@ -1,7 +1,7 @@
 {
     "name": "deltasort",
     "version": "0.1.0",
-    "description": "Efficient incremental repair of sorted arrays",
+    "description": "Incremental sorting of arrays with known updates",
     "type": "module",
     "sideEffects": false,
     "exports": {
@@ -39,8 +39,7 @@
         "delta",
         "sort",
         "incremental",
-        "fast",
-        "repair"
+        "fast"
     ],
     "author": "Shubham Dwivedi <shudv@users.noreply.github.com>",
     "license": "MIT",

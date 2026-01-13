@@ -37,14 +37,14 @@ pnpm install && pnpm test
 | 50000 (50%)   | 13002.7 ±0.8% | 3389991.9 ±0.5% | 10335.7 ±3.4% | 18364.3 ±1.1%  |
 | 100000 (100%) | 13844.5 ±0.2% | 3911565.0 ±0.8% | 16238.7 ±0.6% | 32921.1 ±2.7%  |
 
-_Results for Rust implementation on an Apple M series chip. The crossover threshold is about ~30%. Numbers are environment specific — results will vary in other runtimes (e.g., JavaScript on v8 has a [much lower crossover threshold](paper/benchmarks/js/crossover-threshold.csv) because of highly optimized native sort)._
+_Results for Rust implementation on an Apple M series chip. The crossover threshold is about ~30%. Numbers are environment specific — results will vary in other runtimes (e.g., the JavaScript implementations on v8 have a [much lower crossover threshold](paper/benchmarks/js/crossover-threshold.csv) because of highly optimized native sort)._
 
 ## How It Works
 
 1. **Phase 1:** Extract dirty values, sort them, write back to original indices
-2. **Phase 2:** Repair each "segment" independently using binary insertion within each segment
+2. **Phase 2:** Fix each "segment" independently using binary insertion
 
-The key insight: pre-sorting dirty values creates _segments_ that can be repaired independently. See the paper for formal proofs.
+The key insight: pre-sorting dirty values creates _segments_ that can be fixed _locally_ and _independently_. See the paper for formal proofs.
 
 ## Repository Structure
 

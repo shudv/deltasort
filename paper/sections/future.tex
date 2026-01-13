@@ -9,4 +9,4 @@ Additionally, we showed how segments can be fixed \emph{locally} and \emph{indep
 
 We also saw that DeltaSort's performance advantage relies on predictable memory movement costs, which does not hold in managed runtimes such as V8. Further study is needed to understand whether this is a general limitation across managed runtimes or specific to V8's implementation.
 
-Finally, while this paper treats DeltaSort as a standalone algorithm for analysis, practical systems would benefit from adaptive hybrid strategies that select among BIS, DeltaSort, ESM, and full re-sorting based on observed update sizes and system constraints. Designing heuristic-based, low-overhead mechanisms for such dynamic selection remains an open challenge.
+Finally, while this paper treats DeltaSort as a standalone algorithm for analysis, practical systems would benefit from hybrid adaptive strategies that select among BIS, DeltaSort, ESM, and full re-sorting based on update sizes and system constraints. Designing heuristic-based, low-overhead mechanisms for such dynamic selection remains an open challenge.

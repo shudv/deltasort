@@ -56,4 +56,4 @@ The key takeaway is that DeltaSort occupies a well-defined ground among update-a
 
 \subsection{Performance in managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8~\cite{v8elementskinds} (see \appref{sec:appendix-js-deltasort} for more details).
+DeltaSort was implemented in JavaScript~\cite{deltasort-repo} and benchmarked on Node v22 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in unmanaged environments (e.g., Rust) but not in V8~\cite{v8elementskinds} (see \appref{sec:appendix-js-deltasort} for benchmarks).

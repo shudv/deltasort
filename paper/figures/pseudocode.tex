@@ -1,4 +1,4 @@
-\begin{algorithm}[H]
+\begin{algorithm}
 \caption{DeltaSort}
 \label{alg:deltasort}
 \begin{algorithmic}[1]
@@ -34,37 +34,3 @@
 \EndFor
 \end{algorithmic}
 \end{algorithm}
-
-\vspace{0.5em}
-
-\noindent\begin{minipage}{\linewidth}
-\begin{algorithmic}[1]
-\Function{GetDirection}{$A$, $i$}
-    \State \Return $i > 0 \land \texttt{cmp}(A[i-1], A[i]) > 0$ ? \textsc{Left} : \textsc{Right}
-\EndFunction
-\end{algorithmic}
-\end{minipage}
-
-\vspace{0.5em}
-
-\noindent\begin{minipage}{\linewidth}
-\begin{algorithmic}[1]
-\Function{FixLeft}{$A$, $i$, $\texttt{leftBound}$}
-    \State $t \gets \Call{BinarySearchLeft}{A, A[i], \texttt{leftBound}, i-1}$
-    \State \Call{Move}{A, i, t}
-    \State \Return $t$
-\EndFunction
-\end{algorithmic}
-\end{minipage}
-
-\vspace{0.5em}
-
-\noindent\begin{minipage}{\linewidth}
-\begin{algorithmic}[1]
-\Function{FixRight}{$A$, $i$, $\texttt{rightBound}$}
-    \State $t \gets \Call{BinarySearchRight}{A, A[i], i+1, \texttt{rightBound}}$
-    \State \Call{Move}{A, i, t}
-    \State \Return $t$
-\EndFunction
-\end{algorithmic}
-\end{minipage}

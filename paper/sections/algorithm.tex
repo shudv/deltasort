@@ -7,7 +7,7 @@
 
 DeltaSort operates in two phases. The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
-\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their unchanged neighbours. Moreover, it induces a simple directional structure on the updated indices, which we formalize next.
+\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their unchanged neighbours. Moreover, it induces \emph{directional segmentation} on the updated indices, which we formalise next.
 
 \begin{definition}[Direction]
 \label{def:direction}
@@ -18,13 +18,11 @@ For an index $i \in U$, we define its \emph{direction} based on local order:
 \end{itemize}
 \end{definition}
 
-The notion of direction is not defined and irrelevant for indices $i \notin U$. Also note that the definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see \algoref{alg:deltasort}).
-
-After Phase~1, updated indices group into \emph{segments}, which we define next.
+The notion of direction is not defined for indices $i \notin U$. Also, note that the definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see \algoref{alg:deltasort}).
 
 \begin{definition}[Segment]
 \label{def:segment}
-A \emph{segment} is a pair of indices $(i, j)$ with $i < j$ such that:
+A \emph{segment} is a subarray $[i, j]$ with $i < j$ such that:
 \begin{enumerate}
   \item Either $i = 0$, or $i \in U$ has direction $R$.
   \item Either $j = n - 1$, or $j \in U$ has direction $L$.
@@ -37,24 +35,10 @@ Intuitively, a segment is a maximal contiguous region of the array in which all 
 
 \input{\figdir/segment-structure}
 
-\paragraph{Phase 2: Fix segments}
-With the above structure in place, DeltaSort fixes the array segment by segment. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two boundaries: a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.
-
-\begin{enumerate}
-  \item At the start of a segment, the left boundary $\ell$ is initialized to the segment's left endpoint.
-  \item As the algorithm scans updated indices from left to right, indices with direction $R$ are pushed onto a stack.
-  \item When the first $L$-direction index at position $i$ is encountered or the end of the segment is reached, the right boundary $r$ is initialized to $i$. All deferred $R$ indices are then fixed in LIFO order. Each $R$ value with index $i$ is fixed using binary insertion within the range $[i, r]$, after which $r$ is advanced to the left beyond the insertion position.
-  \item After all deferred $R$ values have been fixed, $L$ values are fixed in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
-\end{enumerate}
-
-Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries. Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
-
-\input{\figdir/delta-sort-example}
-
-\subsection{Key Insight: Segments can be fixed locally and independently}
+\subparagraph{Key Insight: Segments can be fixed locally and independently.}
 \label{sec:insight}
 
-The key insight behind DeltaSort is that segments created after Phase~1 can be fixed locally. Unlike BIS, where each insertion can be at any point in the array, an updated value in a segment cannot cross its segment boundary. We formally prove this property next.
+Unlike BIS, where each insertion can be at any point in the array, an updated value in a segment cannot cross its segment boundary. We formally prove this property next.
 
 \begin{lemma}[Direction Invariance]
 \label{lem:direction-invariance}
@@ -77,17 +61,26 @@ During Phase~2, all value movement is confined within segment boundaries.
 Let $S$ be a segment with $R$-indices
 $R_0,\ldots,R_{r-1}$ followed by $L$-indices
 $L_0,\ldots,L_{l-1}$, where $r+l \ge 1$.
-After Phase~1,
-\[
-A[R_0] \le \cdots \le A[R_{r-1}] \le A[L_0] \le \cdots \le A[L_{l-1}].
-\]
-
-By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-values move only leftward. An $R$-value cannot cross $L_0$ (if it exists), and an $L$-value cannot cross $R_{r-1}$ (if it exists), since the above ordering is preserved. Therefore, no value exits its segment.
+After Phase~1, updated values are ordered: $A[R_0] \le \cdots \le A[R_{r-1}] \le A[L_0] \le \cdots \le A[L_{l-1}]$. By Lemma~\ref{lem:direction-invariance}, $R$-values move only rightward and $L$-values move only leftward. An $R$-value cannot cross $L_0$ (if it exists), and an $L$-value cannot cross $R_{r-1}$ (if it exists), since the above ordering is preserved. Therefore, no value exits its segment.
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} with degree of parallelism \emph{proportional to the number of segments}. This can improve performance even further on multi-core systems or distributed environments. To avoid scope creep, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can improve performance even further on multi-core systems and distributed environments. To avoid scope creep, we leave this investigation for future work.
 \end{remark}
+
+\paragraph{Phase 2: Fix segments}
+With the above structure in place, DeltaSort fixes the array one segment at a time. Within each segment, updated indices are processed in increasing index order. For each segment, the algorithm maintains two boundaries: a left boundary $\ell$ beyond which the $L$-values cannot move and a right boundary $r$ beyond which the $R$-values cannot move.
+
+\begin{enumerate}
+  \item At the start of a segment, the left boundary $\ell$ is initialized to the segment's left endpoint.
+  \item As the algorithm scans updated indices from left to right, indices with direction $R$ are pushed onto a stack.
+  \item When the first $L$-direction index at position $i$ is encountered or the end of the segment is reached, the right boundary $r$ is initialized to $i$. All deferred $R$ indices are then fixed in LIFO order. Each $R$ value with index $i$ is fixed using binary insertion within the range $[i, r]$, after which $r$ is advanced to the left beyond the insertion position.
+  \item After all deferred $R$ values have been fixed, $L$ values are fixed in left-to-right order. Each $L$ value at index $i$ is fixed using binary insertion within the range $[\ell, i]$, after which the left boundary $\ell$ is advanced to the right beyond the insertion position.
+\end{enumerate}
+
+Importantly, the binary search ranges for $L$ and $R$ fixes are always within the current segment boundaries. Figure~\ref{fig:delta-sort-example} illustrates this process for a sample array.
+
+\input{\figdir/delta-sort-example}
 
 \subsection{Correctness Proof}
 
@@ -110,7 +103,7 @@ DeltaSort produces a correctly sorted array.
 \end{theorem}
 
 \begin{proof}
-The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \lemref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
+The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \lemref{lem:fix-invariant}, each fix aresolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
 \end{proof}
 
 \subsection{Complexity Analysis}
@@ -120,16 +113,16 @@ We analyse the expected total data movement incurred during Phase~2 of DeltaSort
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see \figref{fig:worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models, including bounded displacement and clustered updates, is left to future work.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see \figref{fig:worst-case} for an example of a worst case). Analysing DeltaSort under more structured update models is left to future work.
 \end{remark}
 
-\begin{lemma}[Expected Linear Movement]
+\begin{lemma}[Expected Movement]
 \label{lem:movement-bound}
 Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's Phase~2 is $O(n)$, independent of $k$.
 \end{lemma}
 
 \begin{proof}
-Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are evenly distributed in expectation across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces the correct order among updated values: for consecutive updated indices $u_\ell < u_i < u_r$, the value at $u_i$ must lie between $A[u_{\ell}]$ and $A[u_r]$.
+Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are expected to be evenly distributed across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces the correct order among updated values: for consecutive updated indices $u_\ell < u_i < u_r$, the value at $u_i$ must lie in $[A[u_{\ell}]$,$A[u_r]]$.
 
 For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_\ell], A[u_i-1]]$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_r]]$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
 

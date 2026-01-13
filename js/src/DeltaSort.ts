@@ -70,6 +70,10 @@ export function deltaSort<T>(
                 break;
             }
             case Direction.RIGHT:
+                if (stackTop === 0) {
+                    // First RIGHT in segment advances left bound
+                    leftBound = i;
+                }
                 pendingRightDirections[stackTop++] = i;
                 break;
         }

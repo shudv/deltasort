@@ -29,6 +29,9 @@
             \State $\texttt{leftBound} \gets \Call{FixLeft}{A, i, \texttt{leftBound}} + 1$
         \EndIf
     \Else
+        \If{$\texttt{pendingRight} = \emptyset$} \Comment{First RIGHT in segment}
+            \State $\texttt{leftBound} \gets i$
+        \EndIf
         \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT index}
     \EndIf
 \EndFor

@@ -341,8 +341,8 @@ fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, us
     }
 
     // Classify each dirty index as L (left violation) or R (right violation)
-    // L: value is less than its left neighbor (needs to move left)
-    // R: value is greater than its right neighbor (needs to move right)
+    // L: value is less than its left neighbour (needs to move left)
+    // R: value is greater than its right neighbour (needs to move right)
     #[derive(Debug, Clone, Copy, PartialEq)]
     enum ViolationType {
         L,

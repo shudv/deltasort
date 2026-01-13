@@ -7,14 +7,14 @@
 
 DeltaSort operates in two phases. The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
-\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back to the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their neighbors. Moreover, it induces a simple directional structure on the updated indices, which we formalize next.
+\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. This monotonicity implies that any remaining disorder must occur only between updated values and their unchanged neighbours. Moreover, it induces a simple directional structure on the updated indices, which we formalize next.
 
 \begin{definition}[Direction]
 \label{def:direction}
 For an index $i \in U$, we define its \emph{direction} based on local order:
 \begin{itemize}
-  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbor: $i > 0 \text{ and } A[i-1] > A[i]$
-  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t its neighbors or ordered incorrectly to its right neighbor: $i = 0 \text{ or } A[i-1] \le A[i]$
+  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbour: $i > 0 \text{ and } A[i-1] > A[i]$
+  \item \textbf{RIGHT ($R$)}: Value is either already sorted correctly w.r.t its neighbours or ordered incorrectly to its right neighbour: $i = 0 \text{ or } A[i-1] \le A[i]$
 \end{itemize}
 \end{definition}
 

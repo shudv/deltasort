@@ -10,7 +10,7 @@ DeltaSort operates in two phases. The first phase establishes a structure among 
 \paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, any remaining order violations must occur only between updated values and their unchanged neighbours.
 
 \paragraph{Phase 2: Fix violations}
-With the above structure in place, DeltaSort fixes the array one updated index at a time left to right. When an updated index is first encountered, we first determine it's \emph{direction}, which we formalise next.
+With the above structure in place, DeltaSort fixes the array one updated index at a time left to right. When an updated index is first encountered, we first determine its \emph{direction}, which we formalise next.
 
 \begin{definition}[Direction]
 \label{def:direction}
@@ -21,21 +21,21 @@ During Phase~2, for an index $i \in U$, we define its \emph{direction} based on 
 \end{itemize}
 \end{definition}
 
-Few things to note about this definition:
+A few things to note about this definition:
 \begin{itemize}
   \item Direction is determined only by the left neighbour. Because Phase~2 fixes indices left to right, the array is guaranteed to be sorted to the left of $i$ by the time we encounter it.
   \item The notion of direction is not defined (or needed) for indices $i \notin U$.
   \item The definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases, as it may or may not violate order with its right neighbour. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see \algoref{alg:deltasort}).
 \end{itemize}
  
-At the start of Phase~2, we initialise a \emph{left boundary} $\ell$ to $0$. All value up to $\ell$ are guaranteed to be in sorted order. Then process each updated index $i \in U$ in as follows:
+At the start of Phase~2, we initialise a \emph{left boundary} $\ell = 0$. All values up to $\ell$ are guaranteed to be in sorted order. Then we process each updated index $i \in U$ as follows:
 \begin{enumerate}
-  \item Whenever an $R$ index is encountered, push it onto the stack, because we can't fix it yet.
-  \item Whenever an $L$ index is encountered, or the end of array is reached, we initialise a \emph{right boundary} $r$ to the current index $i$. Any deferred $R$ indices upto this point can't cross $r$, so we pop and fix them in LIFO order using binary insertion within the range $[i, r]$. After each insertion, we update $r$ to the left of the insertion position.
-  \item After all deferred $R$ indices have been fixed, we fix the current $L$ index using binary insertion within the range $[\ell, i]$. After insertion, we update $\ell$ to the right of the insertion position.
+  \item Whenever an $R$ index is encountered, push it onto the stack, because we cannot fix it yet.
+  \item Whenever an $L$ index is encountered, or the end of array is reached, we initialise a \emph{right boundary} $r$ to the current index $i$. Any deferred $R$ indices up to this point cannot cross $r$, so we pop and fix them in LIFO order using binary insertion within the range $[i+1, r]$. After each insertion, we update $r$ to the left of the insertion position.
+  \item After all deferred $R$ indices have been fixed, we fix the current $L$ index using binary insertion within the range $[\ell, i-1]$. After insertion, we update $\ell$ to the position to the right of the insertion point.
 \end{enumerate}
 
-To understand why this works, first we need to characterise the structure established in Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on the direction they had when they were first encountered during Phase~2, we can divide them into individual \emph{segments}.
+To understand why this works, we formalise the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
 
 \begin{definition}[Segment]
 \label{def:segment}
@@ -95,7 +95,7 @@ DeltaSort produces a correctly sorted array.
 \end{theorem}
 
 \begin{proof}
-The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \lemref{lem:fix-invariant}, each fix aresolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
+The only violations in the array after Phase~1 are at updated indices. Phase~2 processes each updated index exactly once. By \lemref{lem:fix-invariant}, each fix resolves a violation without introducing new ones. After all fixes, no violations remain, so the array is sorted.
 \end{proof}
 
 \subsection{Pseudocode}

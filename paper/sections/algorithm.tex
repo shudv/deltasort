@@ -35,8 +35,6 @@ At the start of Phase~2, we initialise a \emph{left boundary} $\ell$ to $0$. All
   \item After all deferred $R$ indices have been fixed, we fix the current $L$ index using binary insertion within the range $[\ell, i]$. After insertion, we update $\ell$ to the right of the insertion position.
 \end{enumerate}
 
-The full pseudocode is available in ~\appref{sec:appendix-pseudocode}.
-
 To understand why this works, first we need to characterise the structure established in Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on the direction they had when they were first encountered during Phase~2, we can divide them into individual \emph{segments}.
 
 \begin{definition}[Segment]

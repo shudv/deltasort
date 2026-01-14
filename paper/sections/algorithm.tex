@@ -47,15 +47,9 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
-\subparagraph{Initialization:} The invariant holds in the initial state:
-\begin{itemize}
-  \item $\ell = 0$ implies $A[0..\ell-1]$ is empty and hence sorted.
-  \item For the same reason, \texttt{pendingRight} is empty.
-  \item No updates have been processed yet, so there are no $L$ violations.
-  \item No previous updated index exists, so condition (3) holds trivially.
-\end{itemize}
+\subparagraph{Initialization:} It can be easily verified that the invariant trivially holds at the start of the first iteration ($p = 0$).
 
-\subparagraph{Maintenance:} We will now show that is the invariant holds at the start of the iteration for index $p$, it holds at the start of the next iteration for index $p+1$ as well. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir} = \Call{GetDirection}{A, i}$.
+\subparagraph{Maintenance:} We will now show that if the invariant holds for $p$, it also holds for $p+1$. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir} = \Call{GetDirection}{A, i}$.
 
 \emph{Case 1: $\texttt{dir} = L$.}
 \begin{enumerate}
@@ -70,7 +64,7 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
       \item No $L$ violations exist because $L$s are processed left-to-right.
       \item No $R$ violations exist because all pending $R$s are flushed before any $L$ is fixed.
     \end{itemize}
-  \item Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$.
+  \item Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves the invariant.
 \end{enumerate}
 
 At the start of the next iteration, condition (1) holds because we have extended the sorted prefix to include the fixed $L$ value. Condition (2) holds because we have flushed all pending $R$s. Condition (3) holds because we have fixed all $L$ violations up to index $i$. Condition (4) holds because the current index had $L$ direction.

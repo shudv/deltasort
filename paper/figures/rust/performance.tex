@@ -42,7 +42,7 @@
 \addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.2pt] 
     table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/execution-time.csv};
 
-\legend{FullSort, BIS, ESM, \textbf{DS}}
+\legend{FullSort, BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
 \end{minipage}%
@@ -63,7 +63,7 @@
     xtick={1000, 10000, 100000, 1000000},
     xticklabels={1K, 10K, 100K, 1M},
     legend pos=north east,
-    legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
+    legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50, legend columns=3},
     grid=both,
     grid style={line width=0.1pt, draw=gray!20},
     major grid style={line width=0.2pt, draw=gray!40},
@@ -84,10 +84,10 @@
 \addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.5pt] 
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
 
-\legend{BIS, ESM, \textbf{DS}}
+\legend{BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
-\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. (b)~Crossover thresholds ($k_c/n$) where each algorithm loses to FullSort. DeltaSort occupies the middle ground: faster than BIS for large $k$, uses less space than ESM.}
+\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. (b)~Crossover thresholds ($k_c/n$) where each algorithm loses to FullSort.}
 \label{fig:rust-performance}
 \end{figure}

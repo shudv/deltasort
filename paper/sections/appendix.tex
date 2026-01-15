@@ -1,5 +1,11 @@
 \appendix
 
+\section{Worst Case Configuration}
+\label{sec:appendix-worst-case}
+\figref{fig:worst-case} illustrates the worst-case configuration for DeltaSort. This occurs when all updated values cluster at the two ends of the array, forming a single spanning segment. In this case, all left-moving values must be shifted to the left end, and all right-moving values to the right end, resulting in maximum data movement of $O(kn)$.
+
+\input{\figdir/worst-case}
+
 \section{Empirical Validation of Complexity Bounds}
 \label{sec:appendix-complexity}
 

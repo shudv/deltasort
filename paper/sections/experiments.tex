@@ -3,6 +3,8 @@
 \label{sec:experiments}
 %==============================================================================
 
+\input{\figdir/sorting-algorithms}
+
 All benchmarks \footnote{Along with benchmarks, we also validated correctness by an extensive set of randomized tests~\cite{deltasort-repo} across various scales of $n$ and full range of $k$.} are evaluated on Rust implementations of each algorithm on synthetic datasets of user objects (name, age, country) on an Apple M series chip. We use Rust as the primary evaluation language due to its predictable performance characteristics \footnote{In contrast, managed execution environments like JavaScript on V8 have various factors like garbage collection, non-contiguous memory layouts~\cite{v8elementskinds} etc. that impact the underlying cost model.}. We used a realistic multi-key comparator to simulate a practical workload. Execution times are measured after sufficient warm-up iterations to account for caching and allocator effects. Each reported data point corresponds to the mean over repeated runs, with a 95\% confidence interval of at most $5\%$. All the source code used for benchmarking is provided in the repository for reproducibility~\cite{deltasort-repo}. We used fully random update distributions, which provide no exploitable structure to any particular algorithm. We evaluated the following algorithms:
 
 \begin{itemize}
@@ -13,13 +15,9 @@ All benchmarks \footnote{Along with benchmarks, we also validated correctness by
   \item \textbf{DeltaSort}: Standard implementation as described in \secref{sec:algorithm}. Like ESM, it also uses Rust's \texttt{slice::sort\_by} internally for sorting updated values.
 \end{itemize}
 
-\input{\figdir/sorting-algorithms}
-
 \subsection{Results}
 
-\figref{fig:rust-performance}(a) shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior at lower ranges of $k$, which is the most practically relevant range, since updates typically affect only a small fraction of an array at once. As $k$ increases, all update-aware algorithms eventually lose to FullSort at a critical crossover threshold $k_c$, as the overhead of processing updates begins to overshadow any benefit from knowing what updated. \figref{fig:rust-performance}(b) shows how $k_c$ varies for each algorithm across various scales.
-
-Several observations emerge from these results:
+\figref{fig:rust-performance}(a) shows execution time (in \textmu s) for $n = 100$K values as a function of percentage of updated values on a log--log scale. We use a log--log scale to highlight interesting behavior at lower ranges of $k$, which is the most practically relevant range, since updates typically affect only a small fraction of an array at once. As $k$ increases, all update-aware algorithms eventually lose to FullSort at a critical crossover threshold $k_c$, as the overhead of processing updates overshadows any benefit from knowing what updated. \figref{fig:rust-performance}(b) shows how $k_c$ varies for each algorithm across various scales. Several observations emerge from these results:
 
 \begin{enumerate}
   \item The \textbf{asymptotic behavior for each algorithm aligns with theoretical expectations}. BIS exhibits steep growth consistent with its $O(kn)$ movement cost, quickly becoming impractical as $k$ increases. ESM is relatively flat for small $k$, where linear merge cost dominates and is largely independent of the number of updates. DeltaSort exhibits intermediate growth.

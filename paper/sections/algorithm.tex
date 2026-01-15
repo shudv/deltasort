@@ -46,9 +46,9 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
-\subparagraph{Initialization:} It can be easily verified that the invariant trivially holds at the start of the first iteration ($p = 0$).
+\subparagraph{Initialization:} The invariant trivially holds at the start of the first iteration ($p = 0$).
 
-\subparagraph{Maintenance:} We will now show that if the invariant holds for $p$, it also holds for $p+1$. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir} = \Call{GetDirection}{A, i}$.
+\subparagraph{Maintenance:} We will now show that if the invariant holds for $p$, it also holds for $p+1$. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir}$ is direction of $i$.
 
 \emph{Case 1: $\texttt{dir} = L$}
 \begin{enumerate}
@@ -64,7 +64,7 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
   \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
 \end{enumerate}
 
-\subparagraph{Termination:} The loop processes all elements of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as a $L$ direction. Substituting $p = n$ in the invariant conditions, we have:
+\subparagraph{Termination:} The loop processes all elements of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as a $L$. Substituting $p = n$ in the invariant conditions, we have:
 \begin{itemize}
   \item Condition (1) implies that $A[0..\ell-1]$ is sorted and contains its final values.
   \item Condition (2) implies there are no $L$ violations in the range $[\ell, n-1]$.
@@ -75,7 +75,7 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
 Figure~\ref{fig:delta-sort-example} illustrates this sequence of operations for a sample array.
 \input{\figdir/delta-sort-example}
 
-its important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search is constrained. To formalise this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
+Its important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search range is smaller. To formalise this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
 
 \begin{definition}[Segment]
 \label{def:segment}
@@ -177,9 +177,9 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both phases gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
-O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log n).
+O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log n)
 \]
 \end{proof}
 
@@ -189,7 +189,7 @@ Under the random bounded-range update model, DeltaSort runs in $O(k \log n + n\s
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(k \log n + n\sqrt{k})$.
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining both we get: $O(k \log n + n\sqrt{k})$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

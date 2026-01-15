@@ -384,13 +384,6 @@ function formatWithCi(value: number, ci: number, totalWidth: number): string {
     return content.padStart(totalWidth);
 }
 
-function formatIntWithCi(value: number, ci: number, totalWidth: number): string {
-    const valStr = Math.round(value).toString();
-    const ciPercent = value > 0 ? ((ci / value) * 100).toFixed(1) : "0.0";
-    const content = `${valStr} ±${ciPercent}%`;
-    return content.padStart(totalWidth);
-}
-
 function printExecutionTimeTable(results: BenchmarkResults): void {
     const COL_WIDTH = 15;
 

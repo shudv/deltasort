@@ -285,15 +285,15 @@ mod tests {
         arr[2] = 0;
         arr[3] = 6;
         arr[5] = 10;
-        arr[7] = 14;
+        arr[7] = 11;
         arr[8] = 22;
         arr[9] = 23;
         // Now: [1, 0, 0, 6, 9, 10, 13, 14, 22, 23, 21]
         let updated: HashSet<usize> = [1, 2, 3, 5, 7, 8, 9].into_iter().collect();
         let result = delta_sort_instrumented(&mut arr, &updated, i32::cmp);
-        assert_eq!(arr, vec![0, 0, 1, 6, 9, 10, 13, 14, 21, 22, 23]);
-        assert_eq!(result.segments, 3); // One R*L* segment
-        assert_eq!(result.movement, 4); // No movement
+        assert_eq!(arr, vec![0, 0, 1, 6, 9, 10, 11, 13, 21, 22, 23]);
+        assert_eq!(result.segments, 3);
+        assert_eq!(result.movement, 5);
     }
 
     #[test]

@@ -156,7 +156,7 @@ where
                 }
             }
             Direction::Right => {
-                if pending_right.len() == 0 {
+                if pending_right.is_empty() {
                     // First RIGHT in segment extends right bound
                     left_bound = i;
                 }

@@ -1,11 +1,12 @@
-\begin{algorithm}
+\begin{algorithm}[!t]
+\small
 \caption{DeltaSort}
 \label{alg:deltasort}
 \begin{algorithmic}[1]
 \Require Array $A[0..n-1]$, updated indices $U$, comparator $\texttt{cmp}$
 \Ensure $A$ is sorted
 \Statex
-\State \textbf{Phase 1: Establish segments}
+\State \textbf{Phase 1: Establish structure}
 \State $\texttt{updatedIndices} \gets \text{sort}(U)$
 \State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
 \For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
@@ -13,7 +14,7 @@
 \EndFor
 \State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
 \Statex
-\State \textbf{Phase 2: Fix segments}
+\State \textbf{Phase 2: Fix violations}
 \State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
 \For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
     \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
@@ -25,14 +26,14 @@
                 \State $\texttt{rightBound} \gets \Call{FixRight}{A, j, \texttt{rightBound}} - 1$
             \EndIf
         \EndWhile
-        \If{$i < n$} \Comment{Skip dummy LEFT sentinel}
+        \If{$i < n$} \Comment{Ensure it's not the LEFT sentinel}
             \State $\texttt{leftBound} \gets \Call{FixLeft}{A, i, \texttt{leftBound}} + 1$
         \EndIf
     \Else
-        \If{$\texttt{pendingRight} = \emptyset$} \Comment{First RIGHT in segment}
+        \If{$\texttt{pendingRight} = \emptyset$} \Comment{First RIGHT in a segment}
             \State $\texttt{leftBound} \gets i$
         \EndIf
-        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT index}
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT}
     \EndIf
 \EndFor
 \end{algorithmic}

@@ -129,8 +129,8 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \begin{proof}
 After Phase~1, we have two sorted sequences of $k$ elements each:
 \begin{itemize}
-  \item \textbf{Indices:} The $k$ updated positions $i_1 < i_2 < \cdots < i_k$, sorted.
-  \item \textbf{Values:} The $k$ updated values $v_1 \le v_2 \le \cdots \le v_k$, sorted.
+  \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
+  \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
 Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
 

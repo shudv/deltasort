@@ -201,12 +201,6 @@ interface CrossoverResultsAll {
     deltasortRatio: number;
 }
 
-interface CrossoverResultDeltaVsEsm {
-    n: number;
-    kc: number;
-    crossoverRatio: number;
-}
-
 function sampleDistinctIndices(n: number, k: number): number[] {
     const arr = Array.from({ length: n }, (_, i) => i);
     for (let i = 0; i < k; i++) {
@@ -314,34 +308,6 @@ function algorithmIsFaster(
     return algoTime < nativeTime;
 }
 
-function deltasortIsFasterThanEsm(baseUsers: User[], k: number, n: number): boolean {
-    let esmTime = 0;
-    let dsTime = 0;
-
-    for (let i = 0; i < CROSSOVER_ITERATIONS; i++) {
-        const users = baseUsers.map((u) => ({ ...u }));
-        const indices = sampleDistinctIndices(n, k);
-        const dirtyIndices = new Set<number>();
-        for (const idx of indices) {
-            users[idx] = mutateUser(users[idx]!);
-            dirtyIndices.add(idx);
-        }
-
-        const usersEsm = users.map((u) => ({ ...u }));
-        const usersDs = users.map((u) => ({ ...u }));
-
-        const startEsm = performance.now();
-        extractSortMerge(usersEsm, dirtyIndices, userComparator);
-        esmTime += performance.now() - startEsm;
-
-        const startDs = performance.now();
-        deltaSort(usersDs, dirtyIndices, userComparator);
-        dsTime += performance.now() - startDs;
-    }
-
-    return dsTime < esmTime;
-}
-
 function deltasortIsFaster(baseUsers: User[], k: number, n: number): boolean {
     return algorithmIsFaster(baseUsers, k, n, (arr, indices) =>
         deltaSort(arr, indices, userComparator),
@@ -401,35 +367,6 @@ function findCrossoverEsm(n: number): number {
     return findCrossoverGeneric(n, 0.0, 1.0, esmIsFaster);
 }
 
-function findCrossoverDeltasortVsEsm(n: number): number {
-    const baseUsers = generateSortedUsers(n);
-
-    // Warmup
-    for (let i = 0; i < 5; i++) {
-        const users = baseUsers.map((u) => ({ ...u }));
-        users.sort(userComparator);
-    }
-
-    let lo = 1;
-    let hi = n;
-
-    const minRange = Math.floor(n * 0.001);
-
-    while (lo < hi) {
-        if (hi - lo < minRange) break;
-
-        const mid = lo + Math.ceil((hi - lo) / 2);
-
-        if (deltasortIsFasterThanEsm(baseUsers, mid, n)) {
-            lo = mid;
-        } else {
-            hi = mid - 1;
-        }
-    }
-
-    return lo;
-}
-
 // ============================================================================
 // OUTPUT
 // ============================================================================
@@ -442,13 +379,6 @@ function formatNumber(n: number): string {
 
 function formatWithCi(value: number, ci: number, totalWidth: number): string {
     const valStr = value.toFixed(1);
-    const ciPercent = value > 0 ? ((ci / value) * 100).toFixed(1) : "0.0";
-    const content = `${valStr} ±${ciPercent}%`;
-    return content.padStart(totalWidth);
-}
-
-function formatIntWithCi(value: number, ci: number, totalWidth: number): string {
-    const valStr = Math.round(value).toString();
     const ciPercent = value > 0 ? ((ci / value) * 100).toFixed(1) : "0.0";
     const content = `${valStr} ±${ciPercent}%`;
     return content.padStart(totalWidth);
@@ -482,34 +412,6 @@ function printExecutionTimeTable(results: BenchmarkResults): void {
     );
 }
 
-function printComparatorCountTable(results: BenchmarkResults): void {
-    const COL_WIDTH = 15;
-
-    console.log();
-    console.log(`Comparator Invocations - n=${formatNumber(N)}`);
-    console.log(
-        "┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐",
-    );
-    console.log(
-        "│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │",
-    );
-    console.log(
-        "├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤",
-    );
-    for (let i = 0; i < results.native.length; i++) {
-        const n = results.native[i]!;
-        const b = results.bis[i]!;
-        const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
-        console.log(
-            `│ ${n.k.toString().padStart(6)} │ ${formatIntWithCi(n.comparisons, n.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(b.comparisons, b.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(e.comparisons, e.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(d.comparisons, d.comparisonsCi, COL_WIDTH)} │`,
-        );
-    }
-    console.log(
-        "└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘",
-    );
-}
-
 function printCrossoverTableAll(results: CrossoverResultsAll[]): void {
     console.log();
     console.log("Crossover Threshold (All Algorithms vs Native)");
@@ -532,20 +434,6 @@ function printCrossoverTableAll(results: CrossoverResultsAll[]): void {
     );
 }
 
-function printCrossoverTableDsVsEsm(results: CrossoverResultDeltaVsEsm[]): void {
-    console.log();
-    console.log("Crossover Threshold (DeltaSort vs ESM)");
-    console.log("┌────────────┬────────────┬────────────┐");
-    console.log("│     n      │    k_c     │   k_c %    │");
-    console.log("├────────────┼────────────┼────────────┤");
-    for (const r of results) {
-        console.log(
-            `│ ${formatNumber(r.n).padStart(10)} │ ${formatNumber(r.kc).padStart(10)} │ ${r.crossoverRatio.toFixed(3).padStart(9)}% │`,
-        );
-    }
-    console.log("└────────────┴────────────┴────────────┘");
-}
-
 // ============================================================================
 // CSV EXPORT (with full statistics: mean, SD, CI, CV, iterations)
 // ============================================================================
@@ -564,33 +452,10 @@ function exportExecutionTimeCsv(results: BenchmarkResults, filePath: string): vo
     console.log(`Exported: ${filePath}`);
 }
 
-function exportComparatorCountCsv(results: BenchmarkResults, filePath: string): void {
-    let csv =
-        "k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n";
-    for (let i = 0; i < results.native.length; i++) {
-        const n = results.native[i]!;
-        const b = results.bis[i]!;
-        const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
-        csv += `${n.k},${n.iterations},${Math.round(n.comparisons)},${Math.round(n.comparisonsSd)},${Math.round(n.comparisonsCi)},${n.comparisonsCv.toFixed(1)},${Math.round(b.comparisons)},${Math.round(b.comparisonsSd)},${Math.round(b.comparisonsCi)},${b.comparisonsCv.toFixed(1)},${Math.round(e.comparisons)},${Math.round(e.comparisonsSd)},${Math.round(e.comparisonsCi)},${e.comparisonsCv.toFixed(1)},${Math.round(d.comparisons)},${Math.round(d.comparisonsSd)},${Math.round(d.comparisonsCi)},${d.comparisonsCv.toFixed(1)}\n`;
-    }
-    fs.writeFileSync(filePath, csv);
-    console.log(`Exported: ${filePath}`);
-}
-
 function exportCrossoverAllCsv(results: CrossoverResultsAll[], filePath: string): void {
     let csv = "n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n";
     for (const r of results) {
         csv += `${r.n},${r.bisKc},${r.bisRatio.toFixed(3)},${r.esmKc},${r.esmRatio.toFixed(3)},${r.deltasortKc},${r.deltasortRatio.toFixed(3)}\n`;
-    }
-    fs.writeFileSync(filePath, csv);
-    console.log(`Exported: ${filePath}`);
-}
-
-function exportCrossoverDsVsEsmCsv(results: CrossoverResultDeltaVsEsm[], filePath: string): void {
-    let csv = "n,kc,crossover_ratio\n";
-    for (const r of results) {
-        csv += `${r.n},${r.kc},${r.crossoverRatio.toFixed(3)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -682,7 +547,6 @@ async function main(): Promise<void> {
     }
 
     printExecutionTimeTable(results);
-    printComparatorCountTable(results);
 
     // --- Crossover Analysis (All Algorithms vs Native) ---
     console.log();
@@ -712,21 +576,6 @@ async function main(): Promise<void> {
 
     printCrossoverTableAll(crossoverAllResults);
 
-    // --- Crossover Analysis (DeltaSort vs ESM) ---
-    console.log();
-    console.log("Running crossover analysis: DeltaSort vs ESM...");
-    const crossoverDsVsEsmResults: CrossoverResultDeltaVsEsm[] = [];
-
-    for (const size of CROSSOVER_SIZES) {
-        process.stdout.write(`  n=${formatNumber(size).padStart(10)}...`);
-        const kc = findCrossoverDeltasortVsEsm(size);
-        const crossoverRatio = (kc / size) * 100;
-        crossoverDsVsEsmResults.push({ n: size, kc, crossoverRatio });
-        console.log(` k_c=${kc} (${crossoverRatio.toFixed(1)}%)`);
-    }
-
-    printCrossoverTableDsVsEsm(crossoverDsVsEsmResults);
-
     // --- Export CSVs ---
     if (shouldExport) {
         console.log();
@@ -734,12 +583,7 @@ async function main(): Promise<void> {
         const basePath = path.join(process.cwd(), "../paper/figures/js");
         fs.mkdirSync(basePath, { recursive: true });
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
-        exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverAllCsv(crossoverAllResults, path.join(basePath, "crossover-all.csv"));
-        exportCrossoverDsVsEsmCsv(
-            crossoverDsVsEsmResults,
-            path.join(basePath, "crossover-ds-vs-esm.csv"),
-        );
         exportMetadataCsv(results, path.join(basePath, "benchmark_metadata.csv"));
     }
 

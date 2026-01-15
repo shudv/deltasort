@@ -9,13 +9,13 @@ const enum Direction {
 }
 
 /**
- * Repairs the sorted array using the provided comparator.
+ * Sort a previously sorted array using the provided comparator.
  *
  * @param arr The array which was previously sorted and has some updated indices
  * @param updatedIndices Set of indices in the array which have been updated
  * @param cmp The comparator function
  *
- * @returns The repaired array
+ * @returns The sorted array
  */
 export function deltaSort<T>(
     arr: T[],
@@ -70,6 +70,10 @@ export function deltaSort<T>(
                 break;
             }
             case Direction.RIGHT:
+                if (stackTop === 0) {
+                    // First RIGHT in segment advances left bound
+                    leftBound = i;
+                }
                 pendingRightDirections[stackTop++] = i;
                 break;
         }

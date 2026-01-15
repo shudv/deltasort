@@ -1,0 +1,105 @@
+% Figure: Empirical validation of complexity bounds
+% Movement: O(n√k) → normalized = movement / (n√k) should be constant
+% Comparisons: O(k log n) → normalized = comparisons / (k log n) should be constant
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.5cm,
+    xlabel={$k$ (\% of $n$)},
+    ylabel={Movement / $(n\sqrt{k})$},
+    xmode=log,
+    log basis x=10,
+    xmin=0.08, xmax=25,
+    ymin=0, ymax=0.6,
+    xtick={0.1, 1, 10},
+    xticklabels={0.1, 1, 10},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+    legend style={font=\footnotesize, at={(0.98,0.02)}, anchor=south east},
+    title={\textbf{(a) Normalized Movement}},
+]
+
+% n = 1K
+\addplot[color=blue!70, mark=*, thick, mark size=2pt] 
+    table[col sep=comma, x=k_percent, y=movement_normalized, 
+          restrict expr to domain={\thisrow{n}}{1000:1000}] {\rootdir/figures/movement-analysis.csv};
+\addlegendentry{$n=1$K}
+
+% n = 10K  
+\addplot[color=red!70, mark=square*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=movement_normalized,
+          restrict expr to domain={\thisrow{n}}{10000:10000}] {\rootdir/figures/movement-analysis.csv};
+\addlegendentry{$n=10$K}
+
+% n = 100K
+\addplot[color=green!60!black, mark=triangle*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=movement_normalized,
+          restrict expr to domain={\thisrow{n}}{100000:100000}] {\rootdir/figures/movement-analysis.csv};
+\addlegendentry{$n=100$K}
+
+% n = 1M
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=movement_normalized,
+          restrict expr to domain={\thisrow{n}}{1000000:1000000}] {\rootdir/figures/movement-analysis.csv};
+\addlegendentry{$n=1$M}
+
+\end{axis}
+\end{tikzpicture}
+\end{minipage}%
+\hfill%
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.5cm,
+    xlabel={$k$ (\% of $n$)},
+    ylabel={Comparisons / $(k \log (n\sqrt{k}))$},
+    xmode=log,
+    log basis x=10,
+    xmin=0.08, xmax=25,
+    ymin=0, ymax=2,
+    xtick={0.1, 1, 10},
+    xticklabels={0.1, 1, 10},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!30},
+    major grid style={line width=0.2pt, draw=gray!50},
+    legend style={font=\footnotesize, at={(0.98,0.02)}, anchor=south east},
+    title={\textbf{(b) Normalized Comparisons}},
+]
+
+% n = 1K
+\addplot[color=blue!70, mark=*, thick, mark size=2pt] 
+    table[col sep=comma, x=k_percent, y=normalized,
+          restrict expr to domain={\thisrow{n}}{1000:1000}] {\rootdir/figures/comparator-analysis.csv};
+\addlegendentry{$n=1$K}
+
+% n = 10K  
+\addplot[color=red!70, mark=square*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=normalized,
+          restrict expr to domain={\thisrow{n}}{10000:10000}] {\rootdir/figures/comparator-analysis.csv};
+\addlegendentry{$n=10$K}
+
+% n = 100K
+\addplot[color=green!60!black, mark=triangle*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=normalized,
+          restrict expr to domain={\thisrow{n}}{100000:100000}] {\rootdir/figures/comparator-analysis.csv};
+\addlegendentry{$n=100$K}
+
+% n = 1M
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt]
+    table[col sep=comma, x=k_percent, y=normalized,
+          restrict expr to domain={\thisrow{n}}{1000000:1000000}] {\rootdir/figures/comparator-analysis.csv};
+\addlegendentry{$n=1$M}
+
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{Empirical assessment of DeltaSort's complexity bounds. Each line represents a different array size $n$. (a)~Movement normalized by $n\sqrt{k}$ converges to $\approx 0.4$, confirming $O(n\sqrt{k})$. (b)~Comparisons normalized by $k\log (n\sqrt{k})$ converges to $\approx 1.4$, confirming $O(k\log (n\sqrt{k}))$. The overlap of lines across scales indicates that the asymptotic bounds are valid.}
+\label{fig:complexity-analysis}
+\end{figure}

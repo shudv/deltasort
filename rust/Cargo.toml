@@ -3,10 +3,10 @@ name = "deltasort"
 version = "0.1.0"
 edition = "2021"
 authors = ["Shubham Dwivedi <shubd3@gmail.com>"]
-description = "Efficient incremental repair of sorted arrays"
+description = "Incremental sorting of arrays with known updates"
 license = "MIT"
 repository = "https://github.com/shubd3/deltasort"
-keywords = ["delta", "sort", "incremental", "fast", "repair"]
+keywords = ["delta", "sort", "incremental", "fast"]
 categories = ["algorithms"]
 
 [lib]

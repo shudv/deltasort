@@ -1,49 +1,40 @@
 % Figure: DeltaSort worst-case movement diagram
-\begin{figure}
+\begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-    cell/.style={minimum width=0.55cm, minimum height=0.5cm, draw, font=\scriptsize, outer sep=0pt},
-    dotcell/.style={minimum width=0.55cm, minimum height=0.5cm, draw, font=\scriptsize, outer sep=0pt},
+    cell/.style={minimum width=0.5cm, minimum height=0.45cm, draw, font=\scriptsize, inner sep=0pt, outer sep=0pt, anchor=center},
     right/.style={cell, fill=red!25},
     left/.style={cell, fill=blue!25},
     clean/.style={cell, fill=gray!10, font=\scriptsize},
     segbrace/.style={decorate, decoration={brace, amplitude=5pt}},
     seglabel/.style={font=\footnotesize},
-    movearrow/.style={->, thick, >=stealth},
-    rmovelabel/.style={font=\scriptsize, text=red!70!black},
-    lmovelabel/.style={font=\scriptsize, text=blue!70!black}
 ]
 
-% Array position
 \def\yarr{0}
-\def\ymove{-1.0}
-\def\cellw{0.55}
+\def\cellw{0.5}
 
-% === R CLUSTER (all R-direction updates at the start) ===
-\node[right] (r1) at (0, \yarr) {R};
-\node[dotcell, fill=red!15] at (\cellw, \yarr) {\dots};
-\node[right] (r2) at (2*\cellw, \yarr) {R};
+% Place cells at exact positions (center anchored, spaced by cellw)
+\node[right] (c0) at (0*\cellw, \yarr) {R};
+\node[cell, fill=red!15] (c1) at (1*\cellw, \yarr) {\dots};
+\node[right] (c2) at (2*\cellw, \yarr) {R};
+\node[clean] (c3) at (3*\cellw, \yarr) {};
+\node[cell, fill=gray!10] (c4) at (4*\cellw, \yarr) {\dots};
+\node[cell, fill=gray!10] (c5) at (5*\cellw, \yarr) {\dots};
+\node[cell, fill=gray!10] (c6) at (6*\cellw, \yarr) {\dots};
+\node[clean] (c7) at (7*\cellw, \yarr) {};
+\node[left] (c8) at (8*\cellw, \yarr) {L};
+\node[cell, fill=blue!15] (c9) at (9*\cellw, \yarr) {\dots};
+\node[left] (c10) at (10*\cellw, \yarr) {L};
 
-% === LARGE CLEAN REGION (unchanged values) ===
-\node[clean] (c1) at (3*\cellw, \yarr) {};
-\node[dotcell, fill=gray!10] at (4*\cellw, \yarr) {\dots};
-\node[dotcell, fill=gray!10] at (5*\cellw, \yarr) {\dots};
-\node[dotcell, fill=gray!10] at (6*\cellw, \yarr) {\dots};
-\node[dotcell, fill=gray!10] at (7*\cellw, \yarr) {\dots};
-\node[dotcell, fill=gray!10] at (8*\cellw, \yarr) {\dots};
-\node[clean] (c2) at (9*\cellw, \yarr) {};
+% Brace spanning entire array
+\draw[segbrace] ([yshift=2pt]c0.north west) -- ([yshift=2pt]c10.north east);
+\node[seglabel] at (5*\cellw, 0.8) {Single spanning segment};
 
-% === L CLUSTER (all L-direction updates at the end) ===
-\node[left] (l1) at (10*\cellw, \yarr) {L};
-\node[dotcell, fill=blue!15] at (11*\cellw, \yarr) {\dots};
-\node[left] (l2) at (12*\cellw, \yarr) {L};
-
-% === SINGLE SEGMENT BRACE (top) ===
-\draw[segbrace] (-0.3, 0.38) -- (12*\cellw+0.3, 0.38);
-\node[seglabel] at (6*\cellw, 0.85) {Single segment spanning entire array};
-
+% Arrows below showing movement directions
+\draw[->, thick, >=stealth] (1*\cellw, -0.4) -- (3.5*\cellw, -0.4);
+\draw[->, thick, >=stealth] (9*\cellw, -0.4) -- (6.5*\cellw, -0.4);
 
 \end{tikzpicture}
-\caption{Worst-case configuration for DeltaSort. This occurs when updated values monotonically cluster at the start and end of the array, forming a single segment that spans the entire array. }
+\caption{Worst-case configuration for DeltaSort is formed when updated values cluster at ends of the array and form a single spanning segment.}
 \label{fig:worst-case}
 \end{figure}

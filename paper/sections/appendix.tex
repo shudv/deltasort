@@ -1,42 +1,30 @@
 \appendix
 
-\section{Comparison Count}
-\label{sec:appendix-comparisons}
+\section{Empirical Validation of Complexity Bounds}
+\label{sec:appendix-complexity}
 
-\figref{fig:rust-comparator-count} shows the total number of comparisons as a function of update count $k$.
+\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
 
-\input{\figdir/rust/comparator-count}
+The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalized by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
 
-\section{DeltaSort vs. ESM Crossover Threshold}
-\label{sec:appendix-rust-ds-vs-esm}
+\input{\figdir/complexity-analysis}
 
-\input{\figdir/rust/crossover-ds-vs-esm}
-
-\figref{fig:rust-crossover-ds-vs-esm} shows that there exists a non-trivial range in which DeltaSort dominates ESM both in execution time and space usage. For example, for an array of size $n = 100$K, DeltaSort outperforms ESM for up to $\approx 1K$ updates, while using only $\approx 1\%$ of the auxiliary space required by ESM. As array size increases, this range steadily shrinks. For large arrays, the crossover threshold moves toward smaller fractions, indicating that DeltaSort loses to ESM earlier. More study is needed to understand this trend fully.
-
-\section{Update-aware algorithms evaluated in JavaScript/V8}
+\section{JavaScript/V8 Benchmarks}
 \label{sec:appendix-js-deltasort}
 
-\input{\figdir/js/execution-time}
+\input{\figdir/js/performance}
+
+\figref{fig:js-performance} shows execution time and crossover threshold data for JavaScript/V8. Several observations emerge:
 
 \begin{enumerate}
-  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost model in V8 is not proportional to the number of shifted values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
+  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost in V8 is not proportional to the number of moved values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
   \item ESM is $\sim 40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that \textbf{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
 \end{enumerate}
 
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, the practical strategy for achieving faster execution times simplifies to:
+The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, the hybrid strategy can be simpler as compared to Rust:
 
 \begin{center}
 Use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
 \end{center}
 
-These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments. \appref{sec:appendix-js} provides additional data about crossover thresholds in JS.
-
-\section{Crossover Thresholds in JavaScript}
-\label{sec:appendix-js}
-
-\figref{fig:js-crossover-all} and~\figref{fig:js-crossover-ds-vs-esm} show crossover thresholds for the JavaScript implementations. The thresholds are generally lower than in Rust due to the managed runtime's memory movement behavior. BIS and DeltaSort have almost identical behavior in JavaScript, while ESM maintains a higher threshold ($\approx 35$--$40\%$). This implies that for small $k$, BIS is preferable to DeltaSort in JavaScript because of its lower space requirement and simpler implementation, unlike in Rust where DeltaSort has a clear measurable advantage.
-
-\input{\figdir/js/crossover-all}
-
-\input{\figdir/js/crossover-ds-vs-esm}
+These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments.

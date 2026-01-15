@@ -25,7 +25,7 @@ During Phase~2, for an index $i \in U$, we define its \emph{direction} based on 
 
 A few important things to note about this definition:
 \begin{itemize}
-  \item Direction captures which side does the target position of an updated index lie relative to it's current position. Hence, the notion of direction is not defined (or needed) for unchanged indices ($i \notin U$).
+  \item Direction captures which side does the target position of an updated index lie relative to its current position. Hence, the notion of direction is not defined (or needed) for unchanged indices ($i \notin U$).
   \item The definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases, as it may or may not violate order with its right neighbour. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see \algoref{alg:deltasort}).
 \end{itemize}
  
@@ -75,7 +75,7 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
 Figure~\ref{fig:delta-sort-example} illustrates this sequence of operations for a sample array.
 \input{\figdir/delta-sort-example}
 
-It's important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search is constrained. To formalise this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
+its important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search is constrained. To formalise this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
 
 \begin{definition}[Segment]
 \label{def:segment}

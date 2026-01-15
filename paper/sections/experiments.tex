@@ -28,7 +28,7 @@ Several observations emerge from these results:
 
   \item ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 70\%$). However, its performance comes at the cost of $O(n)$ space. \textbf{DeltaSort provides a space-efficient alternative to ESM for} $k \lesssim 20\%$, while still beating FullSort by $\sim 2 \times$.
   
-  \item Crossover threshold trend is consistent and largely stable across all scales (DeltaSort 20--40\%, ESM 60--80\%). BIS has a very low threshold due to its quadratic data movement cost, whereas ESM has the highest threshold due to its efficient linear merge pass. DeltaSort exhibits an intermediate threshold, in line with it's theoretical asymptotic complexity.
+  \item Crossover threshold trend is consistent and largely stable across all scales (DeltaSort 20--40\%, ESM 60--80\%). BIS has a very low threshold due to its quadratic data movement cost, whereas ESM has the highest threshold due to its efficient linear merge pass. DeltaSort exhibits an intermediate threshold, in line with its theoretical asymptotic complexity.
 \end{enumerate}
 
 \input{\figdir/rust/performance}

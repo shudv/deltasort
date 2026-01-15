@@ -297,7 +297,7 @@ struct AnalysisResult {
     // Comparator analysis (for DeltaSort)
     comparisons_mean: f64,
     comparisons_sd: f64,
-    comparisons_normalized: f64, // comparisons / (k * log(n))
+    comparisons_normalized: f64, // comparisons / (k * log(n * sqrt(k)))
 }
 
 fn run_analysis(n: usize, k: usize) -> AnalysisResult {
@@ -358,7 +358,7 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
     let cmp_stats = calculate_stats_u64(&comparisons);
 
     let k_sqrt = (k as f64).sqrt();
-    let log_n = (n as f64).ln();
+    let log_n_sqrt_k = (n as f64 * k_sqrt).ln();
 
     AnalysisResult {
         n,
@@ -372,7 +372,7 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
         segments_normalized: seg_stats.mean / k_sqrt,
         comparisons_mean: cmp_stats.mean,
         comparisons_sd: cmp_stats.sd,
-        comparisons_normalized: cmp_stats.mean / (k as f64 * log_n),
+        comparisons_normalized: cmp_stats.mean / (k as f64 * log_n_sqrt_k),
     }
 }
 
@@ -790,7 +790,7 @@ fn run_comparator_analysis(export: bool) {
     println!();
     println!("Comparator Count Analysis");
     println!("=========================");
-    println!("Normalized by k·log(n) to validate O(k·log(n)) complexity");
+    println!("Normalized by k·log(n·√k) to validate O(k·log(n·√k)) complexity");
     println!();
 
     let mut results: Vec<AnalysisResult> = Vec::new();
@@ -820,7 +820,7 @@ fn run_comparator_analysis(export: bool) {
     print_comparator_table(&results);
 
     if export {
-        let base_path = "../figures";
+        let base_path = "../paper/figures";
         fs::create_dir_all(base_path).ok();
         export_comparator_csv(&results, &format!("{}/comparator-analysis.csv", base_path));
     }
@@ -828,7 +828,7 @@ fn run_comparator_analysis(export: bool) {
 
 fn print_comparator_table(results: &[AnalysisResult]) {
     println!();
-    println!("Comparator Count (normalized by k·log(n))");
+    println!("Comparator Count (normalized by k·log(n·√k))");
     println!("┌────────────┬────────────┬──────────┬─────────────────┬────────────┐");
     println!("│     n      │     k      │   k %    │   Comparisons   │ Normalized │");
     println!("├────────────┼────────────┼──────────┼─────────────────┼────────────┤");
@@ -899,7 +899,7 @@ fn run_movement_analysis(export: bool) {
     print_segments_table(&results);
 
     if export {
-        let base_path = "../figures";
+        let base_path = "../paper/figures";
         fs::create_dir_all(base_path).ok();
         export_movement_csv(&results, &format!("{}/movement-analysis.csv", base_path));
     }

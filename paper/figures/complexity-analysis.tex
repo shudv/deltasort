@@ -13,7 +13,7 @@
     ylabel={Movement / $(n\sqrt{k})$},
     xmode=log,
     log basis x=10,
-    xmin=0.08, xmax=60,
+    xmin=0.08, xmax=25,
     ymin=0, ymax=0.6,
     xtick={0.1, 1, 10},
     xticklabels={0.1, 1, 10},
@@ -21,7 +21,7 @@
     grid style={line width=0.1pt, draw=gray!30},
     major grid style={line width=0.2pt, draw=gray!50},
     legend style={font=\footnotesize, at={(0.98,0.02)}, anchor=south east},
-    title={\textbf{(a) Movement Complexity}},
+    title={\textbf{(a) Normalized Movement}},
 ]
 
 % n = 1K
@@ -59,18 +59,18 @@
     width=\textwidth,
     height=5.5cm,
     xlabel={$k$ (\% of $n$)},
-    ylabel={Comparisons / $(k \log n)$},
+    ylabel={Comparisons / $(k \log (n\sqrt{k}))$},
     xmode=log,
     log basis x=10,
-    xmin=0.08, xmax=60,
-    ymin=0, ymax=2.5,
+    xmin=0.08, xmax=25,
+    ymin=0, ymax=2,
     xtick={0.1, 1, 10},
     xticklabels={0.1, 1, 10},
     grid=both,
     grid style={line width=0.1pt, draw=gray!30},
     major grid style={line width=0.2pt, draw=gray!50},
     legend style={font=\footnotesize, at={(0.98,0.02)}, anchor=south east},
-    title={\textbf{(b) Comparison Complexity}},
+    title={\textbf{(b) Normalized Comparisons}},
 ]
 
 % n = 1K
@@ -100,6 +100,6 @@
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
-\caption{Empirical validation of DeltaSort's complexity bounds. Each line represents a different array size $n$. (a)~Movement normalized by $n\sqrt{k}$ converges to $\approx 0.4$, confirming $O(n\sqrt{k})$. (b)~Comparisons normalized by $k\log n$ converges to $\approx 2$, confirming $O(k\log n)$. The overlap of lines across scales validates the asymptotic analysis.}
+\caption{Empirical assessment of DeltaSort's complexity bounds. Each line represents a different array size $n$. (a)~Movement normalized by $n\sqrt{k}$ converges to $\approx 0.4$, confirming $O(n\sqrt{k})$. (b)~Comparisons normalized by $k\log (n\sqrt{k})$ converges to $\approx 1.4$, confirming $O(k\log (n\sqrt{k}))$. The overlap of lines across scales indicates that the asymptotic bounds are valid.}
 \label{fig:complexity-analysis}
 \end{figure}

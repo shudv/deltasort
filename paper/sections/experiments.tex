@@ -17,8 +17,6 @@ All benchmarks \footnote{Along with benchmarks, we also validated correctness by
 
 \subsection{Results}
 
-\input{\figdir/rust/performance}
-
 \figref{fig:rust-performance}(a) shows execution time (in \textmu s) for $n = 100$K values as a function of the number of updated values $k$ on a log--log scale. We use a log--log scale to highlight interesting behavior at lower ranges of $k$, which is the most practically relevant range, since updates typically affect only a small fraction of an array at once. As $k$ increases, all update-aware algorithms eventually lose to FullSort at a critical crossover threshold $k_c$, as the overhead of processing updates begins to overshadow any benefit from knowing what updated. \figref{fig:rust-performance}(b) shows how $k_c$ varies for each algorithm across various scales.
 
 Several observations emerge from these results:
@@ -32,6 +30,8 @@ Several observations emerge from these results:
   
   \item Crossover threshold trend is consistent and largely stable across all scales (DeltaSort 20--40\%, ESM 60--80\%). BIS has a very low threshold due to its quadratic data movement cost, whereas ESM has the highest threshold due to its efficient linear merge pass. DeltaSort exhibits an intermediate threshold, in line with it's theoretical asymptotic complexity.
 \end{enumerate}
+
+\input{\figdir/rust/performance}
 
 These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, DriftSort~\cite{driftsort}), it would be beneficial to construct \emph{hybrid adaptive update-aware} strategies. As an example, for the Rust implementation evaluated here, a hybrid strategy for an environment that requires fast execution without excessive space usage could be:
 

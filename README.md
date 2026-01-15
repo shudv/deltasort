@@ -13,15 +13,18 @@ An incremental soting algorithm for arrays. When you know _which_ values changed
 ```bash
 cd rust
 cargo test               # Run correctness tests
-cargo benchmark          # Run performance benchmarks
-cargo benchmark-export   # Run performance benchmarks and export to diagrams
+cargo benchmark          # Run benchmarks
+cargo benchmark-export   # Run benchmarks and export data to diagrams
 ```
 
 ### JavaScript
 
 ```bash
 cd js
-pnpm install && pnpm test
+pnpm install
+pnpm test
+pnpm benchmark
+pnpm benchmark:export
 ```
 
 ## Sample Benchmark Run (n = 100K, Rust)
@@ -41,8 +44,8 @@ _Results for Rust implementation on an Apple M series chip. The crossover thresh
 
 ## How It Works
 
-1. **Phase 1:** Extract dirty values, sort them, write back to original indices
-2. **Phase 2:** Fix each "segment" independently using binary insertion
+1. **Phase 1:** Extract updated values, sort them, write back to original indices.
+2. **Phase 2:** Fix each violation using binary insertion on a constrained range.
 
 The key insight: pre-sorting dirty values creates _segments_ that can be fixed _locally_ and _independently_. See the paper for formal proofs.
 

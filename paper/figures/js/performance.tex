@@ -7,7 +7,7 @@
 \begin{axis}[
     width=\textwidth,
     height=5.5cm,
-    xlabel={Number of updated values ($k$)},
+    xlabel={Percentage of updated values ($k/n$)},
     ylabel={Execution time (\textmu s)},
     xmode=log,
     ymode=log,
@@ -16,7 +16,7 @@
     xmin=1, xmax=100000,
     ymin=5, ymax=100000,
     xtick={1, 10, 100, 1000, 10000, 100000},
-    xticklabels={1, 10, 100, 1K, 10K, 100K},
+    xticklabels={.001\%, .01\%, .1\%, 1\%, 10\%, 100\%},
     legend pos=south east,
     legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
     grid=major,

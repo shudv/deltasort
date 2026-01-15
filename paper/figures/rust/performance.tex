@@ -7,7 +7,7 @@
 \begin{axis}[
     width=\textwidth,
     height=5.5cm,
-    xlabel={Number of updated values ($k$)},
+    xlabel={Percentage of updated values ($k/n$)},
     ylabel={Execution time (\textmu s)},
     xmode=log,
     ymode=log,
@@ -16,7 +16,7 @@
     xmin=1, xmax=100000,
     ymin=5, ymax=100000,
     xtick={1, 10, 100, 1000, 10000, 100000},
-    xticklabels={1, 10, 100, 1K, 10K, 100K},
+    xticklabels={.001\%, .01\%, .1\%, 1\%, 10\%, 100\%},
     legend pos=south east,
     legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
     grid=major,
@@ -83,6 +83,9 @@
 % DeltaSort crossover
 \addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.5pt] 
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
+
+% Vertical line at n=100K to indicate scale of figure (a)
+\addplot[black, dashed, line width=0.6pt, forget plot] coordinates {(100000, 0) (100000, 100)};
 
 \legend{BIS, ESM, \textbf{DeltaSort}}
 \end{axis}

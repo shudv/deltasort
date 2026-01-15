@@ -1,10 +1,20 @@
 //! DeltaSort Benchmark Suite
 //!
-//! Run with: `cargo run --bin benchmark --release`
-//! Export CSV: `cargo run --bin benchmark --release -- --export`
+//! Run with: `cargo run --bin benchmark --release -- [FLAGS]`
+//!
+//! Flags:
+//!   --time       Run execution time benchmark
+//!   --crossover  Run crossover analysis
+//!   --comparator Run comparator count analysis (instrumented)
+//!   --movement   Run movement analysis (instrumented)
+//!   --export     Export results to CSV files
+//!
+//! If no flags are provided, runs all benchmarks.
+
 mod binary_insertion_sort;
 mod data;
 mod extract_sort_merge;
+mod instrumented_deltasort;
 mod statistics;
 
 use crate::binary_insertion_sort::binary_insertion_sort;
@@ -13,8 +23,10 @@ use crate::data::{
     sample_distinct_indices, user_comparator, User,
 };
 use crate::extract_sort_merge::extract_sort_merge;
+use crate::instrumented_deltasort::{delta_sort_instrumented, InstrumentedResult};
 use crate::statistics::{calculate_stats, calculate_stats_u64};
 use deltasort::delta_sort_by;
+use rand::Rng;
 use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Write};
@@ -33,7 +45,7 @@ const BIS_MAX_K: usize = 2000;
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;
 
-/// Delta counts to test
+/// Delta counts to test for time benchmarks
 const DELTA_COUNTS: &[usize] = &[
     1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000,
 ];
@@ -46,24 +58,33 @@ const CROSSOVER_SIZES: &[usize] = &[
     1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000,
 ];
 
+/// Array sizes for movement/comparator analysis
+const ANALYSIS_N_VALUES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
+
+/// k percentages for movement/comparator analysis
+const ANALYSIS_K_FRACTIONS: &[f64] = &[
+    0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2
+];
+
+/// Iterations for analysis
+const ANALYSIS_ITERATIONS: usize = 100;
+
 /// Get number of iterations for a given k value
-/// Small k values need more iterations due to timer resolution
 fn timing_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=5 => BASE_ITERATIONS * 50,   // 1000 iterations for k <= 10
-        6..=10 => BASE_ITERATIONS * 10,  // 1000 iterations for k <= 10
-        11..=50 => BASE_ITERATIONS * 5,  // 500 iterations for k <= 50
-        51..=200 => BASE_ITERATIONS * 2, // 200 iterations for k <= 200
-        _ => BASE_ITERATIONS,            // 100 iterations for large k
+        0..=5 => BASE_ITERATIONS * 50,
+        6..=10 => BASE_ITERATIONS * 10,
+        11..=50 => BASE_ITERATIONS * 5,
+        51..=200 => BASE_ITERATIONS * 2,
+        _ => BASE_ITERATIONS,
     }
 }
 
 /// Get number of comparison iterations for a given k value
-/// Small k values need more iterations due to timer resolution
 fn comparison_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=50 => BASE_ITERATIONS, // 1000 iterations for k <= 10
-        _ => BASE_ITERATIONS / 5,  // 100 iterations for large k
+        0..=50 => BASE_ITERATIONS,
+        _ => BASE_ITERATIONS / 5,
     }
 }
 
@@ -85,7 +106,6 @@ struct BenchmarkResult {
 
 /// Measure timing using non-counting comparator (accurate timing)
 /// Measure comparisons using counting versions (separate runs)
-/// Each iteration generates fresh random mutations for proper variance measurement
 fn run_benchmark<F>(base_users: &[User], k: usize, mut sort_fn: F) -> BenchmarkResult
 where
     F: FnMut(&mut Vec<User>, &HashSet<usize>, fn(&User, &User) -> std::cmp::Ordering),
@@ -95,7 +115,6 @@ where
     let mut iters = timing_iterations_for_k(k);
 
     // Phase 1: Measure timing (without counting overhead)
-    // Each iteration uses fresh random mutations
     let mut times_us = Vec::with_capacity(iters);
     for _ in 0..iters {
         let mut users = base_users.to_vec();
@@ -110,7 +129,7 @@ where
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
-    // Phase 2: Measure comparisons (separate runs with fresh mutations)
+    // Phase 2: Measure comparisons (separate runs)
     iters = comparison_iterations_for_k(k);
     let mut comparisons = Vec::with_capacity(iters);
     for _ in 0..iters {
@@ -146,7 +165,6 @@ where
 // CROSSOVER ANALYSIS
 // ============================================================================
 
-/// Compare algorithm timing against native sort
 fn algorithm_is_faster<F>(base_users: &[User], k: usize, n: usize, mut algo: F) -> bool
 where
     F: FnMut(&mut Vec<User>, &HashSet<usize>),
@@ -165,7 +183,6 @@ where
             dirty_indices.insert(idx);
         }
 
-        // Use non-counting comparator for accurate timing
         let start = Instant::now();
         let mut test_users = users.clone();
         test_users.sort_by(user_comparator);
@@ -180,9 +197,9 @@ where
     algo_time < native_time
 }
 
-/// Compare DeltaSort timing against ESM
-fn deltasort_is_faster_than_esm(base_users: &[User], k: usize, n: usize) -> bool {
+fn deltasort_is_faster_than_esm(base_users: &[User], k: usize, _n: usize) -> bool {
     let mut rng = rand::thread_rng();
+    let n = base_users.len();
 
     let mut esm_time = 0.0;
     let mut ds_time = 0.0;
@@ -228,8 +245,6 @@ fn esm_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
     })
 }
 
-/// Generic crossover finder using binary search
-/// lo_ratio and hi_ratio define the search range as fractions of n (0.0 to 1.0)
 fn find_crossover_generic<F>(n: usize, lo_ratio: f64, hi_ratio: f64, is_faster: F) -> usize
 where
     F: Fn(&[User], usize, usize) -> bool,
@@ -269,7 +284,6 @@ fn find_crossover_esm(n: usize) -> usize {
     find_crossover_generic(n, if n > 5000 { 0.7 } else { 0.6 }, 0.95, esm_is_faster)
 }
 
-/// Find crossover where DeltaSort becomes slower than ESM
 fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
     let base_users = generate_sorted_users(n);
 
@@ -281,7 +295,6 @@ fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
 
     let mut lo: usize = 1;
     let mut hi: usize = n;
-
     let min_range = (n / 1000).min(10);
 
     while lo < hi {
@@ -302,111 +315,107 @@ fn find_crossover_deltasort_vs_esm(n: usize) -> usize {
 }
 
 // ============================================================================
-// SEGMENTATION ANALYSIS (NOT USED)
+// INSTRUMENTED ANALYSIS (MOVEMENT & COMPARATOR)
 // ============================================================================
 
-// Compute segment boundaries for a given array and dirty indices
-//
-// A segment is defined by its violation types:
-// - Trailing segment: starts at 0, contains only L violations (no R in between)
-// - Leading segment: ends at n-1, contains only R violations (no L after)
-// - Intermediate segment: contains R violations followed by L violations
-//
-// Algorithm: Start at 0, run past all R's, when L is found run past all L's
-// keeping track of farthest L encountered. When you hit R or end of array,
-// record segment from start to farthest L. If hit R, it becomes start of next segment.
-//
-// Returns (segment_count, total_segment_size)
-
-/*
-fn compute_segments(arr: &[i32], updated_indices: &HashSet<usize>) -> (usize, usize) {
-    if updated_indices.is_empty() {
-        return (0, 0);
-    }
-
-    let n = arr.len();
-
-    // Sort dirty indices
-    let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
-    dirty.sort_unstable();
-
-    // Create working array after Phase 1 redistribution
-    // (dirty values sorted among themselves and placed back at dirty positions)
-    let mut values: Vec<i32> = dirty.iter().map(|&i| arr[i]).collect();
-    values.sort_unstable();
-
-    let mut work_arr = arr.to_vec();
-    for (i, &idx) in dirty.iter().enumerate() {
-        work_arr[idx] = values[i];
-    }
-
-    // Classify each dirty index as L (left violation) or R (right violation)
-    // L: value is less than its left neighbour (needs to move left)
-    // R: value is greater than its right neighbour (needs to move right)
-    #[derive(Debug, Clone, Copy, PartialEq)]
-    enum ViolationType {
-        L,
-        R,
-    }
-
-    let mut violations: Vec<(usize, ViolationType)> = Vec::new();
-    for &idx in &dirty {
-        let vtype = if idx > 0 && work_arr[idx] < work_arr[idx - 1] {
-            ViolationType::L
-        } else {
-            ViolationType::R
-        };
-        violations.push((idx, vtype));
-    }
-
-    if violations.is_empty() {
-        return (0, 0);
-    }
-
-    // Now detect segments by traversing violations
-    // Segment starts at leftmost index, run past R's, then past L's, recording farthest L
-    let mut segments: Vec<(usize, usize)> = Vec::new();
-    let mut i = 0;
-
-    // If first violation index is not 0, then we can just assumy dummy R, add a 0,R to front of violations array
-    if violations[0].0 != 0 {
-        violations.insert(0, (0, ViolationType::R));
-    }
-
-    // If last violation index is not n-1, then we can just assumy dummy L, add a n-1,L to end of violations array
-    if violations[violations.len() - 1].0 != n - 1 {
-        violations.push((n - 1, ViolationType::L));
-    }
-
-    loop {
-        let seg_start_idx = violations[i].0;
-
-        // Do an R run first
-        while i < violations.len() && violations[i].1 == ViolationType::R {
-            i += 1;
-        }
-
-        // Then do an L run
-        let mut last_l_idx = seg_start_idx; // Initialize to segment start, not i
-        while i < violations.len() && violations[i].1 == ViolationType::L {
-            last_l_idx = violations[i].0;
-            i += 1;
-        }
-
-        segments.push((seg_start_idx, last_l_idx));
-
-        if i >= violations.len() {
-            break;
-        }
-    }
-
-    // Count and sum segment sizes
-    let segment_count = segments.len();
-    let total_size: usize = segments.iter().map(|(l, r)| r - l + 1).sum();
-
-    (segment_count, total_size)
+#[derive(Debug)]
+struct AnalysisResult {
+    n: usize,
+    k: usize,
+    k_percent: f64,
+    // Movement analysis
+    movement_mean: f64,
+    movement_sd: f64,
+    movement_normalized: f64, // movement / (n * sqrt(k))
+    // Segment analysis
+    segments_mean: f64,
+    segments_sd: f64,
+    segments_normalized: f64, // segments / sqrt(k)
+    // Comparator analysis (for DeltaSort)
+    comparisons_mean: f64,
+    comparisons_sd: f64,
+    comparisons_normalized: f64, // comparisons / (k * log(n))
 }
-*/
+
+fn run_analysis(n: usize, k: usize) -> AnalysisResult {
+    let mut rng = rand::thread_rng();
+    let base_arr: Vec<i32> = (0..n as i32).collect();
+
+    let mut movements: Vec<usize> = Vec::with_capacity(ANALYSIS_ITERATIONS);
+    let mut segments: Vec<usize> = Vec::with_capacity(ANALYSIS_ITERATIONS);
+    let mut comparisons: Vec<u64> = Vec::with_capacity(ANALYSIS_ITERATIONS);
+
+    for _ in 0..ANALYSIS_ITERATIONS {
+        let mut arr = base_arr.clone();
+        let indices: Vec<usize> = {
+            let mut idx: Vec<usize> = (0..n).collect();
+            for i in 0..k {
+                let j = rng.gen_range(i..n);
+                idx.swap(i, j);
+            }
+            idx.truncate(k);
+            idx
+        };
+        let mut dirty_indices = HashSet::with_capacity(k);
+
+        for idx in indices {
+            arr[idx] = rng.gen_range(0..n as i32);
+            dirty_indices.insert(idx);
+        }
+
+        let result: InstrumentedResult = delta_sort_instrumented(&mut arr, &dirty_indices, i32::cmp);
+        movements.push(result.movement);
+        segments.push(result.segments);
+
+        // For comparisons, use the counting comparator on User data
+        let base_users = generate_sorted_users(n);
+        let mut users = base_users.clone();
+        let indices: Vec<usize> = {
+            let mut idx: Vec<usize> = (0..n).collect();
+            for i in 0..k {
+                let j = rng.gen_range(i..n);
+                idx.swap(i, j);
+            }
+            idx.truncate(k);
+            idx
+        };
+        let mut dirty_indices = HashSet::with_capacity(k);
+        for idx in indices {
+            users[idx].mutate(&mut rng);
+            dirty_indices.insert(idx);
+        }
+        reset_comparison_count();
+        delta_sort_by(&mut users, &dirty_indices, counting_comparator);
+        comparisons.push(get_comparison_count());
+    }
+
+    let mov_stats = calculate_stats_usize(&movements);
+    let seg_stats = calculate_stats_usize(&segments);
+    let cmp_stats = calculate_stats_u64(&comparisons);
+
+    let k_sqrt = (k as f64).sqrt();
+    let log_n = (n as f64).ln();
+
+    AnalysisResult {
+        n,
+        k,
+        k_percent: (k as f64 / n as f64) * 100.0,
+        movement_mean: mov_stats.mean,
+        movement_sd: mov_stats.sd,
+        movement_normalized: mov_stats.mean / (n as f64 * k_sqrt),
+        segments_mean: seg_stats.mean,
+        segments_sd: seg_stats.sd,
+        segments_normalized: seg_stats.mean / k_sqrt,
+        comparisons_mean: cmp_stats.mean,
+        comparisons_sd: cmp_stats.sd,
+        comparisons_normalized: cmp_stats.mean / (k as f64 * log_n),
+    }
+}
+
+fn calculate_stats_usize(values: &[usize]) -> statistics::Stats {
+    let floats: Vec<f64> = values.iter().map(|&x| x as f64).collect();
+    calculate_stats(&floats)
+}
 
 // ============================================================================
 // RESULTS STORAGE
@@ -432,7 +441,6 @@ struct BenchmarkResults {
     deltasort: Vec<AlgorithmResult>,
 }
 
-/// Extended crossover results for all algorithms vs native
 struct CrossoverResultsAll {
     n: usize,
     bis_k_c: usize,
@@ -443,7 +451,6 @@ struct CrossoverResultsAll {
     deltasort_ratio: f64,
 }
 
-/// Crossover result for DeltaSort vs ESM
 struct CrossoverResultDeltaVsEsm {
     n: usize,
     k_c: usize,
@@ -451,7 +458,7 @@ struct CrossoverResultDeltaVsEsm {
 }
 
 // ============================================================================
-// OUTPUT
+// OUTPUT HELPERS
 // ============================================================================
 
 fn format_number(n: usize) -> String {
@@ -464,7 +471,6 @@ fn format_number(n: usize) -> String {
     }
 }
 
-/// Format value ± ci% with consistent total width
 fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.1}", value);
     let ci_percent = if value > 0.0 {
@@ -476,7 +482,6 @@ fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     format!("{:>width$}", content, width = total_width)
 }
 
-/// Format integer value ± ci% with consistent total width  
 fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     let val_str = format!("{:.0}", value);
     let ci_percent = if value > 0.0 {
@@ -486,6 +491,111 @@ fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     };
     let content = format!("{} ±{:.1}%", val_str, ci_percent);
     format!("{:>width$}", content, width = total_width)
+}
+
+// ============================================================================
+// EXECUTION TIME BENCHMARK
+// ============================================================================
+
+fn run_time_benchmark(export: bool) {
+    println!();
+    println!("Execution Time Benchmark");
+    println!("========================");
+
+    let base_users = generate_sorted_users(N);
+
+    // Warmup
+    for _ in 0..5 {
+        let mut users = base_users.clone();
+        users.sort_by(user_comparator);
+    }
+
+    let mut results = BenchmarkResults {
+        native: Vec::new(),
+        bis: Vec::new(),
+        esm: Vec::new(),
+        deltasort: Vec::new(),
+    };
+
+    for &k in DELTA_COUNTS {
+        print!("  k={:>5}...", k);
+        io::stdout().flush().unwrap();
+
+        let native = run_benchmark(&base_users, k, |arr, _indices, cmp| {
+            arr.sort_by(cmp);
+        });
+        results.native.push(AlgorithmResult {
+            k,
+            iterations: native.iterations,
+            time_us: native.time_us,
+            time_sd: native.time_sd,
+            time_ci: native.time_ci,
+            time_cv: native.time_cv,
+            comparisons: native.comparisons,
+            comparisons_sd: native.comparisons_sd,
+            comparisons_ci: native.comparisons_ci,
+            comparisons_cv: native.comparisons_cv,
+        });
+
+        if k <= BIS_MAX_K {
+            let bis = run_benchmark(&base_users, k, binary_insertion_sort);
+            results.bis.push(Some(AlgorithmResult {
+                k,
+                iterations: bis.iterations,
+                time_us: bis.time_us,
+                time_sd: bis.time_sd,
+                time_ci: bis.time_ci,
+                time_cv: bis.time_cv,
+                comparisons: bis.comparisons,
+                comparisons_sd: bis.comparisons_sd,
+                comparisons_ci: bis.comparisons_ci,
+                comparisons_cv: bis.comparisons_cv,
+            }));
+        } else {
+            results.bis.push(None);
+        }
+
+        let esm = run_benchmark(&base_users, k, extract_sort_merge);
+        results.esm.push(AlgorithmResult {
+            k,
+            iterations: esm.iterations,
+            time_us: esm.time_us,
+            time_sd: esm.time_sd,
+            time_ci: esm.time_ci,
+            time_cv: esm.time_cv,
+            comparisons: esm.comparisons,
+            comparisons_sd: esm.comparisons_sd,
+            comparisons_ci: esm.comparisons_ci,
+            comparisons_cv: esm.comparisons_cv,
+        });
+
+        let ds = run_benchmark(&base_users, k, |arr, indices, cmp| {
+            delta_sort_by(arr.as_mut_slice(), indices, cmp)
+        });
+        results.deltasort.push(AlgorithmResult {
+            k,
+            iterations: ds.iterations,
+            time_us: ds.time_us,
+            time_sd: ds.time_sd,
+            time_ci: ds.time_ci,
+            time_cv: ds.time_cv,
+            comparisons: ds.comparisons,
+            comparisons_sd: ds.comparisons_sd,
+            comparisons_ci: ds.comparisons_ci,
+            comparisons_cv: ds.comparisons_cv,
+        });
+
+        println!(" done");
+    }
+
+    print_execution_time_table(&results);
+
+    if export {
+        let base_path = "../paper/figures/rust";
+        fs::create_dir_all(base_path).ok();
+        export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
+        export_metadata_csv(&results, &format!("{}/benchmark_metadata.csv", base_path));
+    }
 }
 
 fn print_execution_time_table(results: &BenchmarkResults) {
@@ -504,58 +614,166 @@ fn print_execution_time_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_with_ci(
-                results.native[i].time_us,
-                results.native[i].time_ci,
-                COL_WIDTH
-            ),
+            format_with_ci(results.native[i].time_us, results.native[i].time_ci, COL_WIDTH),
             bis_str,
             format_with_ci(results.esm[i].time_us, results.esm[i].time_ci, COL_WIDTH),
-            format_with_ci(
-                results.deltasort[i].time_us,
-                results.deltasort[i].time_ci,
-                COL_WIDTH
-            ),
+            format_with_ci(results.deltasort[i].time_us, results.deltasort[i].time_ci, COL_WIDTH),
         );
     }
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
 }
 
-fn print_comparator_count_table(results: &BenchmarkResults) {
-    const COL_WIDTH: usize = 15;
-
-    println!();
-    println!("Comparator Invocations - n={}", format_number(N));
-    println!("┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐");
-    println!("│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │");
-    println!("├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤");
+fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
+    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
-        let bis_str = match &results.bis[i] {
-            Some(bis) => format_int_with_ci(bis.comparisons, bis.comparisons_ci, COL_WIDTH),
-            None => format!("{:>width$}", "-", width = COL_WIDTH),
+        let bis_cols = match &results.bis[i] {
+            Some(bis) => format!("{:.1},{:.1},{:.1},{:.1}", bis.time_us, bis.time_sd, bis.time_ci, bis.time_cv),
+            None => ",,,".to_string(),
         };
-        println!(
-            "│ {:>6} │ {} │ {} │ {} │ {} │",
+        csv.push_str(&format!(
+            "{},{},{:.1},{:.1},{:.1},{:.1},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
             results.native[i].k,
-            format_int_with_ci(
-                results.native[i].comparisons,
-                results.native[i].comparisons_ci,
-                COL_WIDTH
-            ),
-            bis_str,
-            format_int_with_ci(
-                results.esm[i].comparisons,
-                results.esm[i].comparisons_ci,
-                COL_WIDTH
-            ),
-            format_int_with_ci(
-                results.deltasort[i].comparisons,
-                results.deltasort[i].comparisons_ci,
-                COL_WIDTH
-            ),
+            results.native[i].iterations,
+            results.native[i].time_us,
+            results.native[i].time_sd,
+            results.native[i].time_ci,
+            results.native[i].time_cv,
+            bis_cols,
+            results.esm[i].time_us,
+            results.esm[i].time_sd,
+            results.esm[i].time_ci,
+            results.esm[i].time_cv,
+            results.deltasort[i].time_us,
+            results.deltasort[i].time_sd,
+            results.deltasort[i].time_ci,
+            results.deltasort[i].time_cv,
+        ));
+    }
+    fs::write(path, csv).expect("Failed to write execution-time.csv");
+    println!("Exported: {}", path);
+}
+
+fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+
+    let os = std::env::consts::OS;
+    let arch = std::env::consts::ARCH;
+
+    let machine = if os == "macos" {
+        Command::new("sysctl")
+            .args(["-n", "machdep.cpu.brand_string"])
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| format!("{}/{}", os, arch))
+    } else {
+        format!("{}/{}", os, arch)
+    };
+
+    let mut max_ci_percent: f64 = 0.0;
+    for r in &results.native {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in results.bis.iter().flatten() {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in &results.esm {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+    for r in &results.deltasort {
+        if r.time_us > 0.0 {
+            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+        }
+    }
+
+    let csv = format!(
+        "key,value\ntimestamp,{}\nmachine,{}\nn,{}\nmax_ci,{:.2}\n",
+        timestamp, machine, N, max_ci_percent
+    );
+    fs::write(path, csv).expect("Failed to write metadata.csv");
+    println!("Exported: {}", path);
+}
+
+// ============================================================================
+// CROSSOVER BENCHMARK
+// ============================================================================
+
+fn run_crossover_benchmark(export: bool) {
+    println!();
+    println!("Crossover Benchmark");
+    println!("===================");
+
+    // --- Crossover Analysis (All Algorithms vs Native) ---
+    println!();
+    println!("Running crossover analysis: All algorithms vs Native...");
+    let mut crossover_all: Vec<CrossoverResultsAll> = Vec::new();
+
+    for &size in CROSSOVER_SIZES {
+        print!("  n={:>10}...", format_number(size));
+        io::stdout().flush().unwrap();
+
+        let bis_k_c = find_crossover_bis(size);
+        let esm_k_c = find_crossover_esm(size);
+        let ds_k_c = find_crossover(size);
+
+        crossover_all.push(CrossoverResultsAll {
+            n: size,
+            bis_k_c,
+            bis_ratio: (bis_k_c as f64 / size as f64) * 100.0,
+            esm_k_c,
+            esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
+            deltasort_k_c: ds_k_c,
+            deltasort_ratio: (ds_k_c as f64 / size as f64) * 100.0,
+        });
+        println!(
+            " BIS={:.1}%, ESM={:.1}%, DS={:.1}%",
+            (bis_k_c as f64 / size as f64) * 100.0,
+            (esm_k_c as f64 / size as f64) * 100.0,
+            (ds_k_c as f64 / size as f64) * 100.0
         );
     }
-    println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
+
+    print_crossover_table_all(&crossover_all);
+
+    // --- Crossover Analysis (DeltaSort vs ESM) ---
+    println!();
+    println!("Running crossover analysis: DeltaSort vs ESM...");
+    let mut crossover_ds_vs_esm: Vec<CrossoverResultDeltaVsEsm> = Vec::new();
+
+    for &size in CROSSOVER_SIZES {
+        print!("  n={:>10}...", format_number(size));
+        io::stdout().flush().unwrap();
+        let k_c = find_crossover_deltasort_vs_esm(size);
+        let crossover_ratio = (k_c as f64 / size as f64) * 100.0;
+        crossover_ds_vs_esm.push(CrossoverResultDeltaVsEsm {
+            n: size,
+            k_c,
+            crossover_ratio,
+        });
+        println!(" k_c={} ({:.1}%)", k_c, crossover_ratio);
+    }
+
+    print_crossover_table_ds_vs_esm(&crossover_ds_vs_esm);
+
+    if export {
+        let base_path = "../paper/figures/rust";
+        fs::create_dir_all(base_path).ok();
+        export_crossover_all_csv(&crossover_all, &format!("{}/crossover-all.csv", base_path));
+        export_crossover_ds_vs_esm_csv(&crossover_ds_vs_esm, &format!("{}/crossover-ds-vs-esm.csv", base_path));
+    }
 }
 
 fn print_crossover_table_all(results: &[CrossoverResultsAll]) {
@@ -596,76 +814,6 @@ fn print_crossover_table_ds_vs_esm(results: &[CrossoverResultDeltaVsEsm]) {
     println!("└────────────┴────────────┴────────────┘");
 }
 
-// ============================================================================
-// CSV EXPORT (with full statistics: mean, SD, CI, CV, iterations)
-// ============================================================================
-
-fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
-    for i in 0..results.native.len() {
-        let bis_cols = match &results.bis[i] {
-            Some(bis) => format!(
-                "{:.1},{:.1},{:.1},{:.1}",
-                bis.time_us, bis.time_sd, bis.time_ci, bis.time_cv
-            ),
-            None => ",,,".to_string(),
-        };
-        csv.push_str(&format!(
-            "{},{},{:.1},{:.1},{:.1},{:.1},{},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1},{:.1}\n",
-            results.native[i].k,
-            results.native[i].iterations,
-            results.native[i].time_us,
-            results.native[i].time_sd,
-            results.native[i].time_ci,
-            results.native[i].time_cv,
-            bis_cols,
-            results.esm[i].time_us,
-            results.esm[i].time_sd,
-            results.esm[i].time_ci,
-            results.esm[i].time_cv,
-            results.deltasort[i].time_us,
-            results.deltasort[i].time_sd,
-            results.deltasort[i].time_ci,
-            results.deltasort[i].time_cv,
-        ));
-    }
-    fs::write(path, csv).expect("Failed to write execution-time.csv");
-    println!("Exported: {}", path);
-}
-
-fn export_comparator_count_csv(results: &BenchmarkResults, path: &str) {
-    let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
-    for i in 0..results.native.len() {
-        let bis_cols = match &results.bis[i] {
-            Some(bis) => format!(
-                "{:.0},{:.0},{:.0},{:.1}",
-                bis.comparisons, bis.comparisons_sd, bis.comparisons_ci, bis.comparisons_cv
-            ),
-            None => ",,,".to_string(),
-        };
-        csv.push_str(&format!(
-            "{},{},{:.0},{:.0},{:.0},{:.1},{},{:.0},{:.0},{:.0},{:.1},{:.0},{:.0},{:.0},{:.1}\n",
-            results.native[i].k,
-            results.native[i].iterations,
-            results.native[i].comparisons,
-            results.native[i].comparisons_sd,
-            results.native[i].comparisons_ci,
-            results.native[i].comparisons_cv,
-            bis_cols,
-            results.esm[i].comparisons,
-            results.esm[i].comparisons_sd,
-            results.esm[i].comparisons_ci,
-            results.esm[i].comparisons_cv,
-            results.deltasort[i].comparisons,
-            results.deltasort[i].comparisons_sd,
-            results.deltasort[i].comparisons_ci,
-            results.deltasort[i].comparisons_cv,
-        ));
-    }
-    fs::write(path, csv).expect("Failed to write comparator-count.csv");
-    println!("Exported: {}", path);
-}
-
 fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
     let mut csv = String::from("n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n");
     for r in results {
@@ -687,62 +835,162 @@ fn export_crossover_ds_vs_esm_csv(results: &[CrossoverResultDeltaVsEsm], path: &
     println!("Exported: {}", path);
 }
 
-fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
-    use std::process::Command;
-    use std::time::{SystemTime, UNIX_EPOCH};
+// ============================================================================
+// COMPARATOR COUNT ANALYSIS
+// ============================================================================
 
-    // Get timestamp
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0);
+fn run_comparator_analysis(export: bool) {
+    println!();
+    println!("Comparator Count Analysis");
+    println!("=========================");
+    println!("Normalized by k·log(n) to validate O(k·log(n)) complexity");
+    println!();
 
-    // Get OS info
-    let os = std::env::consts::OS;
-    let arch = std::env::consts::ARCH;
+    let mut results: Vec<AnalysisResult> = Vec::new();
 
-    // Try to get more detailed system info on macOS
-    let machine = if os == "macos" {
-        Command::new("sysctl")
-            .args(["-n", "machdep.cpu.brand_string"])
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|| format!("{}/{}", os, arch))
-    } else {
-        format!("{}/{}", os, arch)
-    };
-
-    // Compute max CI as percentage of mean across all timing measurements
-    // This represents our least confident measurement (can be narrowed with more iterations)
-    let mut max_ci_percent: f64 = 0.0;
-    for r in &results.native {
-        if r.time_us > 0.0 {
-            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
-        }
-    }
-    for r in results.bis.iter().flatten() {
-        if r.time_us > 0.0 {
-            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
-        }
-    }
-    for r in &results.esm {
-        if r.time_us > 0.0 {
-            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
-        }
-    }
-    for r in &results.deltasort {
-        if r.time_us > 0.0 {
-            max_ci_percent = max_ci_percent.max((r.time_ci / r.time_us) * 100.0);
+    for &n in ANALYSIS_N_VALUES {
+        for &k_pct in ANALYSIS_K_FRACTIONS {
+            let k = ((n as f64) * k_pct).round() as usize;
+            if k < 1 {
+                continue;
+            }
+            print!("  n={:>7}, k={:>7} ({:>5.1}%)...", format_number(n), format_number(k), k_pct * 100.0);
+            io::stdout().flush().unwrap();
+            let result = run_analysis(n, k);
+            println!(" cmp={:.0}, norm={:.4}", result.comparisons_mean, result.comparisons_normalized);
+            results.push(result);
         }
     }
 
-    let csv = format!(
-        "key,value\ntimestamp,{}\nmachine,{}\nn,{}\nmax_ci,{:.2}\n",
-        timestamp, machine, N, max_ci_percent
-    );
-    fs::write(path, csv).expect("Failed to write metadata.csv");
+    print_comparator_table(&results);
+
+    if export {
+        let base_path = "../figures";
+        fs::create_dir_all(base_path).ok();
+        export_comparator_csv(&results, &format!("{}/comparator-analysis.csv", base_path));
+    }
+}
+
+fn print_comparator_table(results: &[AnalysisResult]) {
+    println!();
+    println!("Comparator Count (normalized by k·log(n))");
+    println!("┌────────────┬────────────┬──────────┬─────────────────┬────────────┐");
+    println!("│     n      │     k      │   k %    │   Comparisons   │ Normalized │");
+    println!("├────────────┼────────────┼──────────┼─────────────────┼────────────┤");
+    for r in results {
+        println!(
+            "│ {:>10} │ {:>10} │ {:>7.2}% │ {:>15.0} │ {:>10.4} │",
+            format_number(r.n),
+            format_number(r.k),
+            r.k_percent,
+            r.comparisons_mean,
+            r.comparisons_normalized
+        );
+    }
+    println!("└────────────┴────────────┴──────────┴─────────────────┴────────────┘");
+}
+
+fn export_comparator_csv(results: &[AnalysisResult], path: &str) {
+    let mut csv = String::from("n,k,k_percent,comparisons,comparisons_sd,normalized\n");
+    for r in results {
+        csv.push_str(&format!(
+            "{},{},{:.4},{:.0},{:.0},{:.6}\n",
+            r.n, r.k, r.k_percent, r.comparisons_mean, r.comparisons_sd, r.comparisons_normalized
+        ));
+    }
+    fs::write(path, csv).expect("Failed to write comparator-analysis.csv");
+    println!("Exported: {}", path);
+}
+
+// ============================================================================
+// MOVEMENT ANALYSIS
+// ============================================================================
+
+fn run_movement_analysis(export: bool) {
+    println!();
+    println!("Movement Analysis");
+    println!("=================");
+    println!("Normalized by n·√k to validate O(n·√k) complexity");
+    println!();
+
+    let mut results: Vec<AnalysisResult> = Vec::new();
+
+    for &n in ANALYSIS_N_VALUES {
+        for &k_pct in ANALYSIS_K_FRACTIONS {
+            let k = ((n as f64) * k_pct).round() as usize;
+            if k < 1 {
+                continue;
+            }
+            print!("  n={:>7}, k={:>7} ({:>5.1}%)...", format_number(n), format_number(k), k_pct * 100.0);
+            io::stdout().flush().unwrap();
+            let result = run_analysis(n, k);
+            println!(
+                " mov={:.0}, seg={:.1}, mov_norm={:.4}, seg_norm={:.4}",
+                result.movement_mean, result.segments_mean, result.movement_normalized, result.segments_normalized
+            );
+            results.push(result);
+        }
+    }
+
+    print_movement_table(&results);
+    print_segments_table(&results);
+
+    if export {
+        let base_path = "../figures";
+        fs::create_dir_all(base_path).ok();
+        export_movement_csv(&results, &format!("{}/movement-analysis.csv", base_path));
+    }
+}
+
+fn print_movement_table(results: &[AnalysisResult]) {
+    println!();
+    println!("Movement (normalized by n·√k)");
+    println!("┌────────────┬────────────┬──────────┬─────────────────┬────────────┐");
+    println!("│     n      │     k      │   k %    │    Movement     │ Normalized │");
+    println!("├────────────┼────────────┼──────────┼─────────────────┼────────────┤");
+    for r in results {
+        println!(
+            "│ {:>10} │ {:>10} │ {:>7.2}% │ {:>15.0} │ {:>10.4} │",
+            format_number(r.n),
+            format_number(r.k),
+            r.k_percent,
+            r.movement_mean,
+            r.movement_normalized
+        );
+    }
+    println!("└────────────┴────────────┴──────────┴─────────────────┴────────────┘");
+}
+
+fn print_segments_table(results: &[AnalysisResult]) {
+    println!();
+    println!("Segments (normalized by √k)");
+    println!("┌────────────┬────────────┬──────────┬─────────────────┬────────────┐");
+    println!("│     n      │     k      │   k %    │    Segments     │ Normalized │");
+    println!("├────────────┼────────────┼──────────┼─────────────────┼────────────┤");
+    for r in results {
+        println!(
+            "│ {:>10} │ {:>10} │ {:>7.2}% │ {:>15.1} │ {:>10.4} │",
+            format_number(r.n),
+            format_number(r.k),
+            r.k_percent,
+            r.segments_mean,
+            r.segments_normalized
+        );
+    }
+    println!("└────────────┴────────────┴──────────┴─────────────────┴────────────┘");
+}
+
+fn export_movement_csv(results: &[AnalysisResult], path: &str) {
+    let mut csv = String::from("n,k,k_percent,movement,movement_sd,movement_normalized,segments,segments_sd,segments_normalized\n");
+    for r in results {
+        csv.push_str(&format!(
+            "{},{},{:.4},{:.0},{:.0},{:.6},{:.1},{:.1},{:.6}\n",
+            r.n, r.k, r.k_percent,
+            r.movement_mean, r.movement_sd, r.movement_normalized,
+            r.segments_mean, r.segments_sd, r.segments_normalized
+        ));
+    }
+    fs::write(path, csv).expect("Failed to write movement-analysis.csv");
     println!("Exported: {}", path);
 }
 
@@ -752,181 +1000,39 @@ fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+
+    let run_time = args.iter().any(|a| a == "--time");
+    let run_crossover = args.iter().any(|a| a == "--crossover");
+    let run_comparator = args.iter().any(|a| a == "--comparator");
+    let run_movement = args.iter().any(|a| a == "--movement");
     let export = args.iter().any(|a| a == "--export");
+
+    // If no specific flags, run all
+    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement;
 
     println!();
     println!("DeltaSort Benchmark");
     println!("===================");
 
-    // Warmup
-    let base_users = generate_sorted_users(N);
-    for _ in 0..5 {
-        let mut users = base_users.clone();
-        users.sort_by(user_comparator);
+    if run_all || run_time {
+        run_time_benchmark(export);
     }
 
-    // --- Combined Execution Time & Comparator Count ---
-    println!();
-    println!("Running benchmarks (time + comparisons)...");
-    let mut results = BenchmarkResults {
-        native: Vec::new(),
-        bis: Vec::new(),
-        esm: Vec::new(),
-        deltasort: Vec::new(),
-    };
-
-    for &k in DELTA_COUNTS {
-        print!("  k={:>5}...", k);
-        io::stdout().flush().unwrap();
-
-        let native = run_benchmark(&base_users, k, |arr, _indices, cmp| {
-            arr.sort_by(cmp);
-        });
-        results.native.push(AlgorithmResult {
-            k,
-            iterations: native.iterations,
-            time_us: native.time_us,
-            time_sd: native.time_sd,
-            time_ci: native.time_ci,
-            time_cv: native.time_cv,
-            comparisons: native.comparisons,
-            comparisons_sd: native.comparisons_sd,
-            comparisons_ci: native.comparisons_ci,
-            comparisons_cv: native.comparisons_cv,
-        });
-
-        // Skip BIS for large k (O(kn) movement cost makes it too slow)
-        if k <= BIS_MAX_K {
-            let bis = run_benchmark(&base_users, k, binary_insertion_sort);
-            results.bis.push(Some(AlgorithmResult {
-                k,
-                iterations: bis.iterations,
-                time_us: bis.time_us,
-                time_sd: bis.time_sd,
-                time_ci: bis.time_ci,
-                time_cv: bis.time_cv,
-                comparisons: bis.comparisons,
-                comparisons_sd: bis.comparisons_sd,
-                comparisons_ci: bis.comparisons_ci,
-                comparisons_cv: bis.comparisons_cv,
-            }));
-        } else {
-            results.bis.push(None);
-        }
-
-        let esm = run_benchmark(&base_users, k, extract_sort_merge);
-        results.esm.push(AlgorithmResult {
-            k,
-            iterations: esm.iterations,
-            time_us: esm.time_us,
-            time_sd: esm.time_sd,
-            time_ci: esm.time_ci,
-            time_cv: esm.time_cv,
-            comparisons: esm.comparisons,
-            comparisons_sd: esm.comparisons_sd,
-            comparisons_ci: esm.comparisons_ci,
-            comparisons_cv: esm.comparisons_cv,
-        });
-
-        let ds = run_benchmark(&base_users, k, |arr, indices, cmp| {
-            delta_sort_by(arr.as_mut_slice(), indices, cmp)
-        });
-
-        results.deltasort.push(AlgorithmResult {
-            k,
-            iterations: ds.iterations,
-            time_us: ds.time_us,
-            time_sd: ds.time_sd,
-            time_ci: ds.time_ci,
-            time_cv: ds.time_cv,
-            comparisons: ds.comparisons,
-            comparisons_sd: ds.comparisons_sd,
-            comparisons_ci: ds.comparisons_ci,
-            comparisons_cv: ds.comparisons_cv,
-        });
-
-        println!(" done");
+    if run_all || run_crossover {
+        run_crossover_benchmark(export);
     }
 
-    print_execution_time_table(&results);
-    print_comparator_count_table(&results);
-
-    // --- Crossover Analysis (All Algorithms vs Native) ---
-    println!();
-    println!("Running crossover analysis: All algorithms vs Native...");
-    let mut crossover_all_results: Vec<CrossoverResultsAll> = Vec::new();
-
-    for &size in CROSSOVER_SIZES {
-        print!("  n={:>10}...", format_number(size));
-        io::stdout().flush().unwrap();
-
-        let bis_k_c = find_crossover_bis(size);
-        let esm_k_c = find_crossover_esm(size);
-        let ds_k_c = find_crossover(size);
-
-        crossover_all_results.push(CrossoverResultsAll {
-            n: size,
-            bis_k_c,
-            bis_ratio: (bis_k_c as f64 / size as f64) * 100.0,
-            esm_k_c,
-            esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
-            deltasort_k_c: ds_k_c,
-            deltasort_ratio: (ds_k_c as f64 / size as f64) * 100.0,
-        });
-        println!(
-            " BIS={:.1}%, ESM={:.1}%, DS={:.1}%",
-            (bis_k_c as f64 / size as f64) * 100.0,
-            (esm_k_c as f64 / size as f64) * 100.0,
-            (ds_k_c as f64 / size as f64) * 100.0
-        );
+    if run_all || run_comparator {
+        run_comparator_analysis(export);
     }
 
-    print_crossover_table_all(&crossover_all_results);
-
-    // --- Crossover Analysis (DeltaSort vs ESM) ---
-    println!();
-    println!("Running crossover analysis: DeltaSort vs ESM...");
-    let mut crossover_ds_vs_esm_results: Vec<CrossoverResultDeltaVsEsm> = Vec::new();
-
-    for &size in CROSSOVER_SIZES {
-        print!("  n={:>10}...", format_number(size));
-        io::stdout().flush().unwrap();
-        let k_c = find_crossover_deltasort_vs_esm(size);
-        let crossover_ratio = (k_c as f64 / size as f64) * 100.0;
-        crossover_ds_vs_esm_results.push(CrossoverResultDeltaVsEsm {
-            n: size,
-            k_c,
-            crossover_ratio,
-        });
-        println!(" k_c={} ({:.1}%)", k_c, crossover_ratio);
-    }
-
-    print_crossover_table_ds_vs_esm(&crossover_ds_vs_esm_results);
-
-    // --- Export CSVs ---
-    if export {
-        println!();
-        println!("Exporting CSV files...");
-        let base_path = "../paper/figures/rust";
-        let figures_path = "../paper/figures";
-        fs::create_dir_all(base_path).ok();
-        fs::create_dir_all(figures_path).ok();
-        export_execution_time_csv(&results, &format!("{}/execution-time.csv", base_path));
-        export_comparator_count_csv(&results, &format!("{}/comparator-count.csv", base_path));
-        export_crossover_all_csv(
-            &crossover_all_results,
-            &format!("{}/crossover-all.csv", base_path),
-        );
-        export_crossover_ds_vs_esm_csv(
-            &crossover_ds_vs_esm_results,
-            &format!("{}/crossover-ds-vs-esm.csv", base_path),
-        );
-        export_metadata_csv(&results, &format!("{}/benchmark_metadata.csv", base_path));
+    if run_all || run_movement {
+        run_movement_analysis(export);
     }
 
     println!();
     println!("Done!");
     if !export {
-        println!("Run with --export to write CSV files to paper/figures/rust/");
+        println!("Run with --export to write CSV files");
     }
 }

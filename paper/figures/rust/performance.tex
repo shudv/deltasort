@@ -1,0 +1,93 @@
+% Figure: Combined Rust performance (execution time + crossover)
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.5cm,
+    xlabel={Number of updated values ($k$)},
+    ylabel={Execution time (\textmu s)},
+    xmode=log,
+    ymode=log,
+    log basis x=10,
+    log basis y=10,
+    xmin=1, xmax=100000,
+    ymin=5, ymax=100000,
+    xtick={1, 10, 100, 1000, 10000, 100000},
+    xticklabels={1, 10, 100, 1K, 10K, 100K},
+    legend pos=south east,
+    legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=major,
+    major grid style={line width=0.3pt, draw=gray!30},
+    tick label style={font=\scriptsize},
+    label style={font=\small},
+    title={\textbf{(a) Execution Time ($n=100$K)}},
+]
+
+% FullSort
+\addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
+    table[col sep=comma, x=k, y=native] {\rootdir/figures/rust/execution-time.csv};
+
+% Binary Insertion
+\addplot[color=orange!80, mark=triangle*, thick, mark size=1.5pt] 
+    table[col sep=comma, x=k, y=bis] {\rootdir/figures/rust/execution-time.csv};
+
+% Extract-Sort-Merge
+\addplot[color=purple!70, mark=diamond*, thick, mark size=1.5pt] 
+    table[col sep=comma, x=k, y=esm] {\rootdir/figures/rust/execution-time.csv};
+
+% DeltaSort (emphasized)
+\addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.2pt] 
+    table[col sep=comma, x=k, y=deltasort] {\rootdir/figures/rust/execution-time.csv};
+
+\legend{FullSort, BIS, ESM, \textbf{DS}}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}%
+\hfill%
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.5cm,
+    xlabel={Array size ($n$)},
+    ylabel={Crossover $k_c / n$ (\%)},
+    xmode=log,
+    log basis x=10,
+    xmin=1000, xmax=1000000,
+    ymin=0, ymax=100,
+    ytick={0, 20, 40, 60, 80, 100},
+    xtick={1000, 10000, 100000, 1000000},
+    xticklabels={1K, 10K, 100K, 1M},
+    legend pos=north east,
+    legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
+    grid=both,
+    grid style={line width=0.1pt, draw=gray!20},
+    major grid style={line width=0.2pt, draw=gray!40},
+    tick label style={font=\scriptsize},
+    label style={font=\small},
+    title={\textbf{(b) Crossover Threshold}},
+]
+
+% BIS crossover
+\addplot[color=orange!80, mark=triangle*, thick, mark size=2pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=bis] {\rootdir/figures/rust/crossover-all.csv};
+
+% ESM crossover
+\addplot[color=purple!70, mark=diamond*, thick, mark size=2pt, line width=1.2pt] 
+    table[col sep=comma, x=n, y=esm] {\rootdir/figures/rust/crossover-all.csv};
+
+% DeltaSort crossover
+\addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.5pt] 
+    table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
+
+\legend{BIS, ESM, \textbf{DS}}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. (b)~Crossover thresholds ($k_c/n$) where each algorithm loses to FullSort. DeltaSort occupies the middle ground: faster than BIS for large $k$, uses less space than ESM.}
+\label{fig:rust-performance}
+\end{figure}

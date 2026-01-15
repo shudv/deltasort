@@ -24,11 +24,11 @@ All benchmarks \footnote{Along with benchmarks, we also validated correctness by
 Several observations emerge from the execution-time profile:
 
 \begin{enumerate}
-  \item The \textbf{asymptotic behavior for each algorithm aligns with theoretical expectations}. BIS exhibits steep growth consistent with its $O(kn)$ movement cost, quickly becoming impractical as $k$ increases. ESM is relatively flat for small $k$, where linear merge cost dominates and is largely independent of the number of updates. DeltaSort exhibits intermediate growth because its execution time scales linearly in $k$ (the $O(k \log n)$ term). ESM and DeltaSort both converge towards FullSort's performance as $k$ approaches $n$, which is expected as they internally use the FullSort routine for sorting all the $k$ updated values.
+  \item The \textbf{asymptotic behavior for each algorithm aligns with theoretical expectations}. BIS exhibits steep growth consistent with its $O(kn)$ movement cost, quickly becoming impractical as $k$ increases. ESM is relatively flat for small $k$, where linear merge cost dominates and is largely independent of the number of updates. DeltaSort exhibits intermediate growth.
 
   \item \textbf{DeltaSort is the fastest baseline for} $k \lesssim 1\%$. It uses more auxiliary space than BIS ($O(k)$ vs $O(1)$) but substantially less than ESM ($O(k)$ vs $O(n)$). Even though $1\%$ is small in absolute terms, it aligns very well with practical workloads where updates are usually a small percentage of the full dataset.
 
-  \item ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 80\%$). However, its performance comes at the cost of $O(n)$ auxiliary space. \textbf{DeltaSort provides a more space-efficient alternative to ESM for} $k \lesssim 20\%$, while still beating FullSort.
+  \item ESM is the fastest baseline across most of the intermediate range ($1\% \lesssim k \lesssim 70\%$). However, its performance comes at the cost of $O(n)$ space. \textbf{DeltaSort provides a space-efficient alternative to ESM for} $k \lesssim 20\%$, while still beating FullSort by $\sim 2 \times$.
 \end{enumerate}
 
 These observations suggest that, much like hybrid blind sorting algorithms (e.g., TimSort~\cite{timsort}, DriftSort~\cite{driftsort}), it would be beneficial to construct \emph{hybrid adaptive update-aware} strategies. As an example, for the Rust implementation evaluated here, a hybrid strategy for an environment that requires fast execution without excessive space usage could be:
@@ -49,7 +49,7 @@ The optimal crossover thresholds for a scenario would depend on several factors 
 
   \item DeltaSort exhibits an \emph{intermediate threshold}, aligning with its $O(k \log n)$ time complexity, which interpolates between the two extremes.
   
-  \item Thresholds are largely stable across different scales (DeltaSort $20--35\%$, ESM $60--80\%$), although we observe a decline for very large arrays ($n \gtrsim 200$K). This may be an artifact of practical limits on devices. More study is needed to understand this behavior in detail.
+  \item Thresholds are largely stable across different scales (DeltaSort 20--40\%, ESM 60--80\%), although we observe a decline for very large arrays ($n \gtrsim 200$K). More study is needed to understand this behavior in detail.
 \end{enumerate}
 
 The shows that DeltaSort occupies a well-defined ground among update-aware algorithms. It supports much larger update batches than BIS while requiring much less auxiliary space than ESM, making it a compelling choice where both time and space constraints matter.

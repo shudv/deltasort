@@ -128,30 +128,30 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \begin{proof}
 After Phase~1, we have two sorted sequences of $k$ elements each:
 \begin{itemize}
-  \item \textbf{Indices:} The $k$ updated positions $I_1 < I_2 < \cdots < I_k$, sorted.
-  \item \textbf{Values:} The $k$ updated values $V_1 \le V_2 \le \cdots \le V_k$, sorted.
+  \item \textbf{Indices:} The $k$ updated positions $i_1 < i_2 < \cdots < i_k$, sorted.
+  \item \textbf{Values:} The $k$ updated values $v_1 \le v_2 \le \cdots \le v_k$, sorted.
 \end{itemize}
-Phase~1 pairs these by rank: the $j$-th smallest value $V_j$ is placed at the $j$-th smallest index $I_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
+Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
 
-Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $V_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $T_j = V_j \cdot n / M$. Since $V_j$ is uniform over $[0, M)$, the target position $T_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
+Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
 
 Define the \emph{gap} at rank $j$ as:
 \[
-G_j = T_j - I_j
+g_j = t_j - i_j
 \]
 This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
 \begin{itemize}
-  \item $G_j < 0$ implies the value is too small for its position, so direction is $L$.
-  \item $G_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
+  \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
+  \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
 \end{itemize}
 
-The gap evolves as we move through the ranks. Let $\Delta I_j = I_{j+1} - I_j$ and $\Delta T_j = T_{j+1} - T_j$ denote the spacings between consecutive order statistics. The change in gap is:
+The gap evolves as we move through the ranks. Let $\Delta i_j = i_{j+1} - i_j$ and $\Delta t_j = t_{j+1} - t_j$ denote the spacings between consecutive order statistics. The change in gap is:
 \[
-G_{j+1} - G_j = \Delta T_j - \Delta I_j
+g_{j+1} - g_j = \Delta t_j - \Delta i_j
 \]
-Since both $\Delta T_j$ and $\Delta I_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $G_{j+1} - G_j$ has mean zero and behaves as a random step. This means the sequence $G_1, G_2, \ldots, G_k$ evolves as a \emph{symmetric random walk}.
+Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
 
-By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $G_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings:
+By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings:
 \[
 \mathbb{E}[\text{zero crossings}] = \Theta(\sqrt{k})
 \]

@@ -62,9 +62,7 @@ const CROSSOVER_SIZES: &[usize] = &[
 const ANALYSIS_N_VALUES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
 
 /// k percentages for movement/comparator analysis
-const ANALYSIS_K_FRACTIONS: &[f64] = &[
-    0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2
-];
+const ANALYSIS_K_FRACTIONS: &[f64] = &[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2];
 
 /// Iterations for analysis
 const ANALYSIS_ITERATIONS: usize = 100;
@@ -80,14 +78,6 @@ fn timing_iterations_for_k(k: usize) -> usize {
     }
 }
 
-/// Get number of comparison iterations for a given k value
-fn comparison_iterations_for_k(k: usize) -> usize {
-    match k {
-        0..=50 => BASE_ITERATIONS,
-        _ => BASE_ITERATIONS / 5,
-    }
-}
-
 // ============================================================================
 // BENCHMARK MEASUREMENT
 // ============================================================================
@@ -97,24 +87,18 @@ struct BenchmarkResult {
     time_sd: f64,
     time_ci: f64,
     time_cv: f64,
-    comparisons: f64,
-    comparisons_sd: f64,
-    comparisons_ci: f64,
-    comparisons_cv: f64,
     iterations: usize,
 }
 
 /// Measure timing using non-counting comparator (accurate timing)
-/// Measure comparisons using counting versions (separate runs)
 fn run_benchmark<F>(base_users: &[User], k: usize, mut sort_fn: F) -> BenchmarkResult
 where
     F: FnMut(&mut Vec<User>, &HashSet<usize>, fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
-    let mut iters = timing_iterations_for_k(k);
+    let iters = timing_iterations_for_k(k);
 
-    // Phase 1: Measure timing (without counting overhead)
     let mut times_us = Vec::with_capacity(iters);
     for _ in 0..iters {
         let mut users = base_users.to_vec();
@@ -129,34 +113,13 @@ where
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
-    // Phase 2: Measure comparisons (separate runs)
-    iters = comparison_iterations_for_k(k);
-    let mut comparisons = Vec::with_capacity(iters);
-    for _ in 0..iters {
-        let mut users = base_users.to_vec();
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        let mut dirty_indices = HashSet::with_capacity(k);
-        for idx in indices {
-            users[idx].mutate(&mut rng);
-            dirty_indices.insert(idx);
-        }
-        reset_comparison_count();
-        sort_fn(&mut users, &dirty_indices, counting_comparator);
-        comparisons.push(get_comparison_count());
-    }
-
     let time_stats = calculate_stats(&times_us);
-    let cmp_stats = calculate_stats_u64(&comparisons);
 
     BenchmarkResult {
         time_us: time_stats.mean,
         time_sd: time_stats.sd,
         time_ci: time_stats.ci_95,
         time_cv: time_stats.cv,
-        comparisons: cmp_stats.mean,
-        comparisons_sd: cmp_stats.sd,
-        comparisons_ci: cmp_stats.ci_95,
-        comparisons_cv: cmp_stats.cv,
         iterations: iters,
     }
 }
@@ -363,7 +326,8 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
             dirty_indices.insert(idx);
         }
 
-        let result: InstrumentedResult = delta_sort_instrumented(&mut arr, &dirty_indices, i32::cmp);
+        let result: InstrumentedResult =
+            delta_sort_instrumented(&mut arr, &dirty_indices, i32::cmp);
         movements.push(result.movement);
         segments.push(result.segments);
 
@@ -428,10 +392,6 @@ struct AlgorithmResult {
     time_sd: f64,
     time_ci: f64,
     time_cv: f64,
-    comparisons: f64,
-    comparisons_sd: f64,
-    comparisons_ci: f64,
-    comparisons_cv: f64,
 }
 
 struct BenchmarkResults {
@@ -482,17 +442,6 @@ fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
     format!("{:>width$}", content, width = total_width)
 }
 
-fn format_int_with_ci(value: f64, ci: f64, total_width: usize) -> String {
-    let val_str = format!("{:.0}", value);
-    let ci_percent = if value > 0.0 {
-        (ci / value) * 100.0
-    } else {
-        0.0
-    };
-    let content = format!("{} ±{:.1}%", val_str, ci_percent);
-    format!("{:>width$}", content, width = total_width)
-}
-
 // ============================================================================
 // EXECUTION TIME BENCHMARK
 // ============================================================================
@@ -531,10 +480,6 @@ fn run_time_benchmark(export: bool) {
             time_sd: native.time_sd,
             time_ci: native.time_ci,
             time_cv: native.time_cv,
-            comparisons: native.comparisons,
-            comparisons_sd: native.comparisons_sd,
-            comparisons_ci: native.comparisons_ci,
-            comparisons_cv: native.comparisons_cv,
         });
 
         if k <= BIS_MAX_K {
@@ -546,10 +491,6 @@ fn run_time_benchmark(export: bool) {
                 time_sd: bis.time_sd,
                 time_ci: bis.time_ci,
                 time_cv: bis.time_cv,
-                comparisons: bis.comparisons,
-                comparisons_sd: bis.comparisons_sd,
-                comparisons_ci: bis.comparisons_ci,
-                comparisons_cv: bis.comparisons_cv,
             }));
         } else {
             results.bis.push(None);
@@ -563,10 +504,6 @@ fn run_time_benchmark(export: bool) {
             time_sd: esm.time_sd,
             time_ci: esm.time_ci,
             time_cv: esm.time_cv,
-            comparisons: esm.comparisons,
-            comparisons_sd: esm.comparisons_sd,
-            comparisons_ci: esm.comparisons_ci,
-            comparisons_cv: esm.comparisons_cv,
         });
 
         let ds = run_benchmark(&base_users, k, |arr, indices, cmp| {
@@ -579,10 +516,6 @@ fn run_time_benchmark(export: bool) {
             time_sd: ds.time_sd,
             time_ci: ds.time_ci,
             time_cv: ds.time_cv,
-            comparisons: ds.comparisons,
-            comparisons_sd: ds.comparisons_sd,
-            comparisons_ci: ds.comparisons_ci,
-            comparisons_cv: ds.comparisons_cv,
         });
 
         println!(" done");
@@ -614,10 +547,18 @@ fn print_execution_time_table(results: &BenchmarkResults) {
         println!(
             "│ {:>6} │ {} │ {} │ {} │ {} │",
             results.native[i].k,
-            format_with_ci(results.native[i].time_us, results.native[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.native[i].time_us,
+                results.native[i].time_ci,
+                COL_WIDTH
+            ),
             bis_str,
             format_with_ci(results.esm[i].time_us, results.esm[i].time_ci, COL_WIDTH),
-            format_with_ci(results.deltasort[i].time_us, results.deltasort[i].time_ci, COL_WIDTH),
+            format_with_ci(
+                results.deltasort[i].time_us,
+                results.deltasort[i].time_ci,
+                COL_WIDTH
+            ),
         );
     }
     println!("└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘");
@@ -627,7 +568,10 @@ fn export_execution_time_csv(results: &BenchmarkResults, path: &str) {
     let mut csv = String::from("k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n");
     for i in 0..results.native.len() {
         let bis_cols = match &results.bis[i] {
-            Some(bis) => format!("{:.1},{:.1},{:.1},{:.1}", bis.time_us, bis.time_sd, bis.time_ci, bis.time_cv),
+            Some(bis) => format!(
+                "{:.1},{:.1},{:.1},{:.1}",
+                bis.time_us, bis.time_sd, bis.time_ci, bis.time_cv
+            ),
             None => ",,,".to_string(),
         };
         csv.push_str(&format!(
@@ -772,7 +716,10 @@ fn run_crossover_benchmark(export: bool) {
         let base_path = "../paper/figures/rust";
         fs::create_dir_all(base_path).ok();
         export_crossover_all_csv(&crossover_all, &format!("{}/crossover-all.csv", base_path));
-        export_crossover_ds_vs_esm_csv(&crossover_ds_vs_esm, &format!("{}/crossover-ds-vs-esm.csv", base_path));
+        export_crossover_ds_vs_esm_csv(
+            &crossover_ds_vs_esm,
+            &format!("{}/crossover-ds-vs-esm.csv", base_path),
+        );
     }
 }
 
@@ -854,10 +801,18 @@ fn run_comparator_analysis(export: bool) {
             if k < 1 {
                 continue;
             }
-            print!("  n={:>7}, k={:>7} ({:>5.1}%)...", format_number(n), format_number(k), k_pct * 100.0);
+            print!(
+                "  n={:>7}, k={:>7} ({:>5.1}%)...",
+                format_number(n),
+                format_number(k),
+                k_pct * 100.0
+            );
             io::stdout().flush().unwrap();
             let result = run_analysis(n, k);
-            println!(" cmp={:.0}, norm={:.4}", result.comparisons_mean, result.comparisons_normalized);
+            println!(
+                " cmp={:.0}, norm={:.4}",
+                result.comparisons_mean, result.comparisons_normalized
+            );
             results.push(result);
         }
     }
@@ -921,12 +876,20 @@ fn run_movement_analysis(export: bool) {
             if k < 1 {
                 continue;
             }
-            print!("  n={:>7}, k={:>7} ({:>5.1}%)...", format_number(n), format_number(k), k_pct * 100.0);
+            print!(
+                "  n={:>7}, k={:>7} ({:>5.1}%)...",
+                format_number(n),
+                format_number(k),
+                k_pct * 100.0
+            );
             io::stdout().flush().unwrap();
             let result = run_analysis(n, k);
             println!(
                 " mov={:.0}, seg={:.1}, mov_norm={:.4}, seg_norm={:.4}",
-                result.movement_mean, result.segments_mean, result.movement_normalized, result.segments_normalized
+                result.movement_mean,
+                result.segments_mean,
+                result.movement_normalized,
+                result.segments_normalized
             );
             results.push(result);
         }
@@ -985,9 +948,15 @@ fn export_movement_csv(results: &[AnalysisResult], path: &str) {
     for r in results {
         csv.push_str(&format!(
             "{},{},{:.4},{:.0},{:.0},{:.6},{:.1},{:.1},{:.6}\n",
-            r.n, r.k, r.k_percent,
-            r.movement_mean, r.movement_sd, r.movement_normalized,
-            r.segments_mean, r.segments_sd, r.segments_normalized
+            r.n,
+            r.k,
+            r.k_percent,
+            r.movement_mean,
+            r.movement_sd,
+            r.movement_normalized,
+            r.segments_mean,
+            r.segments_sd,
+            r.segments_normalized
         ));
     }
     fs::write(path, csv).expect("Failed to write movement-analysis.csv");

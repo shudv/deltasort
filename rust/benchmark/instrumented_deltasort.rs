@@ -70,7 +70,7 @@ where
 
     // Left boundary for fixing LEFT violations
     let mut left_bound = 0;
-    
+
     // Track previous direction for segment counting (L→R transitions)
     let mut prev_direction: Option<Direction> = None;
 
@@ -267,7 +267,7 @@ mod tests {
         let mut arr = vec![1, 3, 5, 7, 9];
         arr[1] = 8; // R violation
         arr[3] = 2; // L violation
-        // Now: [1, 8, 5, 2, 9]
+                    // Now: [1, 8, 5, 2, 9]
         let updated: HashSet<usize> = [1, 3].into_iter().collect();
         let result = delta_sort_instrumented(&mut arr, &updated, i32::cmp);
         assert_eq!(arr, vec![1, 2, 5, 8, 9]);
@@ -300,24 +300,24 @@ mod tests {
     fn test_correctness_matches_native_sort() {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        
+
         for _ in 0..10 {
             let n = 100;
             let k = 10;
             // Start with a sorted array
             let mut arr: Vec<i32> = (0..n).collect();
             let mut updated = HashSet::new();
-            
+
             // Make k random updates
             for _ in 0..k {
                 let idx = rng.gen_range(0..n as usize);
                 arr[idx] = rng.gen_range(0..n); // Update to random value
                 updated.insert(idx);
             }
-            
+
             let mut expected = arr.clone();
             expected.sort();
-            
+
             delta_sort_instrumented(&mut arr, &updated, i32::cmp);
             assert_eq!(arr, expected);
         }

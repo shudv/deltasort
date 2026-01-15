@@ -1,11 +1,17 @@
 \appendix
 
+\section{Worst Case Configuration}
+\label{sec:appendix-worst-case}
+\figref{fig:worst-case} illustrates the worst-case configuration for DeltaSort. This occurs when all updated values cluster at the two ends of the array, forming a single spanning segment. In this case, all left-moving values must be shifted to the left end, and all right-moving values to the right end, resulting in maximum data movement of $O(kn)$.
+
+\input{\figdir/worst-case}
+
 \section{Empirical Validation of Complexity Bounds}
 \label{sec:appendix-complexity}
 
-\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
+\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalised values should be approximately constant across all scales.
 
-The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalized by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
+The results confirm both bounds: movement normalised by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalised by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
 
 \input{\figdir/complexity-analysis}
 
@@ -21,10 +27,6 @@ The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to
   \item ESM is $\sim 40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that \textbf{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
 \end{enumerate}
 
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, the hybrid strategy can be simpler as compared to Rust:
-
-\begin{center}
-Use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
-\end{center}
+The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, a valid hybrid strategy can be: use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
 
 These results highlight that update-aware sorting algorithms must be evaluated together with the execution semantics of the target runtime, rather than assuming uniform cost models across environments.

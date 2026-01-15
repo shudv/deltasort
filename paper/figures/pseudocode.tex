@@ -26,7 +26,7 @@
                 \State $\texttt{rightBound} \gets \Call{FixRight}{A, j, \texttt{rightBound}} - 1$
             \EndIf
         \EndWhile
-        \If{$i < n$} \Comment{Ensure it's not the LEFT sentinel}
+        \If{$i < n$} \Comment{Ensure its not the LEFT sentinel}
             \State $\texttt{leftBound} \gets \Call{FixLeft}{A, i, \texttt{leftBound}} + 1$
         \EndIf
     \Else

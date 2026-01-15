@@ -17,33 +17,32 @@ With the above structure in place, DeltaSort fixes the array one updated index a
 \begin{definition}[Direction]
 \label{def:direction}
 During Phase~2, for an index $i \in U$, we define its \emph{direction} based on its local order with its left neighbour:
-\begin{itemize}
+\begin{enumerate}
   \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbour and hence \textbf{must} move left: $i > 0 \text{ and } A[i-1] > A[i]$
   \item \textbf{RIGHT ($R$)}: Value is ordered correctly to its left neighbour or its the first value and hence \textbf{may} move right: $i = 0 \text{ or } A[i-1] \le A[i]$
-\end{itemize}
+\end{enumerate}
 \end{definition}
 
-A few things to note about this definition:
+A few important things to note about this definition:
 \begin{itemize}
-  \item The notion of direction is not defined (or needed) for unchanged indices ($i \notin U$).
-  \item Direction is determined only by the left neighbour because the array is guaranteed to be sorted to the left of $i$ by the time we encounter it.
+  \item Direction captures which side does the target position of an updated index lie relative to it's current position. Hence, the notion of direction is not defined (or needed) for unchanged indices ($i \notin U$).
   \item The definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases, as it may or may not violate order with its right neighbour. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see \algoref{alg:deltasort}).
 \end{itemize}
  
-Phase~2 (line ~9--29) processes updated indices from left to right while maintaining a growing sorted prefix. We describe Phase~2 by first establishing a loop invariant and then prove its correctness by showing that the invariant holds during initialization, maintenance, and termination.
+Phase~2 (line ~9--29) processes updated indices from left to right while maintaining a growing sorted prefix. We describe Phase~2 by first establishing a loop invariant and then prove its correctness by showing that the loop invariant holds during initialization and maintenance, and that the array is fully sorted when it terminates.
 
 \subparagraph{State:} We utilise following state information during Phase~2:
 \begin{itemize}
   \item \texttt{updatedIndices}: Sorted list of updated indices with a sentinel $n$ appended at the end.
-  \item \texttt{leftBound} ($\ell$): $0$
-  \item \texttt{pendingRight}: $\phi$
+  \item \texttt{leftBound} ($\ell$): The boundary of the sorted prefix, $0$ at the start.
+  \item \texttt{pendingRight}: Stack of pending $R$ indices, empty at the start.
 \end{itemize}
 
 \subparagraph{Loop invariant:} At the start of each iteration of the loop at line~10, the following conditions hold for index $p$:
 \begin{enumerate}
-  \item The subarray $A[0..\ell-1]$ is sorted and contains its final values.
-  \item The stack contains pending $R$ indices within the range $[\ell, \texttt{updatedIndices}[p]-1]$.
+  \item The subarray $A[0..\ell-1]$ is sorted.
   \item There are no $L$ violations in the range $[\ell, {updatedIndices}[p]-1]$.
+  \item The stack contains pending $R$ indices within the range $[\ell, \texttt{updatedIndices}[p]-1]$.
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
@@ -51,48 +50,32 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
 
 \subparagraph{Maintenance:} We will now show that if the invariant holds for $p$, it also holds for $p+1$. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir} = \Call{GetDirection}{A, i}$.
 
-\emph{Case 1: $\texttt{dir} = L$.}
+\emph{Case 1: $\texttt{dir} = L$}
 \begin{enumerate}
-  \item We first set $\texttt{rightBound} \gets i - 1$.
-  \item We then flush all pending $R$ indices in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, \texttt{rightBound}]$, where $\texttt{rightBound}$ is updated after each fix to ensure that subsequent fixes do not interfere with already fixed values. By construction, this range contains no violations because:
-    \begin{itemize}
-      \item No $R$ violations exist because $R$s are processed in LIFO order with $\texttt{rightBound}$ narrowing after each fix.
-      \item No $L$ violations exist because all pending $R$s are flushed before any $L$ is fixed.
-    \end{itemize}
-  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range contains no violations because:
-    \begin{itemize}
-      \item No $L$ violations exist because $L$s are processed left-to-right.
-      \item No $R$ violations exist because all pending $R$s are flushed before any $L$ is fixed.
-    \end{itemize}
-  \item Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves the invariant.
+  \item We first set $\texttt{rightBound} \gets i - 1$. This marks the right boundary beyond which the $R$ values in \texttt{pendingRight} cannot move, because after Phase~1, updated values are ordered and hence cannot cross each other in either directions.
+  \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, \texttt{rightBound}]$, where $\texttt{rightBound}$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, it is guaranteed that the range $[j+1, \texttt{rightBound}]$ contains no violations and hence binary search can always find the right insertion point. This step preserves condition (3) and (4) of the loop invariant.
+  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves the condition (1) and (2) of the loop invariant.
 \end{enumerate}
 
-At the start of the next iteration, condition (1) holds because we have extended the sorted prefix to include the fixed $L$ value. Condition (2) holds because we have flushed all pending $R$s. Condition (3) holds because we have fixed all $L$ violations up to index $i$. Condition (4) holds because the current index had $L$ direction.
-
-\emph{Case 2: $\texttt{dir} = R$.}
+\emph{Case 2: $\texttt{dir} = R$}
 
 \begin{enumerate}
-  \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$.
-  \item We then push $i$ onto \texttt{pendingRight} for deferred fixing.
+  \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$. This preserves condition (1) and (2) of the loop invariant.
+  \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
 \end{enumerate}
-
-At the start of the next iteration, condition (1) holds because we have not modified the sorted prefix. Condition (2) holds because we have only added a new pending $R$ index within the current range. Condition (3) holds because we have not introduced any new $L$ violations. Condition (4) holds trivially because the current index had $R$ direction.
 
 \subparagraph{Termination:} The loop processes all elements of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as a $L$ direction. Substituting $p = n$ in the invariant conditions, we have:
 \begin{itemize}
   \item Condition (1) implies that $A[0..\ell-1]$ is sorted and contains its final values.
-  \item Condition (2) implies that all $R$ violations in range $A[\ell..n-1]$ are in \texttt{pendingRight}.
-  \item Condition (3) implies that there are no $L$ violations in the range $[\ell, n-1]$.
-  \item Condition (4) implies that \texttt{pendingRight} is empty, because the previous index was the sentinel $n$ with $L$ direction.
-  \item Combining conditions (2), (3) and (4), we conclude that there are no violations in the range $[\ell, n-1]$.
-  \item Combining that with condition (1), we have no violations in the entire array $A[0..n-1]$. Hence, the array is fully sorted.
+  \item Condition (2) implies there are no $L$ violations in the range $[\ell, n-1]$.
+  \item Condition (3) and (4) together imply that there are no $R$ violations in the range $[\ell, n-1]$.
+  \item Hence we can conclude that the array $A[0..n-1]$ is fully sorted.
 \end{itemize}
 
 Figure~\ref{fig:delta-sort-example} illustrates this sequence of operations for a sample array.
 \input{\figdir/delta-sort-example}
 
-To understand why this helps reduce data movement even though we are doing repeated binary insertions, we first formalise the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
-
+It's important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search is constrained. To formalise this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
 
 \begin{definition}[Segment]
 \label{def:segment}
@@ -107,10 +90,10 @@ A \emph{segment} is a subarray of $A$ spanning indices $[i, j]$, where $0 \le i 
 
 More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
 
-\subparagraph{Key Insight: Segments can be fixed \emph{locally} and \emph{independently}.}
+\subparagraph{Key Insight: Segments can be fixed \emph{locally} and \emph{independently}:}
 \label{sec:insight}
 
-Unlike BIS, where each insertion can be at any point in the array, in DeltaSort, \emph{an updated value in a segment cannot cross its segment boundary}. We formally prove this property next.
+Unlike naive BIS, where each insertion can be at any point in the array, in DeltaSort, \emph{an updated value in a segment cannot cross its segment boundary}. We formally prove this property next.
 
 \begin{lemma}[Movement Confinement]
 \label{lem:confinement}
@@ -139,32 +122,52 @@ Several update models could be considered. For example, a \emph{bounded rank dis
 
 \begin{lemma}[Expected Movement]
 \label{lem:movement-bound}
-Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's Phase~2 is $O(n)$, independent of $k$.
+Under the random bounded-range update model, for an array of size $n$ with $k$ updated indices, the expected total data movement incurred during DeltaSort's Phase~2 is $O(n \sqrt{k})$.
 \end{lemma}
 
 \begin{proof}
-Consider the sequence of directions induced by the $k$ updated indices after Phase~1. Under the random update model, updated indices are chosen uniformly at random and hence are expected to be evenly distributed across the array. After Phase~1, the updated values are sorted and written back in index order, which enforces the correct order among updated values: for consecutive updated indices $u_\ell < u_i < u_r$, the value at $u_i$ must lie in $[A[u_{\ell}]$,$A[u_r]]$.
+After Phase~1, we have two sorted sequences of $k$ elements each:
+\begin{itemize}
+  \item \textbf{Indices:} The $k$ updated positions $I_1 < I_2 < \cdots < I_k$, sorted.
+  \item \textbf{Values:} The $k$ updated values $V_1 \le V_2 \le \cdots \le V_k$, sorted.
+\end{itemize}
+Phase~1 pairs these by rank: the $j$-th smallest value $V_j$ is placed at the $j$-th smallest index $I_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
 
-For an updated index $u_i$ to be classified as $L$, it must be in the range $[A[u_\ell], A[u_i-1]]$. Similarly, for it to be classified as $R$, it must be in the range $[A[u_i-1], A[u_r]]$. Given the updated indices are distributed uniformly at random, both these intervals are expected to be of equal size on average. Each updated value, randomly chosen, has equal probability to lie in either range. Therefore, each updated index has direction $L$ or $R$ with equal probability $1/2$, independently.
+Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $V_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $T_j = V_j \cdot n / M$. Since $V_j$ is uniform over $[0, M)$, the target position $T_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
 
-It follows from \defref{def:direction} that segment boundaries occur at $\mathrm{L}\!\to\!\mathrm{R}$ transitions in the direction sequence. For any adjacent pair of updated indices $(i, i+1)$:
+Define the \emph{gap} at rank $j$ as:
 \[
-\Pr[\mathrm{LR} \text{ at } (i, i+1)] = \Pr[\text{L at } i] \cdot \Pr[\text{R at } i+1] = \frac{1}{2} \cdot \frac{1}{2} = \frac{1}{4}.
+G_j = T_j - I_j
+\]
+This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
+\begin{itemize}
+  \item $G_j < 0$ implies the value is too small for its position, so direction is $L$.
+  \item $G_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
+\end{itemize}
+
+The gap evolves as we move through the ranks. Let $\Delta I_j = I_{j+1} - I_j$ and $\Delta T_j = T_{j+1} - T_j$ denote the spacings between consecutive order statistics. The change in gap is:
+\[
+G_{j+1} - G_j = \Delta T_j - \Delta I_j
+\]
+Since both $\Delta T_j$ and $\Delta I_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $G_{j+1} - G_j$ has mean zero and behaves as a random step. This means the sequence $G_1, G_2, \ldots, G_k$ evolves as a \emph{symmetric random walk}.
+
+By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $G_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings:
+\[
+\mathbb{E}[\text{zero crossings}] = \Theta(\sqrt{k})
+\]
+Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is:
+\[
+\mathbb{E}[\text{segments}] = 1 + \mathbb{E}[L \to R \text{ transitions}] = O(\sqrt{k})
 \]
 
-With $k-1$ adjacent pairs, the expected number of $\mathrm{L}\!\to\!\mathrm{R}$ transitions is:
+With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
-\mathbb{E}[\text{LR transitions}] = (k-1) \cdot \frac{1}{4} = \frac{k-1}{4} = \Theta(k).
-\]
-
-The expected number of segments is therefore $1 + \Theta(k) = \Theta(k)$. Under uniform index distribution, each segment spans $O(n/k)$ positions in expectation. By \lemref{lem:confinement}, movement is confined within segments, so each updated value moves at most $O(n/k)$ positions. Thus:
-\[
-\mathbb{E}[\text{total movement}] \le k \cdot O(n/k) = O(n). \qedhere
+\mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}). \qedhere
 \]
 \end{proof}
 
 \begin{remark}[Worst Case Movement]
-While the expected movement is $O(n)$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates cluster \emph{monotonically} at the start or end of the array as shown in \figref{fig:worst-case}. Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates cluster \emph{monotonically} at the start or end of the array as shown in \figref{fig:worst-case}. Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
 \input{\figdir/worst-case}
 \end{remark}
 
@@ -174,19 +177,19 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected width of a segment is $O(n/k)$, and searches are confined within segment boundaries. Therefore, each fix requires $O(\log (n/k))$ comparisons, for a total of $O(k \log (n/k))$ comparisons in Phase~2. Summing both phases gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both phases gives:
 \[
-O(k \log k) + O(k \log (n/k)) = O\!\bigl(k(\log k + \log (n/k))\bigr) = O(k \log n).
+O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log n).
 \]
 \end{proof}
 
 \begin{theorem}[Time Complexity]
 \label{thm:time-complexity}
-Under the random bounded-range update model, DeltaSort runs in $O(k \log n + n)$ expected time.
+Under the random bounded-range update model, DeltaSort runs in $O(k \log n + n\sqrt{k})$ expected time.
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n)$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(k \log n + n)$.
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Combining these, the expected running time is $O(k \log n + n\sqrt{k})$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

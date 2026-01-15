@@ -419,34 +419,6 @@ function printExecutionTimeTable(results: BenchmarkResults): void {
     );
 }
 
-function printComparatorCountTable(results: BenchmarkResults): void {
-    const COL_WIDTH = 15;
-
-    console.log();
-    console.log(`Comparator Invocations - n=${formatNumber(N)}`);
-    console.log(
-        "┌────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐",
-    );
-    console.log(
-        "│   k    │     Native      │       BIS       │       ESM       │    DeltaSort    │",
-    );
-    console.log(
-        "├────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤",
-    );
-    for (let i = 0; i < results.native.length; i++) {
-        const n = results.native[i]!;
-        const b = results.bis[i]!;
-        const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
-        console.log(
-            `│ ${n.k.toString().padStart(6)} │ ${formatIntWithCi(n.comparisons, n.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(b.comparisons, b.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(e.comparisons, e.comparisonsCi, COL_WIDTH)} │ ${formatIntWithCi(d.comparisons, d.comparisonsCi, COL_WIDTH)} │`,
-        );
-    }
-    console.log(
-        "└────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘",
-    );
-}
-
 function printCrossoverTableAll(results: CrossoverResultsAll[]): void {
     console.log();
     console.log("Crossover Threshold (All Algorithms vs Native)");
@@ -482,20 +454,6 @@ function exportExecutionTimeCsv(results: BenchmarkResults, filePath: string): vo
         const e = results.esm[i]!;
         const d = results.deltasort[i]!;
         csv += `${n.k},${n.iterations},${n.timeUs.toFixed(1)},${n.timeSd.toFixed(1)},${n.timeCi.toFixed(1)},${n.timeCv.toFixed(1)},${b.timeUs.toFixed(1)},${b.timeSd.toFixed(1)},${b.timeCi.toFixed(1)},${b.timeCv.toFixed(1)},${e.timeUs.toFixed(1)},${e.timeSd.toFixed(1)},${e.timeCi.toFixed(1)},${e.timeCv.toFixed(1)},${d.timeUs.toFixed(1)},${d.timeSd.toFixed(1)},${d.timeCi.toFixed(1)},${d.timeCv.toFixed(1)}\n`;
-    }
-    fs.writeFileSync(filePath, csv);
-    console.log(`Exported: ${filePath}`);
-}
-
-function exportComparatorCountCsv(results: BenchmarkResults, filePath: string): void {
-    let csv =
-        "k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n";
-    for (let i = 0; i < results.native.length; i++) {
-        const n = results.native[i]!;
-        const b = results.bis[i]!;
-        const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
-        csv += `${n.k},${n.iterations},${Math.round(n.comparisons)},${Math.round(n.comparisonsSd)},${Math.round(n.comparisonsCi)},${n.comparisonsCv.toFixed(1)},${Math.round(b.comparisons)},${Math.round(b.comparisonsSd)},${Math.round(b.comparisonsCi)},${b.comparisonsCv.toFixed(1)},${Math.round(e.comparisons)},${Math.round(e.comparisonsSd)},${Math.round(e.comparisonsCi)},${e.comparisonsCv.toFixed(1)},${Math.round(d.comparisons)},${Math.round(d.comparisonsSd)},${Math.round(d.comparisonsCi)},${d.comparisonsCv.toFixed(1)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -596,7 +554,6 @@ async function main(): Promise<void> {
     }
 
     printExecutionTimeTable(results);
-    printComparatorCountTable(results);
 
     // --- Crossover Analysis (All Algorithms vs Native) ---
     console.log();
@@ -633,7 +590,6 @@ async function main(): Promise<void> {
         const basePath = path.join(process.cwd(), "../paper/figures/js");
         fs.mkdirSync(basePath, { recursive: true });
         exportExecutionTimeCsv(results, path.join(basePath, "execution-time.csv"));
-        exportComparatorCountCsv(results, path.join(basePath, "comparator-count.csv"));
         exportCrossoverAllCsv(crossoverAllResults, path.join(basePath, "crossover-all.csv"));
         exportMetadataCsv(results, path.join(basePath, "benchmark_metadata.csv"));
     }

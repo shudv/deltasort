@@ -5,7 +5,7 @@
 
 \subsection{Overview}
 
-DeltaSort is a stable\footnote{Strictly speaking, the stability also depends upon the sorting routine used internally to sort updated values. As long as the sorting routine is stable, DeltaSort remains stable as a whole.} update-aware sorting algorithm. It operates in two phases (see~\algoref{alg:deltasort} for pseudocode). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
+DeltaSort is a stable\footnote{Strictly speaking, the stability also depends upon the sorting routine used internally to sort updated values. As long as the sorting routine used internally is stable, DeltaSort remains stable as a whole.} update-aware sorting algorithm. It operates in two phases (see~\algoref{alg:deltasort} for pseudocode). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
 \paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, any remaining order violations must occur only between updated values and their unchanged neighbours.
 

@@ -33,7 +33,7 @@ pub fn binary_insertion_sort(
 /// 1. Partition: move dirty elements to end while keeping clean elements sorted - O(n)
 /// 2. Binary insert each dirty element using rotation - O(kn)
 pub fn binary_insertion_sort_rotate(
-    arr: &mut Vec<User>,
+    arr: &mut [User],
     dirty_indices: &HashSet<usize>,
     user_comparator: fn(&User, &User) -> std::cmp::Ordering,
 ) {

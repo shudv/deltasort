@@ -20,7 +20,7 @@
 \def\rowB{-0.8}   % ESM row  
 \def\rowC{-2.4}   % DeltaSort row
 
-\def\xI{-0.8}     % Input column (shifted left)
+\def\xI{-0.5}     % Input column (shifted left)
 \def\xM{4.5}      % Middle column (algorithm-specific)
 \def\xO{9.4}      % Output column (shifted right)
 
@@ -51,9 +51,14 @@
     \fi
 }
 % Movement arrows outside array: 9->self (0), 4->idx3 (4), 3->idx2 (6)
-\draw[movearrow] (bisM5.north) to[out=70,in=110,looseness=8] node[above, movelabel, yshift=0.1cm] {0} (bisM5.north);
-\draw[movearrow] ([yshift=-0.25cm]bisM6.south) -- ([yshift=-0.5cm]bisM6.south) -| ([yshift=-0.25cm]bisM3.south) node[pos=0.25, below, movelabel] {4};
-\draw[movearrow] ([yshift=-0.25cm]bisM7.south) -- ([yshift=-0.7cm]bisM7.south) -| ([yshift=-0.25cm]bisM2.south) node[pos=0.25, below, movelabel] {6};
+% Self-loop: starts from top-left of cell, curves up and right, ends at top-right
+\draw[movearrow] ([xshift=-0.1cm, yshift=0.02cm]bisM5.north) 
+    .. controls ++(0, 0.4) and ++(0, 0.4) .. 
+    ([xshift=0.1cm, yshift=0.02cm]bisM5.north) node[above, movelabel, yshift=0.15cm, xshift=-0.1cm] {0};
+% Arrow for 4: goes above to avoid overlap with 6
+\draw[movearrow] ([yshift=0.25cm]bisM6.north) -- ([yshift=0.5cm]bisM6.north) -| ([yshift=0.25cm]bisM3.north) node[pos=0.25, above, movelabel] {4};
+% Arrow for 6: goes below
+\draw[movearrow] ([yshift=-0.25cm]bisM7.south) -- ([yshift=-0.5cm]bisM7.south) -| ([yshift=-0.25cm]bisM2.south) node[pos=0.25, below, movelabel] {6};
 
 % --- ESM: 3 + 3 + 5 = 11 moves ---
 % Label placed beside horizontal arm
@@ -102,28 +107,28 @@
 % ============================================================================
 % Connecting arrows between columns (orthogonal with 90-degree turns)
 % ============================================================================
-\def\arrowgap{0.3}
+\def\arrowgap{0.25}
 \def\arrayw{8*\cellw}
+\def\labelx{2.8}
 
 % Input -> Middle (fan out to 3 algorithms)
 % Horizontal then vertical - turn point shifted left for longer horizontal arms
 % Labels at fixed x position (left-aligned), black color, above arrows
 \draw[arrow] (\xI + \arrayw + \arrowgap, \rowB) -- (2.8, \rowB) -- (2.8, \rowA) -- (\xM - \arrowgap, \rowA);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (3.0, \rowA + 0.25) {BIS};
+\node[font=\scriptsize\bfseries, black, anchor=west] at (\labelx, \rowA + 0.25) {BIS};
 \draw[arrow] (\xI + \arrayw + \arrowgap, \rowB) -- (\xM - \arrowgap, \rowB);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (3.0, \rowB + 0.25) {ESM};
+\node[font=\scriptsize\bfseries, black, anchor=west] at (\labelx, \rowB + 0.25) {ESM};
 \draw[arrow] (\xI + \arrayw + \arrowgap, \rowB) -- (2.8, \rowB) -- (2.8, \rowC) -- (\xM - \arrowgap, \rowC);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (3.0, \rowC + 0.25) {DS};
-
+\node[font=\scriptsize\bfseries, black, anchor=west] at (\labelx, \rowC + 0.25) {DeltaSort};
 % Middle -> Output (fan in from 3 algorithms)
 % Horizontal then vertical - consistent with column 1->2 arrows
 % Labels showing total moves for each algorithm
-\draw[arrow] (\xM + \arrayw + \arrowgap, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (8.0, \rowA + 0.25) {19 moves};
-\draw[arrow] (\xM + \arrayw + \arrowgap, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (8.0, \rowB + 0.25) {11 moves};
-\draw[arrow] (\xM + \arrayw + \arrowgap, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[font=\scriptsize\bfseries, black, anchor=west] at (8.0, \rowC + 0.25) {9 moves};
+\draw[arrow] (\xM + \arrayw + 0.1, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.6, \rowA + 0.25) {\scriptsize\bfseries 19 {\tiny moves}};
+\draw[arrow] (\xM + \arrayw + 0.1, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.6, \rowB + 0.25) {\scriptsize\bfseries 11 {\tiny moves}};
+\draw[arrow] (\xM + \arrayw + 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.6, \rowC + 0.25) {\scriptsize\bfseries 9 {\tiny moves}};
 
 \end{tikzpicture}
 \caption{Data movement for 3 updates (yellow). Arrows in middle column show element shifts; numbers indicate positions moved.}

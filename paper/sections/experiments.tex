@@ -35,4 +35,4 @@ These observations suggest that, much like hybrid blind sorting algorithms (e.g.
 
 \subsection{Managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which \textbf{holds in unmanaged environments (e.g., Rust) but not in V8~\cite{v8elementskinds}} (see \appref{sec:appendix-js-deltasort} for benchmarks).
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in unmanaged environments (e.g., Rust) but \textbf{not in V8~\cite{v8elementskinds}} (see \appref{sec:appendix-js-deltasort} for benchmarks).

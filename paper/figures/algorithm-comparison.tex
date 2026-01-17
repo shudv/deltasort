@@ -35,6 +35,8 @@
         \node[cell] (I\i) at (\xI + \i*\cellw, \rowB) {\v};
     \fi
 }
+% Label below input array
+\node[font=\tiny, anchor=north, text width=3.5cm, align=center] at (\xI + 3.5*\cellw, \rowB - 0.35) {Previously sorted array\\ with 3 updated indices: [1, 5, 6]};
 
 % ============================================================================
 % SECOND COLUMN: Algorithm-specific processing with movements
@@ -104,6 +106,8 @@
         \node[cell] (O\i) at (\xO + \i*\cellw, \rowB) {\v};
     \fi
 }
+% Label below output array
+\node[font=\tiny, anchor=north] at (\xO + 3.5*\cellw, \rowB - 0.35) {Fully sorted array};
 
 % ============================================================================
 % Connecting arrows between columns (orthogonal with 90-degree turns)
@@ -128,10 +132,10 @@
 \draw[arrow] (\xM + \arrayw + 0.1, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
 \node[black, anchor=west] at (8.0, \rowA + 0.25) {\scriptsize\bfseries 9+10};
 \draw[arrow] (\xM + \arrayw + 0.1, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (8.0, \rowB + 0.25) {\scriptsize\bfseries 3+8};
+\node[black, anchor=west] at (8.0, \rowB + 0.25) {\scriptsize\bfseries 6+8};
 \draw[arrow] (\xM + \arrayw + 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (8.0, \rowC + 0.25) {\scriptsize\bfseries 3+6};
+\node[black, anchor=west] at (8.0, \rowC + 0.25) {\scriptsize\bfseries 6+6};
 \end{tikzpicture}
-\caption{Data movement for 3 updates (yellow). Arrows in middle column show element shifts; numbers indicate positions moved.}
+\caption{Data movement comparison for 3 updated values (yellow). BIS first uses 9 moves to shift updated values to the end (since insertion requires a fully sorted prefix), then 10 (0+4+6) moves to insert each into the sorted prefix. ESM uses 6 moves to sort the extracted values, then writes all 8 values to produce the merged output. DeltaSort uses 6 moves to sort updated values, then just 6 (2+2+2) moves to place each value correctly within its segment (see~\defref{def:segment}), without having to form a full sorted prefix like BIS.}
 \label{fig:algorithm-comparison}
 \end{figure}

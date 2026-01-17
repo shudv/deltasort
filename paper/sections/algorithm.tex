@@ -88,9 +88,9 @@ A \emph{segment} is a subarray of $A$ spanning indices $[i, j]$, where $0 \le i 
 \end{enumerate}
 \end{definition}
 
-More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
-
 \input{\figdir/segment-structure}
+
+More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
 
 \subparagraph{Key Insight: Segments can be fixed \emph{locally} and \emph{independently}:}
 \label{sec:insight}

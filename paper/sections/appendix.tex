@@ -74,12 +74,8 @@ The key takeaway is that \emph{DeltaSort's performance benefits rely on a predic
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}
 
-Tables~\ref{tab:execution-time-Rust} and~\ref{tab:execution-time-JavaScript} present the raw execution time measurements for Rust and JavaScript benchmarks respectively. Each row shows the mean execution time and 95\% confidence interval for a given value of $k$ (number of updated indices) with $n = 100{,}000$ elements.
+Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$ (number of updated indices) with $n = 100{,}000$ elements.
 
 \def\csvpath{rust/execution-time.csv}
 \def\csvlabel{Rust}
-\input{\figdir/execution-time-table}
-
-\def\csvpath{js/execution-time.csv}
-\def\csvlabel{JavaScript}
 \input{\figdir/execution-time-table}

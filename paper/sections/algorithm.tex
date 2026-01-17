@@ -103,11 +103,11 @@ During Phase~2, all value movement is confined within segment boundaries.
 \end{lemma}
 
 \begin{proof}
-Let $S$ be a segment with $R$-indices $R_0,\ldots,R_{r-1}$ followed by $L$-indices $L_0,\ldots,L_{l-1}$, where $r+l \ge 1$. After Phase~1, updated values are ordered: $A[R_0] \le \cdots \le A[R_{r-1}] \le A[L_0] \le \cdots \le A[L_{l-1}]$. An $R$-value couldn't have crossed $L_0$ (if it exists), and an $L$-value couldn't have crossed $R_{r-1}$ (if it exists), since the above ordering must be preserved. Therefore, no value exits its segment.
+Let $S$ be a segment with $R$-indices $r_0,\ldots,r_{r-1}$ followed by $L$-indices $\ell_0,\ldots,\ell_{l-1}$, where $r+l \ge 1$. After Phase~1, updated values are ordered: $A[r_0] \le \cdots \le A[r_{r-1}] \le A[\ell_0] \le \cdots \le A[\ell_{l-1}]$. An $R$-value cannot have crossed $\ell_0$ (if it exists), and an $L$-value cannot have crossed $r_{r-1}$ (if it exists), since the above ordering must be preserved. Therefore, no value exits its segment.
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths don't change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can improve performance even further on multi-core systems and distributed environments. To avoid expanding scope, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can improve performance even further on multi-core systems and distributed environments. To avoid expanding scope, we leave this investigation for future work.
 \end{remark}
 
 \subsection{Complexity Analysis}

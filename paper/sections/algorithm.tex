@@ -131,9 +131,7 @@ After Phase~1, we have two sorted sequences of $k$ values each:
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
-After Phase~1, we have two sorted sequences of $k$ values each which forms an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed are $O(\sqrt{k})$ (see~\lemref{lem:expected-segments} for full proof).
-
-With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
+After Phase~1, we have two sorted sequences of $k$ values each which forms an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed are $O(\sqrt{k})$ (see~\lemref{lem:expected-segments} for full proof). With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
 \mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}) \qedhere
 \]
@@ -151,7 +149,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \begin{proof}
 Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
-O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log n) \qedhere
+O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log (n \sqrt{k})) = O(k \log n) \qedhere
 \]
 \end{proof}
 

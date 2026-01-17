@@ -2,16 +2,16 @@
 
 \section{DeltaSort Worst Case Movement}
 \label{sec:appendix-worst-case}
-DeltaSort can exhibit worst-case movement of $O(k n)$ under clustered monotic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $O(kn)$.
+DeltaSort can exhibit worst-case movement of $O(kn)$ under clustered monotonic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $O(kn)$.
 
 \input{\figdir/worst-case}
 
 \section{Full proof for expected number of segments}
 \label{sec:appendix-movement-proof}
 \begin{lemma}
+\label{lem:expected-segments}
   In Phase~1 of DeltaSort, the expected number of segments created is $O(\sqrt{k})$.
 \end{lemma}
-\label{lem:expected-segments}
 \begin{proof}
 After Phase~1, we have two sorted sequences of $k$ values each:
 \begin{itemize}

@@ -20,7 +20,7 @@ This raises the question: are there other algorithms that offer \emph{intermedia
 \begin{enumerate}
   \item \textbf{Update-aware sorting model:} We formulate a sorting model in which the sorting routine is explicitly informed of the updated indices since the previous sort. Under this model, BIS and ESM serve as the baseline algorithms because they can naturally exploit knowledge of which indices have been updated. 
 
-  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers distinct trade-offs (\figref{tab:incremental-sorting-algorithms}) as compared to existing approaches. We prove its correctness using loop invariants and illustrate its operation with examples.
+  \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers distinct trade-offs (\figref{tab:incremental-sorting-algorithms}) as compared to existing approaches. Even though it uses insertion under the hood, it reduces data movement signficantly by identifying \emph{independent regions} of left-moving and right-moving values, and restricting movement within these segments.
   
   \item \textbf{Theoretical analysis:} Under a random bounded-range update model, we show that DeltaSort achieves $O(k \log n + n \sqrt{k})$ amortized time complexity while needing only $O(k)$ auxiliary space.
   

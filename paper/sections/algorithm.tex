@@ -65,7 +65,7 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
   \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
 \end{enumerate}
 
-\subparagraph{Termination:} The loop processes all elements of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as a $L$. Substituting $p = n$ in the invariant conditions, we have:
+\subparagraph{Termination:} The loop processes all values of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as a $L$. Substituting $p = n$ in the invariant conditions, we have:
 \begin{itemize}
   \item Condition (1) implies that $A[0..\ell-1]$ is sorted and contains its final values.
   \item Condition (2) implies there are no $L$ violations in the range $[\ell, n-1]$.
@@ -117,7 +117,7 @@ We analyse the expected total data movement incurred during Phase~2 of DeltaSort
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see \figref{fig:worst-case} for an example of a worst case). Analysing DeltaSort under more structured update models is left to future work.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see\figref{fig:worst-case} for an example of a worst case). Analysing DeltaSort under more structured update models is left to future work.
 \end{remark}
 
 \begin{lemma}[Expected Movement]
@@ -126,12 +126,12 @@ Under the random bounded-range update model, for an array of size $n$ with $k$ u
 \end{lemma}
 
 \begin{proof}
-After Phase~1, we have two sorted sequences of $k$ elements each:
+After Phase~1, we have two sorted sequences of $k$ values each:
 \begin{itemize}
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
-After Phase~1, we have two sorted sequences of $k$ elements each which forms an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed are $O(\sqrt{k})$ (see ~\lemref{lem:expected-segments} for full proof).
+After Phase~1, we have two sorted sequences of $k$ values each which forms an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed are $O(\sqrt{k})$ (see ~\lemref{lem:expected-segments} for full proof).
 
 With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
@@ -140,10 +140,8 @@ With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected wid
 \end{proof}
 
 \begin{remark}[Worst Case Movement]
-While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see \figref{fig:worst-case} for an illustration). In this case, all left-moving values must be shifted to the left end, and all right-moving values to the right end, resulting in maximum data movement of $O(kn)$. Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
 \end{remark}
-
-\input{\figdir/worst-case}
 
 \begin{lemma}[Comparison Count]
 \label{lem:comparison-count}

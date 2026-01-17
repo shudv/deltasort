@@ -1,5 +1,11 @@
 \appendix
 
+\section{DeltaSort Worst Case Movement}
+\label{sec:appendix-worst-case}
+DeltaSort can exhibit worst-case movement of $O(k n)$ under clustered monotic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $O(kn)$.
+
+\input{\figdir/worst-case}
+
 \section{Full proof for expected number of segments}
 \label{sec:appendix-movement-proof}
 \begin{lemma}
@@ -7,14 +13,14 @@
 \end{lemma}
 \label{lem:expected-segments}
 \begin{proof}
-After Phase~1, we have two sorted sequences of $k$ elements each:
+After Phase~1, we have two sorted sequences of $k$ values each:
 \begin{itemize}
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
 Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
 
-Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
+Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ values spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
 
 Define the \emph{gap} at rank $j$ as:
 \[

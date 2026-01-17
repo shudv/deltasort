@@ -17,7 +17,7 @@ mod extract_sort_merge;
 mod instrumented_deltasort;
 mod statistics;
 
-use crate::binary_insertion_sort::binary_insertion_sort;
+use crate::binary_insertion_sort::binary_insertion_sort_hybrid;
 use crate::data::{
     counting_comparator, generate_sorted_users, get_comparison_count, reset_comparison_count,
     sample_distinct_indices, user_comparator, User,
@@ -168,7 +168,7 @@ fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
 
 fn bis_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
     algorithm_is_faster(base_users, k, n, |arr, indices| {
-        binary_insertion_sort(arr, indices, user_comparator);
+        binary_insertion_sort_hybrid(arr, indices, user_comparator);
     })
 }
 
@@ -417,7 +417,7 @@ fn run_time_benchmark(export: bool) {
         });
 
         if k <= BIS_MAX_K {
-            let bis = run_benchmark(&base_users, k, binary_insertion_sort);
+            let bis = run_benchmark(&base_users, k, binary_insertion_sort_hybrid);
             results.bis.push(Some(AlgorithmResult {
                 k,
                 iterations: bis.iterations,

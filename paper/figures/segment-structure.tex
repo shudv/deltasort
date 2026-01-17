@@ -1,6 +1,7 @@
 % Figure: Segment structure diagram
 \begin{figure}[t]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
     cell/.style={minimum width=0.6cm, minimum height=0.5cm, draw, font=\scriptsize},
     dotcell/.style={minimum width=0.5cm, minimum height=0.5cm, font=\scriptsize},
@@ -99,6 +100,7 @@
 \node[font=\scriptsize, anchor=west] at (12.15, -0.25) {= LEFT};
 
 \end{tikzpicture}
+}
 \caption{Segment structure (leading and trailing segments may be absent)}
 \label{fig:segment-structure}
 \end{figure}

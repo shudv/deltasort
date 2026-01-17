@@ -5,8 +5,9 @@
 
 \input{\figdir/sorting-algorithms}
 
-All benchmarks \footnote{Along with benchmarks, we also validated correctness by an extensive set of randomized tests~\cite{deltasort-repo} across various scales of $n$ and full range of $k$.} are run on Rust implementations of each algorithm on randomly generated synthetic datasets of user objects (name, age, country) on an Apple M series chip. We chose Rust due to its predictable performance characteristics \footnote{In contrast, managed execution environments like JavaScript on V8 have various factors like garbage collection, non-contiguous memory layouts~\cite{v8elementskinds} etc. that impact the underlying cost model.}. We used a realistic multi-key comparator to simulate a practical workload. Execution times are measured after sufficient warm-up, and each data point is the mean over repeated runs with 95\% CI within $5\%$. All the source code is available for reproducibility~\cite{deltasort-repo}. We evaluated the following algorithms:
+All benchmarks \footnote{Along with benchmarks, we also validated correctness by an extensive set of randomized tests~\cite{deltasort-repo} across various scales of $n$ and full range of $k$.} are run on Rust implementations of each algorithm on randomly generated synthetic datasets of user objects (name, age, country) on an Apple M series chip. We chose Rust due to its predictable performance characteristics \footnote{In contrast, managed execution environments like JavaScript on V8 have various factors like garbage collection, non-contiguous memory layouts~\cite{v8elementskinds} etc. that impact the underlying cost model.}. We used a realistic multi-key comparator to simulate a practical workload. Execution times are measured after sufficient warm-up, and each data point is the mean over repeated runs with 95\% CI within $5\%$. All the source code is available for reproducibility~\cite{deltasort-repo}. The raw data used in plots is available in ~\appref{sec:appendix-raw-data}.
 
+We evaluated the following algorithms:
 \begin{itemize}
   \item \textbf{FullSort}: Rust's stable \texttt{slice::sort\_by} implementation based on DriftSort~\cite{driftsort}, representing full re-sorting of the array. This serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which FullSort is preferable.
 
@@ -25,9 +26,9 @@ All benchmarks \footnote{Along with benchmarks, we also validated correctness by
 \begin{enumerate}
   \item The \textbf{asymptotic behavior for each algorithm aligns with theoretical expectations}. BIS exhibits steep growth consistent with its $O(kn)$ movement cost, quickly becoming impractical as $k$ increases. ESM is relatively flat for small $k$, where linear merge cost dominates and is largely independent of the number of updates. DeltaSort exhibits intermediate growth.
 
-  \item \textbf{DeltaSort is the fastest algorithm for} $k \lesssim 1\%$. For example, at $k = 0.1\%$, DeltaSort is $\sim 10\times$ faster than FullSort and $\sim 3\times$ faster than ESM. It uses more auxiliary space than BIS ($O(k)$ vs $O(1)$) but substantially less than ESM ($O(k)$ vs $O(n)$). Even though $1\%$ is small in absolute terms, it aligns very well with practical workloads where updates usually affect only a small percentage of the full dataset.
+  \item \textbf{DeltaSort is the fastest algorithm for} $k \lesssim 1\%$. For example, at $k = 0.1\%$, DeltaSort is $\sim$10$\times$ faster than FullSort and $\sim$3$\times$ faster than ESM. It uses more auxiliary space than BIS ($O(k)$ vs $O(1)$) but substantially less than ESM ($O(k)$ vs $O(n)$). Even though $1\%$ is small in absolute terms, it aligns very well with practical workloads where updates usually affect only a small percentage of the full dataset.
 
-  \item ESM is the fastest algorithm across most of the intermediate range ($1\% \lesssim k \lesssim 70\%$). However, its performance comes at the cost of $O(n)$ space. \textbf{DeltaSort provides a space-efficient alternative to ESM for} $k \lesssim 20\%$, while still beating FullSort by $\sim 2 \times$.
+  \item ESM is the fastest algorithm across most of the intermediate range ($1\% \lesssim k \lesssim 70\%$). However, its performance comes at the cost of $O(n)$ space. \textbf{DeltaSort provides a space-efficient alternative to ESM for} $k \lesssim 20\%$, using $\sim$5--10$\times$ less space while still beating FullSort by $\sim$2$\times$.
   
   \item Crossover threshold trend is consistent and largely stable across all scales (DeltaSort 20--40\%, ESM 60--80\%), indicating that \textbf{the above observations hold across scales}. BIS has a very low threshold due to its quadratic data movement cost, whereas ESM has the highest threshold due to its efficient linear merge pass. DeltaSort exhibits an intermediate threshold, in line with its intermediate time complexity.
 \end{enumerate}
@@ -36,4 +37,8 @@ These observations suggest that, much like hybrid blind sorting algorithms (e.g.
 
 \subsection{Managed execution environments}
 
-DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaway is that DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in unmanaged environments (e.g., Rust) but \textbf{not in V8~\cite{v8elementskinds}} (see~\appref{sec:appendix-js-deltasort} for benchmarks). We need further study and evaluation on other managed runtimes (e.g., JVM, .NET, JavascriptCore etc.) to understand if this is a general trend or specific to V8.
+DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in managed runtimes. The key takeaways are:
+\begin{enumerate}
+  \item DeltaSort's performance benefits rely on a \emph{predictable movement cost model}, which holds in unmanaged environments (e.g., Rust) but \textbf{not in V8~\cite{v8elementskinds}} (see~\appref{sec:appendix-js-deltasort} for benchmarks). We need further study and evaluation on other managed runtimes (e.g., JVM, .NET, JavascriptCore etc.) to understand if this is a general trend or specific to V8.
+  \item BIS and DeltaSort are $\sim$10$\times$ faster than FullSort for $k\lessapprox0.01\%$ and ESM is $\sim$1.4$\times$ faster than FullSort for $k$ up to $\approx$50\%, indicating that even in managed runtimes, exposing updated indices can unlock better performance.
+\end{enumerate}

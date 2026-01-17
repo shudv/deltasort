@@ -136,6 +136,6 @@
 \draw[arrow] (\xM + \arrayw + 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
 \node[black, anchor=west] at (8.0, \rowC + 0.25) {\scriptsize\bfseries 6+6};
 \end{tikzpicture}
-\caption{Data movement comparison for 3 updated values (yellow). BIS first uses 9 moves to shift updated values to the end (since insertion requires a fully sorted prefix), then 10 (0+4+6) moves to insert each into the sorted prefix. ESM uses 6 moves to sort the extracted values, then writes all 8 values to produce the merged output. DeltaSort uses 6 moves to sort updated values, then just 6 (2+2+2) moves to place each value correctly within its segment (see~\defref{def:segment}), without having to form a full sorted prefix like BIS.}
+\caption{Data movement comparison for 3 updated values (yellow). BIS first uses 9 moves to shift updated values to the end (since insertion requires a fully sorted prefix), then 10 (0+4+6) moves to insert each into the sorted prefix. ESM uses 6 moves to sort the extracted values, then writes all 8 values to produce the merged output. DeltaSort uses 6 moves to sort updated values, then just 6 (2+2+2) moves to place each value correctly within its segment (see~\defref{def:segment}), without having to form a fully sorted prefix upfront like BIS.}
 \label{fig:algorithm-comparison}
 \end{figure}

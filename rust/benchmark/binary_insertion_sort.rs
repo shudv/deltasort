@@ -65,11 +65,10 @@ pub fn binary_insertion_sort_rotate(
         // Current dirty element is at position clean_len + i
         // The sorted portion is arr[0..clean_len + i]
         let sorted_len = clean_len + i;
-        
+
         // Binary search in the sorted portion
-        let pos = arr[..sorted_len].partition_point(|x| {
-            user_comparator(x, &arr[sorted_len]) == std::cmp::Ordering::Less
-        });
+        let pos = arr[..sorted_len]
+            .partition_point(|x| user_comparator(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
 
         // Rotate to insert: [sorted_part | element] -> insert element at pos
         // This is equivalent to insert but done in-place via rotation
@@ -419,11 +418,11 @@ mod tests {
         for _ in 0..50 {
             let n = 100;
             let k = rng.gen_range(1..=20);
-            
+
             let base: Vec<User> = (0..n as u32).map(make_user).collect();
             let mut arr1 = base.clone();
             let mut arr2 = base.clone();
-            
+
             let mut dirty: HashSet<usize> = HashSet::new();
             for _ in 0..k {
                 let idx = rng.gen_range(0..n);
@@ -432,54 +431,69 @@ mod tests {
                 arr2[idx] = make_user(new_val);
                 dirty.insert(idx);
             }
-            
+
             binary_insertion_sort(&mut arr1, &dirty, user_cmp);
             binary_insertion_sort_rotate(&mut arr2, &dirty, user_cmp);
-            
+
             let ages1: Vec<u32> = arr1.iter().map(|u| u.age).collect();
             let ages2: Vec<u32> = arr2.iter().map(|u| u.age).collect();
-            assert_eq!(ages1, ages2, "Both versions should produce same sorted result");
+            assert_eq!(
+                ages1, ages2,
+                "Both versions should produce same sorted result"
+            );
         }
     }
 
     #[test]
     fn benchmark_compare_versions() {
         use std::time::Instant;
-        
+
         let mut rng = rand::thread_rng();
         let n = 10000;
         let iterations = 10;
         let k_values = [1, 10, 100, 200, 500, 1000, 2000];
 
-        println!("\n=== Binary Insertion Sort Benchmark (n={}, {} iterations) ===", n, iterations);
-        println!("{:>6} | {:>15} | {:>15} | {:>15} | {:>10}", "k", "Original (µs)", "Rotate (µs)", "Hybrid (µs)", "Best");
-        println!("{:-<6}-+-{:-<15}-+-{:-<15}-+-{:-<15}-+-{:-<10}", "", "", "", "", "");
+        println!(
+            "\n=== Binary Insertion Sort Benchmark (n={}, {} iterations) ===",
+            n, iterations
+        );
+        println!(
+            "{:>6} | {:>15} | {:>15} | {:>15} | {:>10}",
+            "k", "Original (µs)", "Rotate (µs)", "Hybrid (µs)", "Best"
+        );
+        println!(
+            "{:-<6}-+-{:-<15}-+-{:-<15}-+-{:-<15}-+-{:-<10}",
+            "", "", "", "", ""
+        );
 
         for &k in &k_values {
             // Prepare test data - create fresh copies for each algorithm
             let mut test_data: Vec<(Vec<User>, HashSet<usize>)> = Vec::with_capacity(iterations);
-            
+
             for _ in 0..iterations {
                 let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
                 let mut dirty: HashSet<usize> = HashSet::new();
-                
+
                 while dirty.len() < k {
                     let idx = rng.gen_range(0..n);
                     arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
                     dirty.insert(idx);
                 }
-                
+
                 test_data.push((arr, dirty));
             }
 
             // Clone for each algorithm to ensure fair comparison
-            let mut original_inputs: Vec<_> = test_data.iter()
+            let mut original_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
-            let mut rotate_inputs: Vec<_> = test_data.iter()
+            let mut rotate_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
-            let mut hybrid_inputs: Vec<_> = test_data.iter()
+            let mut hybrid_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
 
@@ -509,14 +523,22 @@ mod tests {
                 let ages1: Vec<u32> = original_inputs[i].0.iter().map(|u| u.age).collect();
                 let ages2: Vec<u32> = rotate_inputs[i].0.iter().map(|u| u.age).collect();
                 let ages3: Vec<u32> = hybrid_inputs[i].0.iter().map(|u| u.age).collect();
-                assert_eq!(ages1, ages2, "Mismatch original vs rotate at iteration {}", i);
-                assert_eq!(ages1, ages3, "Mismatch original vs hybrid at iteration {}", i);
+                assert_eq!(
+                    ages1, ages2,
+                    "Mismatch original vs rotate at iteration {}",
+                    i
+                );
+                assert_eq!(
+                    ages1, ages3,
+                    "Mismatch original vs hybrid at iteration {}",
+                    i
+                );
             }
 
             let original_us = original_time.as_micros() as f64 / iterations as f64;
             let rotate_us = rotate_time.as_micros() as f64 / iterations as f64;
             let hybrid_us = hybrid_time.as_micros() as f64 / iterations as f64;
-            
+
             let best = if hybrid_us <= original_us && hybrid_us <= rotate_us {
                 "Hybrid"
             } else if original_us <= rotate_us {
@@ -525,8 +547,10 @@ mod tests {
                 "Rotate"
             };
 
-            println!("{:>6} | {:>15.2} | {:>15.2} | {:>15.2} | {:>10}", 
-                     k, original_us, rotate_us, hybrid_us, best);
+            println!(
+                "{:>6} | {:>15.2} | {:>15.2} | {:>15.2} | {:>10}",
+                k, original_us, rotate_us, hybrid_us, best
+            );
         }
         println!();
     }
@@ -534,39 +558,51 @@ mod tests {
     #[test]
     fn benchmark_compare_versions_small() {
         use std::time::Instant;
-        
+
         let mut rng = rand::thread_rng();
         let n = 10000;
         let iterations = 50;
         let k_values = [1, 5, 10, 20, 50, 100, 500, 1000, 2000];
 
-        println!("\n=== Binary Insertion Sort Benchmark (n={}, {} iterations) ===", n, iterations);
-        println!("{:>6} | {:>15} | {:>15} | {:>15} | {:>10}", "k", "Original (µs)", "Rotate (µs)", "Hybrid (µs)", "Best");
-        println!("{:-<6}-+-{:-<15}-+-{:-<15}-+-{:-<15}-+-{:-<10}", "", "", "", "", "");
+        println!(
+            "\n=== Binary Insertion Sort Benchmark (n={}, {} iterations) ===",
+            n, iterations
+        );
+        println!(
+            "{:>6} | {:>15} | {:>15} | {:>15} | {:>10}",
+            "k", "Original (µs)", "Rotate (µs)", "Hybrid (µs)", "Best"
+        );
+        println!(
+            "{:-<6}-+-{:-<15}-+-{:-<15}-+-{:-<15}-+-{:-<10}",
+            "", "", "", "", ""
+        );
 
         for &k in &k_values {
             let mut test_data: Vec<(Vec<User>, HashSet<usize>)> = Vec::with_capacity(iterations);
-            
+
             for _ in 0..iterations {
                 let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
                 let mut dirty: HashSet<usize> = HashSet::new();
-                
+
                 while dirty.len() < k {
                     let idx = rng.gen_range(0..n);
                     arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
                     dirty.insert(idx);
                 }
-                
+
                 test_data.push((arr, dirty));
             }
 
-            let mut original_inputs: Vec<_> = test_data.iter()
+            let mut original_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
-            let mut rotate_inputs: Vec<_> = test_data.iter()
+            let mut rotate_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
-            let mut hybrid_inputs: Vec<_> = test_data.iter()
+            let mut hybrid_inputs: Vec<_> = test_data
+                .iter()
                 .map(|(arr, dirty)| (arr.clone(), dirty.clone()))
                 .collect();
 
@@ -593,14 +629,22 @@ mod tests {
                 let ages1: Vec<u32> = original_inputs[i].0.iter().map(|u| u.age).collect();
                 let ages2: Vec<u32> = rotate_inputs[i].0.iter().map(|u| u.age).collect();
                 let ages3: Vec<u32> = hybrid_inputs[i].0.iter().map(|u| u.age).collect();
-                assert_eq!(ages1, ages2, "Mismatch original vs rotate at iteration {}", i);
-                assert_eq!(ages1, ages3, "Mismatch original vs hybrid at iteration {}", i);
+                assert_eq!(
+                    ages1, ages2,
+                    "Mismatch original vs rotate at iteration {}",
+                    i
+                );
+                assert_eq!(
+                    ages1, ages3,
+                    "Mismatch original vs hybrid at iteration {}",
+                    i
+                );
             }
 
             let original_us = original_time.as_micros() as f64 / iterations as f64;
             let rotate_us = rotate_time.as_micros() as f64 / iterations as f64;
             let hybrid_us = hybrid_time.as_micros() as f64 / iterations as f64;
-            
+
             let best = if hybrid_us <= original_us && hybrid_us <= rotate_us {
                 "Hybrid"
             } else if original_us <= rotate_us {
@@ -609,8 +653,10 @@ mod tests {
                 "Rotate"
             };
 
-            println!("{:>6} | {:>15.2} | {:>15.2} | {:>15.2} | {:>10}", 
-                     k, original_us, rotate_us, hybrid_us, best);
+            println!(
+                "{:>6} | {:>15.2} | {:>15.2} | {:>15.2} | {:>10}",
+                k, original_us, rotate_us, hybrid_us, best
+            );
         }
         println!();
     }

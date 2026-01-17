@@ -5,7 +5,7 @@
 
 \subsection{Overview}
 
-DeltaSort is a conditionally \footnote{The stability and auxiliary space usage of DeltaSort depend solely on the sorting routine used in Phase~1 to order the $k$ updated values. Apart from this step, DeltaSort introduces no instability and requires no auxiliary space.} \emph{stable} \emph{in-place} update-aware sorting algorithm. It operates in two phases (see \algoref{alg:deltasort} for pseudocode). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
+DeltaSort is an in-place update-aware sorting algorithm. It operates in two phases (see \algoref{alg:deltasort} for pseudocode). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
 \paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, any remaining order violations must occur only between updated values and their unchanged neighbours.
 
@@ -52,15 +52,14 @@ Phase~2 (line ~9--29) processes updated indices from left to right while maintai
 
 \subparagraph{Maintenance:} We will now show that if the invariant holds for $p$, it also holds for $p+1$. Let $i = \texttt{updatedIndices}[p]$ and $\texttt{dir}$ is direction of $i$.
 
-\emph{Case 1: $\texttt{dir} = L$}
+\textbf{Case 1: $\texttt{dir} = L$}
 \begin{enumerate}
   \item We first set $\texttt{rightBound} \gets i - 1$. This marks the right boundary beyond which the $R$ values in \texttt{pendingRight} cannot move, because after Phase~1, updated values are ordered and hence cannot cross each other in either directions.
   \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, \texttt{rightBound}]$, where $\texttt{rightBound}$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, it is guaranteed that the range $[j+1, \texttt{rightBound}]$ contains no violations and hence binary search can always find the right insertion point. This step preserves condition (3) and (4) of the loop invariant.
   \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves the condition (1) and (2) of the loop invariant.
 \end{enumerate}
 
-\emph{Case 2: $\texttt{dir} = R$}
-
+\textbf{Case 2: $\texttt{dir} = R$}
 \begin{enumerate}
   \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$. This preserves condition (1) and (2) of the loop invariant.
   \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
@@ -89,9 +88,9 @@ A \emph{segment} is a subarray of $A$ spanning indices $[i, j]$, where $0 \le i 
 \end{enumerate}
 \end{definition}
 
-More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
-
 \input{\figdir/segment-structure}
+
+More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
 
 \subparagraph{Key Insight: Segments can be fixed \emph{locally} and \emph{independently}:}
 \label{sec:insight}
@@ -132,34 +131,7 @@ After Phase~1, we have two sorted sequences of $k$ elements each:
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
-Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
-
-Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
-
-Define the \emph{gap} at rank $j$ as:
-\[
-g_j = t_j - i_j
-\]
-This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
-\begin{itemize}
-  \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
-  \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
-\end{itemize}
-
-The gap evolves as we move through the ranks. Let $\Delta i_j = i_{j+1} - i_j$ and $\Delta t_j = t_{j+1} - t_j$ denote the spacings between consecutive order statistics. The change in gap is:
-\[
-g_{j+1} - g_j = \Delta t_j - \Delta i_j
-\]
-Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
-
-By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings:
-\[
-\mathbb{E}[\text{zero crossings}] = \Theta(\sqrt{k})
-\]
-Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is:
-\[
-\mathbb{E}[\text{segments}] = 1 + \mathbb{E}[L \to R \text{ transitions}] = O(\sqrt{k})
-\]
+After Phase~1, we have two sorted sequences of $k$ elements each which forms an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed are $O(\sqrt{k})$ (see ~\lemref{lem:expected-segments} for full proof).
 
 With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
@@ -168,8 +140,10 @@ With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected wid
 \end{proof}
 
 \begin{remark}[Worst Case Movement]
-While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates cluster \emph{monotonically} at the start or end of the array (see \appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when all updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see \figref{fig:worst-case} for an illustration). In this case, all left-moving values must be shifted to the left end, and all right-moving values to the right end, resulting in maximum data movement of $O(kn)$. Hence, in a practical setting, a hybrid algorithm will need to fallback to ESM or full re-sort based on the number of segments detected after Phase~1.
 \end{remark}
+
+\input{\figdir/worst-case}
 
 \begin{lemma}[Comparison Count]
 \label{lem:comparison-count}

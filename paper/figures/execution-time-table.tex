@@ -1,0 +1,43 @@
+% Reusable execution time table from CSV
+% Usage: \def\csvpath{rust/execution-time.csv} \def\csvlabel{rust} \input{\figdir/execution-time-table}
+% Requires: booktabs, pgfplotstable packages
+
+\begin{table}[htbp]
+\centering
+\caption{Raw execution time data (\csvlabel). Times shown as mean $\pm$ 95\% CI\% (in $\mu$s).}
+\label{tab:execution-time-\csvlabel}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\pgfplotstableread[col sep=comma]{\figdir/\csvpath}\csvdata
+% Create CI percentage columns
+\pgfplotstablecreatecol[
+    create col/expr={\thisrow{native_ci}/\thisrow{native}*100}
+]{native_cipct}\csvdata
+\pgfplotstablecreatecol[
+    create col/expr={\thisrow{bis_ci}/\thisrow{bis}*100}
+]{bis_cipct}\csvdata
+\pgfplotstablecreatecol[
+    create col/expr={\thisrow{esm_ci}/\thisrow{esm}*100}
+]{esm_cipct}\csvdata
+\pgfplotstablecreatecol[
+    create col/expr={\thisrow{deltasort_ci}/\thisrow{deltasort}*100}
+]{deltasort_cipct}\csvdata
+\pgfplotstabletypeset[
+    columns={k,iters,native,native_cipct,bis,bis_cipct,esm,esm_cipct,deltasort,deltasort_cipct},
+    every head row/.style={
+        before row=\toprule,
+        after row=\midrule
+    },
+    every last row/.style={after row=\bottomrule},
+    columns/k/.style={column name=$k$, int detect},
+    columns/iters/.style={column name=Iters, int detect},
+    columns/native/.style={column name=FullSort, fixed, precision=0, dec sep align},
+    columns/native_cipct/.style={column name=$\pm$\%, fixed, precision=1, postproc cell content/.append style={/pgfplots/table/@cell content/.add={}{\%}}},
+    columns/bis/.style={column name=BIS, fixed, precision=0, dec sep align},
+    columns/bis_cipct/.style={column name=$\pm$\%, fixed, precision=1, postproc cell content/.append style={/pgfplots/table/@cell content/.add={}{\%}}},
+    columns/esm/.style={column name=ESM, fixed, precision=0, dec sep align},
+    columns/esm_cipct/.style={column name=$\pm$\%, fixed, precision=1, postproc cell content/.append style={/pgfplots/table/@cell content/.add={}{\%}}},
+    columns/deltasort/.style={column name=DeltaSort, fixed, precision=0, dec sep align},
+    columns/deltasort_cipct/.style={column name=$\pm$\%, fixed, precision=1, postproc cell content/.append style={/pgfplots/table/@cell content/.add={}{\%}}},
+]\csvdata
+\end{table}

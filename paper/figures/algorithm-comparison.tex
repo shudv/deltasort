@@ -44,7 +44,7 @@
 
 % --- BIS: 0 + 4 + 6 = 10 moves ---
 % Label placed beside horizontal arm
-% After moving dirty elements to end: 0 2 4 5 8 9 4 3
+% After moving dirty values to end: 0 2 4 5 8 9 4 3
 \foreach \i/\v/\up in {0/0/0, 1/2/0, 2/4/0, 3/5/0, 4/8/0, 5/9/1, 6/4/1, 7/3/1} {
     \ifnum\up=1
         \node[cellup] (bisM\i) at (\xM + \i*\cellw, \rowA) {\v};
@@ -98,7 +98,7 @@
 % THIRD COLUMN: Shared Output Array
 % ============================================================================
 % Output: 0 2 3 4 4 5 8 9 (centered vertically)
-% 3, 4, 9 colored green (the updated elements in final position)
+% 3, 4, 9 colored green (the updated values in final position)
 \foreach \i/\v/\green in {0/0/0, 1/2/0, 2/3/1, 3/4/0, 4/4/1, 5/5/0, 6/8/0, 7/9/1} {
     \ifnum\green=1
         \node[cellgreen] (O\i) at (\xO + \i*\cellw, \rowB) {\v};

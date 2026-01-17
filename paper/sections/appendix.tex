@@ -1,20 +1,26 @@
 \appendix
 
+\section{DeltaSort Worst Case Movement}
+\label{sec:appendix-worst-case}
+DeltaSort can exhibit worst-case movement of $O(kn)$ under clustered monotonic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $O(kn)$.
+
+\input{\figdir/worst-case}
+
 \section{Full proof for expected number of segments}
 \label{sec:appendix-movement-proof}
 \begin{lemma}
+\label{lem:expected-segments}
   In Phase~1 of DeltaSort, the expected number of segments created is $O(\sqrt{k})$.
 \end{lemma}
-\label{lem:expected-segments}
 \begin{proof}
-After Phase~1, we have two sorted sequences of $k$ elements each:
+After Phase~1, we have two sorted sequences of $k$ values each:
 \begin{itemize}
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
 Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
 
-Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ elements spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyse both sequences as order statistics of uniform samples from the same range.
+Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ values spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyze both sequences as order statistics of uniform samples from the same range.
 
 Define the \emph{gap} at rank $j$ as:
 \[
@@ -45,9 +51,9 @@ Since $L \to R$ transitions account for roughly half of all zero crossings, the 
 \section{Empirical Validation of Complexity Bounds}
 \label{sec:appendix-complexity}
 
-\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalised values should be approximately constant across all scales.
+\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
 
-The results confirm both bounds: movement normalised by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalised by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
+The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalized by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
 
 \input{\figdir/complexity-analysis}
 
@@ -64,3 +70,12 @@ The results confirm both bounds: movement normalised by $n\sqrt{k}$ converges to
 \end{enumerate}
 
 The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, a valid hybrid strategy can be: use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
+
+\section{Raw Benchmark Data}
+\label{sec:appendix-raw-data}
+
+Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$ (number of updated indices) with $n = 100{,}000$ elements.
+
+\def\csvpath{rust/execution-time.csv}
+\def\csvlabel{Rust}
+\input{\figdir/execution-time-table}

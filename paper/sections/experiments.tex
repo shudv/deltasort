@@ -38,7 +38,7 @@ These observations suggest that, much like hybrid blind sorting algorithms (e.g.
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in a runtime that \emph{does not have a predictable movement cost model}~\cite{v8elementskinds}. The key takeaways are:
 \begin{enumerate}
-  \item DeltaSort's performance is identical to BIS and has a \textbf{much lower crossover threshold} (see~\appref{sec:appendix-js-deltasort} for benchmarks), which shows that the improvements seen in native environments like Rust, \textbf{do not translate to V8}.
+  \item DeltaSort's performance is identical to BIS and has a \textbf{much lower crossover threshold} (see~\appref{sec:appendix-js-deltasort} for benchmarks), which shows that the improvements seen in native environments like Rust, \textbf{do not translate as is to V8}.
 
-  \item BIS and DeltaSort are $\sim$10$\times$ faster than FullSort for $k\lessapprox0.01\%$ and ESM is $\sim$1.4$\times$ faster than FullSort for $k$ up to $\approx$50\%, indicating that even in managed runtimes, \emph{exposing updated indices can unlock better performance}.
+  \item BIS and DeltaSort are $\sim$10$\times$ faster than FullSort for $k\lessapprox0.01\%$ and ESM is $\sim$1.4$\times$ faster than FullSort for $k$ up to $\approx$50\%, indicating that even in managed runtimes, \textbf{exposing updated indices can unlock better incremental sort performance}.
 \end{enumerate}

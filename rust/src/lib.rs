@@ -117,7 +117,7 @@ where
     for (i, &idx) in dirty.iter().enumerate() {
         arr[idx] = values[i].clone();
     }
-    
+
     dirty.push(arr.len()); // Add sentinel to trigger final flush
 
     // Phase 2: Scan updated indices left to right

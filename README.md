@@ -1,11 +1,12 @@
 # DeltaSort
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18132074.svg)](https://doi.org/10.5281/zenodo.18132074)
-[![CI](https://github.com/shudv/deltasort/actions/workflows/ci.yml/badge.svg)](https://github.com/shudv/deltasort/actions)
+<!-- DOI badge removed for anonymous review -->
+
+<!-- CI badge removed for anonymous review -->
 
 An incremental soting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
-📄 **[Read the pre-print](https://doi.org/10.5281/zenodo.18132074)**
+<!-- Pre-print link removed for anonymous review -->
 
 ## Quick Start
 
@@ -68,7 +69,7 @@ This is early-stage. If you:
 - Have suggestions for the paper
 - Want to discuss applications
 
-Please [open an issue](https://github.com/shudv/deltasort/issues) or reach out!
+Please reach out via the review process.
 
 ## License
 

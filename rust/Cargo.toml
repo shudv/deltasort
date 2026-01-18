@@ -2,10 +2,10 @@
 name = "deltasort"
 version = "0.1.0"
 edition = "2021"
-authors = ["Shubham Dwivedi <shubd3@gmail.com>"]
+authors = ["Anonymous"]
 description = "Incremental sorting of arrays with known updates"
 license = "MIT"
-repository = "https://github.com/shubd3/deltasort"
+# repository anonymized for review
 keywords = ["delta", "sort", "incremental", "fast"]
 categories = ["algorithms"]
 

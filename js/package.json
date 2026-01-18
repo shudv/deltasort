@@ -41,16 +41,16 @@
         "incremental",
         "fast"
     ],
-    "author": "Shubham Dwivedi <shudv@users.noreply.github.com>",
+    "author": "Anonymous",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/shudv/deltasort.git"
+        "url": "anonymized-for-review"
     },
     "bugs": {
-        "url": "https://github.com/shudv/deltasort/issues"
+        "url": "anonymized-for-review"
     },
-    "homepage": "https://github.com/shudv/deltasort#readme",
+    "homepage": "anonymized-for-review",
     "devDependencies": {
         "@eslint/js": "^9.39.2",
         "@size-limit/preset-small-lib": "^11.2.0",

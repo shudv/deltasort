@@ -43,7 +43,7 @@ pnpm benchmark:export
 
 ⚡ = DeltaSort is fastest &nbsp;&nbsp; 🪶 = DeltaSort beats FullSort, slower than ESM but uses much less memory &nbsp;&nbsp; 🐢 = too slow, not evaluated
 
-_Rust on Apple M-series. Results are environment-specific — JavaScript on V8 has a [much lower crossover threshold](paper/figures/js) due to V8's highly optimized native sort._
+_Rust on Apple M-series. Results are environment-specific — JavaScript on V8 has a [much lower crossover threshold](paper/figures/js)._
 
 ## How It Works
 

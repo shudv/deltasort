@@ -3,7 +3,7 @@
 \label{sec:introduction}
 %==============================================================================
 
-Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and DriftSort~\cite{driftsort} deliver excellent performance for general inputs by exploiting existing order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have been updated since the previous sort. While this model is more general and makes things straightforward for the caller, it also misses opportunities for optimization when such information is available. Modern systems often maintain metadata about updated records as part of their execution pipeline~\cite{kleppmann2017cdc}, making it possible to expose this information to lower-level sorting primitives. In the absence of a primitive that can accept this as a first-class input, they must either perform a full re-sort or use standard insertion-based or merge-based incremental techniques.
+Sorting is among the most heavily optimized primitives in modern systems, backed by decades of deep research. Standard library implementations---TimSort~\cite{timsort}, Introsort~\cite{musser1997introspective}, and DriftSort~\cite{driftsort} deliver excellent performance for general inputs by exploiting existing order, cache locality, and adaptive strategies. However, these algorithms operate under a \emph{blind} model: they discover structure dynamically rather than being explicitly informed about which values have been updated since the previous sort. While this model is more general and makes things straightforward for the caller, it also \emph{misses opportunities for optimization when such information is available}. Modern systems often maintain metadata about updated records as part of their execution pipeline~\cite{kleppmann2017cdc}, making it possible to expose this information to lower-level sorting primitives. In the absence of a primitive that can accept this as a first-class input, they must either perform a full re-sort or use standard insertion-based or merge-based incremental techniques.
 
 \input{\figdir/incremental-sorting-algorithms}
 
@@ -29,6 +29,4 @@ This raises the question: are there other algorithms that offer \emph{intermedia
   \item \textbf{Experimental validation:} We benchmark Rust implementations of DeltaSort, BIS, and ESM on synthetic datasets. In our evaluation, DeltaSort is consistently faster than BIS and provides a space-efficient alternative to ESM across a wide range of update sizes.
 \end{enumerate}
 
-
 \input{\figdir/algorithm-comparison}
-

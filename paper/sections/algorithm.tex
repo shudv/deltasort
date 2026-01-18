@@ -5,9 +5,9 @@
 
 \subsection{Overview}
 
-DeltaSort is a stable\footnote{Strictly speaking, the stability also depends upon the sorting routine used internally to sort updated values. As long as the sorting routine used internally is stable, DeltaSort remains stable as a whole.} update-aware sorting algorithm. It operates in two phases (see~\algoref{alg:deltasort} for pseudocode). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
+DeltaSort is a stable\footnote{Strictly speaking, the stability also depends upon the sorting routine used internally to sort updated values. As long as the sorting routine used internally is stable, DeltaSort remains stable as a whole.} update-aware sorting algorithm. It operates in two phases (see~\algoref{alg:deltasort} for pseudocode and~\figref{fig:delta-sort-example} for an example). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
-\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, any remaining order violations must occur only between updated values and their unchanged neighbors.
+\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them, and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, \emph{any remaining order violations must occur only between updated values and their unchanged neighbors}.
 
 \paragraph{Phase 2: Fix violations}
 With the above structure in place, DeltaSort fixes the array one updated index at a time left to right. When an updated index is first encountered, we first determine its \emph{direction}:
@@ -107,7 +107,7 @@ Let $S$ be a segment with $R$-indices $r_0,\ldots,r_{r-1}$ followed by $L$-indic
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can improve performance even further on multi-core systems and distributed environments. To avoid expanding scope, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can \emph{improve performance even further on multi-core systems and distributed environments}. To avoid expanding scope, we leave this investigation for future work.
 \end{remark}
 
 \subsection{Complexity Analysis}
@@ -117,7 +117,7 @@ We analyze the expected total data movement incurred during Phase~2 of DeltaSort
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model} as a neutral baseline. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see~\figref{fig:worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models is left to future work.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model as a neutral baseline}. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see~\figref{fig:worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models is left to future work.
 \end{remark}
 
 \begin{lemma}[Expected Movement]

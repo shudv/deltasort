@@ -70,7 +70,8 @@ const ANALYSIS_ITERATIONS: usize = 100;
 /// Get number of iterations for a given k value
 fn timing_iterations_for_k(k: usize) -> usize {
     match k {
-        0..=5 => BASE_ITERATIONS * 50,
+        1 => BASE_ITERATIONS * 100,
+        2..=5 => BASE_ITERATIONS * 50,
         6..=10 => BASE_ITERATIONS * 10,
         11..=50 => BASE_ITERATIONS * 5,
         51..=1000 => BASE_ITERATIONS * 2,

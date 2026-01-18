@@ -189,23 +189,22 @@ fn fix_right<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F) -> usiz
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    // Binary search for target position on the right
+    // Binary search for target position in (i, right_bound]
     let mut lo = i + 1;
-    let mut hi = right_bound;
+    let mut hi = right_bound + 1;
 
-    while lo <= hi {
+    while lo < hi {
         let mid = lo + ((hi - lo) >> 1);
-        let c = cmp(&arr[mid], &arr[i]);
-
-        if c != std::cmp::Ordering::Greater {
+        if cmp(&arr[mid], &arr[i]) != std::cmp::Ordering::Greater {
             lo = mid + 1;
         } else {
-            hi = mid - 1;
+            hi = mid;
         }
     }
 
-    move_element(arr, i, hi);
-    hi
+    let target = lo - 1;
+    move_element(arr, i, target);
+    target
 }
 
 /// Fixes a LEFT direction at i by moving it to the correct position

@@ -1,10 +1,17 @@
 % Reusable execution time table from CSV
-% Usage: \def\csvpath{rust/execution-time.csv} \def\csvlabel{rust} \input{\figdir/execution-time-table}
-% Requires: booktabs, pgfplotstable packages
+% Usage: \def\csvdir{rust} \def\csvpath{rust/execution-time.csv} \def\csvlabel{Rust} \input{\figdir/execution-time-table}
+% Requires: booktabs, pgfplotstable, datetime2 packages
+
+% Read metadata (row indices: 0=timestamp, 1=machine, 2=n, 3=max_ci)
+\pgfplotstableread[col sep=comma]{\figdir/\csvdir/benchmark_metadata.csv}\metadatatable
+\pgfplotstablegetelem{0}{value}\of\metadatatable \let\benchtimestamp\pgfplotsretval
+\pgfplotstablegetelem{1}{value}\of\metadatatable \let\benchmachine\pgfplotsretval
+\pgfplotstablegetelem{2}{value}\of\metadatatable \let\benchn\pgfplotsretval
+\pgfplotstablegetelem{3}{value}\of\metadatatable \let\benchmaxci\pgfplotsretval
 
 \begin{table}[htbp]
 \centering
-\caption{Raw execution time data (\csvlabel). Times shown as mean $\pm$ 95\% CI\% (in $\mu$s).}
+\caption{Raw execution time data (\csvlabel). $n = \benchn$, machine: \benchmachine, max CI: \benchmaxci\%, timestamp: \benchtimestamp. Times in $\mu$s shown as mean $\pm$ 95\% CI\%.}
 \label{tab:execution-time-\csvlabel}
 \scriptsize
 \setlength{\tabcolsep}{3pt}

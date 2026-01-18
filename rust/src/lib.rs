@@ -118,12 +118,11 @@ where
         arr[idx] = values[i].clone();
     }
 
-    // Add sentinel to trigger final flush
-    dirty.push(arr.len());
+    dirty.push(arr.len()); // Add sentinel to trigger final flush
 
     // Phase 2: Scan updated indices left to right
 
-    // Stack for pending RIGHT directions
+    // Stack for pending RIGHT values
     let mut pending_right: Vec<usize> = Vec::with_capacity(dirty.len());
 
     // Left boundary for fixing LEFT violations
@@ -190,22 +189,20 @@ fn fix_right<T, F>(arr: &mut [T], i: usize, right_bound: usize, cmp: &F) -> usiz
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    // Binary search for target position on the right
+    // Binary search for target position in (i, right_bound]
     let mut lo = i + 1;
-    let mut hi = right_bound as isize;
+    let mut hi = right_bound + 1;
 
-    while lo as isize <= hi {
-        let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[mid], &arr[i]);
-
-        if c != std::cmp::Ordering::Greater {
+    while lo < hi {
+        let mid = lo + ((hi - lo) >> 1);
+        if cmp(&arr[mid], &arr[i]) != std::cmp::Ordering::Greater {
             lo = mid + 1;
         } else {
-            hi = mid as isize - 1;
+            hi = mid;
         }
     }
 
-    let target = hi as usize;
+    let target = lo - 1;
     move_element(arr, i, target);
     target
 }
@@ -218,16 +215,15 @@ fn fix_left<T, F>(arr: &mut [T], i: usize, left_bound: usize, cmp: &F) -> usize
 where
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    // Binary search for target position on the left
+    // Binary search for target position in [left_bound, i)
+    // Using half-open interval avoids underflow when target is at position 0
     let mut lo = left_bound;
-    let mut hi = i.saturating_sub(1) as isize;
+    let mut hi = i;
 
-    while lo as isize <= hi {
-        let mid = lo + ((hi as usize - lo) >> 1);
-        let c = cmp(&arr[i], &arr[mid]);
-
-        if c == std::cmp::Ordering::Less {
-            hi = mid as isize - 1;
+    while lo < hi {
+        let mid = lo + ((hi - lo) >> 1);
+        if cmp(&arr[i], &arr[mid]) == std::cmp::Ordering::Less {
+            hi = mid;
         } else {
             lo = mid + 1;
         }

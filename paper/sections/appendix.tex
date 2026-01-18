@@ -65,8 +65,8 @@ The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to
 \figref{fig:js-performance} shows execution time and crossover threshold data for JavaScript/V8. Several observations emerge:
 
 \begin{enumerate}
-  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost in V8 is not proportional to the number of moved values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that may not guarantee contiguous layouts.
-  \item ESM is $\sim 40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that \textbf{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
+  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost in V8 is not proportional to the number of moved values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that do not guarantee contiguous layouts. More study is needed to understand the exact root cause.
+  \item ESM is $\sim 40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that \emph{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
 \end{enumerate}
 
 The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in managed runtimes such as V8. Hence in V8, a valid hybrid strategy can be: use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
@@ -74,8 +74,9 @@ The key takeaway is that \emph{DeltaSort's performance benefits rely on a predic
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}
 
-Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$ (number of updated indices) with $n = 100{,}000$ elements.
+Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$ (number of updated indices).
 
+\def\csvdir{rust}
 \def\csvpath{rust/execution-time.csv}
 \def\csvlabel{Rust}
 \input{\figdir/execution-time-table}

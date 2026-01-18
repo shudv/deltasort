@@ -9,4 +9,5 @@ out/**
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+*.synctex(busy)
 main.pdf

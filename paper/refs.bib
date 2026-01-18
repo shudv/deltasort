@@ -29,16 +29,6 @@
   organization={SIAM}
 }
 
-@article{bentley1993engineering,
-  title={Engineering a Sort Function},
-  author={Bentley, Jon L. and McIlroy, M. Douglas},
-  journal={Software: Practice and Experience},
-  volume={23},
-  number={11},
-  pages={1249--1265},
-  year={1993}
-}
-
 @misc{timsort,
   title={Timsort},
   author={Peters, Tim},
@@ -47,14 +37,21 @@
   note={Adopted by Java SE 7, Android, and V8}
 }
 
-@article{musser1997introspective,
-  title={Introspective Sorting and Selection Algorithms},
-  author={Musser, David R.},
-  journal={Software: Practice and Experience},
-  volume={27},
-  number={8},
-  pages={983--993},
-  year={1997}
+@article{10.5555/261387.261395,
+author = {Musser, David R.},
+title = {Introspective sorting and selection algorithms},
+year = {1997},
+issue_date = {Aug. 1997},
+publisher = {John Wiley \& Sons, Inc.},
+address = {USA},
+volume = {27},
+number = {8},
+issn = {0038-0644},
+journal = {Softw. Pract. Exper.},
+month = aug,
+pages = {983–993},
+numpages = {11},
+keywords = {STL, generic algorithms, heapsort, hybrid algorithms, introspective algorithms, quicksort, sorting algorithms}
 }
 
 @misc{driftsort,
@@ -103,15 +100,6 @@
   doi={10.1109/TC.1985.5009382}
 }
 
-
-@inproceedings{guibas1977new,
-  title={A New Representation for Linear Lists},
-  author={Guibas, Leo J. and McCreight, Edward M. and Plass, Michael F. and Roberts, Janet R.},
-  booktitle={Proceedings of the 9th Annual ACM Symposium on Theory of Computing},
-  pages={49--60},
-  year={1977}
-}
-
 @article{avl1962,
   title={An Algorithm for the Organization of Information},
   author={Adelson-Velsky, Georgy M. and Landis, Evgenii M.},
@@ -121,68 +109,62 @@
   year={1962}
 }
 
-@inproceedings{guibas1978dichromatic,
-  title={A Dichromatic Framework for Balanced Trees},
+@inproceedings{4567957,
   author={Guibas, Leo J. and Sedgewick, Robert},
-  booktitle={Proceedings of the 19th Annual Symposium on Foundations of Computer Science},
-  pages={8--21},
-  year={1978}
+  booktitle={19th Annual Symposium on Foundations of Computer Science (sfcs 1978)}, 
+  title={A dichromatic framework for balanced trees}, 
+  year={1978},
+  volume={},
+  number={},
+  pages={8-21},
+  keywords={Computer science;Petroleum;Particle measurements;Algorithm design and analysis;Performance analysis},
+  doi={10.1109/SFCS.1978.3}
 }
 
-@article{bayer1972organization,
-  title={Organization and Maintenance of Large Ordered Indices},
-  author={Bayer, Rudolf and McCreight, Edward M.},
-  journal={Acta Informatica},
-  volume={1},
-  number={3},
-  pages={173--189},
-  year={1972}
+@inproceedings{10.1145/1734663.1734671,
+  author = {Bayer, R. and McCreight, E.},
+  title = {Organization and maintenance of large ordered indices},
+  year = {1970},
+  isbn = {9781450379410},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/1734663.1734671},
+  doi = {10.1145/1734663.1734671},
+  abstract = {Organization and maintenance of an index for a dynamic random access file is considered. It is assumed that the index must be kept on some pseudo random access backup store like a disc or a drum. The index organization described allows retrieval, insertion, and deletion of keys in time proportional to logk I where I is the size of the index and k is a device dependent natural number such that the performance of the scheme becomes near optimal. Storage utilization is at least 50\% but generally much higher. The pages of the index are organized in a special data-structure, so-called B-trees. The scheme is analyzed, performance bounds are obtained, and a near optimal k is computed. Experiments have been performed with indices up to 100,000 keys. An index of size 15,000 (100,000) can be maintained with an average of 9 (at least 4) transactions per second on an IBM 360/44 with a 2311 disc.},
+  booktitle = {Proceedings of the 1970 ACM SIGFIDET (Now SIGMOD) Workshop on Data Description, Access and Control},
+  pages = {107–141},
+  numpages = {35},
+  keywords = {random access files, paging, key retrieval, key insertion, key deletion, information retrieval, dynamic index maintenance, data structures},
+  location = {Houston, Texas},
+  series = {SIGFIDET '70}
 }
 
-@article{pugh1990skip,
-  title={Skip Lists: A Probabilistic Alternative to Balanced Trees},
-  author={Pugh, William},
-  journal={Communications of the ACM},
-  volume={33},
-  number={6},
-  pages={668--676},
-  year={1990}
+@article{10.1145/78973.78977,
+  author = {Pugh, William},
+  title = {Skip lists: a probabilistic alternative to balanced trees},
+  year = {1990},
+  issue_date = {June 1990},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {33},
+  number = {6},
+  issn = {0001-0782},
+  url = {https://doi.org/10.1145/78973.78977},
+  doi = {10.1145/78973.78977},
+  abstract = {Skip lists are data structures that use probabilistic balancing rather than strictly enforced balancing. As a result, the algorithms for insertion and deletion in skip lists are much simpler and significantly faster than equivalent algorithms for balanced trees.},
+  journal = {Commun. ACM},
+  month = {jun},
+  pages = {668–676},
+  numpages = {9},
+  keywords = {trees, searching, data structures}
 }
 
-@article{blum1973selection,
-  title={Time Bounds for Selection},
-  author={Blum, Manuel and Floyd, Robert W. and Pratt, Vaughan R. and Rivest, Ronald L. and Tarjan, Robert E.},
-  journal={Journal of Computer and System Sciences},
-  volume={7},
-  number={4},
-  pages={448--461},
-  year={1973}
-}
-
-@article{estivill1992new,
-  title={A New Family of Sorting Algorithms},
-  author={Estivill-Castro, Vladimir and Wood, Derick},
-  journal={Computing Surveys},
-  volume={24},
-  number={4},
-  pages={441--476},
-  year={1992}
-}
-
-@inproceedings{bender2004insertion,
-  title={Insertion Sort is $O(n \log n)$},
-  author={Bender, Michael A. and Farach-Colton, Martin and Mosteiro, Miguel A.},
-  booktitle={Proceedings of the 3rd International Conference on Fun with Algorithms},
-  pages={16--23},
+@article{DBLP:journals/corr/cs-DS-0407003,
+  author={Michael A. Bender and Martin Farach{-}Colton and Miguel A. Mosteiro},
+  title={Insertion Sort is O(n log n)},
+  journal={CoRR},
+  volume={cs.DS/0407003},
   year={2004}
-}
-
-@inproceedings{frigo1999cache,
-  title={Cache-Oblivious Algorithms},
-  author={Frigo, Matteo and Leiserson, Charles E. and Prokop, Harald and Ramachandran, Sridhar},
-  booktitle={Proceedings of the 40th Annual Symposium on Foundations of Computer Science},
-  pages={285--297},
-  year={1999}
 }
 
 @misc{deltasort-repo,
@@ -193,25 +175,53 @@
   note={Rust and JavaScript implementations with unit tests and benchmark suite}
 }
 
-@article{gupta1995maintenance,
-  author = {Ashish Gupta and Inderpal Singh Mumick},
-  title = {Maintenance of Materialized Views: Problems, Techniques, and Applications},
-  journal = {IEEE Data Engineering Bulletin},
-  year = {1995}
+@inbook{10.5555/310709.310737,
+  author = {Gupta, Ashish and Mumick, Inderpal Singh},
+  title = {Maintenance of materialized views: problems, techniques, and applications},
+  year = {1999},
+  isbn = {0262571226},
+  publisher = {MIT Press},
+  address = {Cambridge, MA, USA},
+  booktitle = {Materialized Views: Techniques, Implementations, and Applications},
+  pages = {145–157},
+  numpages = {13}
 }
 
-@inproceedings{nikolic2014incremental,
-  author = {Milo{\v{s}} Nikoli{\'c} and others},
-  title = {Incremental Computation with Dataflow Graphs},
-  booktitle = {OOPSLA},
-  year = {2014}
+@article{10.1145/42192.42193,
+  author = {Ryder, Barbara G. and Paull, Marvin C.},
+  title = {Incremental data-flow analysis algorithms},
+  year = {1988},
+  issue_date = {Jan. 1988},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {10},
+  number = {1},
+  issn = {0164-0925},
+  url = {https://doi.org/10.1145/42192.42193},
+  doi = {10.1145/42192.42193},
+  abstract = {An incremental update algorithm modifies the solution of a problem that has been changed, rather than re-solving the entire problem. ACINCF and ACINCB are incremental update algorithms for forward and backward data-flow analysis, respectively, based on our equations model of Allen-Cocke interval analysis. In addition, we have studied their performance on a “nontoy” structured programming language L. Given a set of localized program changes in a program written in L, we identify a priori the nodes in its flow graph whose corresponding data-flow equations may be affected by the changes. We characterize these possibly affected nodes by their corresponding program structures and their relation to the original change sites, and do so without actually performing the incremental updates. Our results can be refined to characterize the reduced equations possibly affected if structured loop exit mechanisms are used, either singly or together, thereby relating richness of programming language usage to the ease of incremental updating.},
+  journal = {ACM Trans. Program. Lang. Syst.},
+  month = jan,
+  pages = {1–50},
+  numpages = {50}
 }
 
-@inproceedings{akidau2015dataflow,
-  author = {Tyler Akidau and others},
-  title = {The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost},
-  booktitle = {VLDB},
-  year = {2015}
+@article{10.14778/2824032.2824076,
+  author = {Akidau, Tyler and Bradshaw, Robert and Chambers, Craig and Chernyak, Slava and Fern\'{a}ndez-Moctezuma, Rafael J. and Lax, Reuven and McVeety, Sam and Mills, Daniel and Perry, Frances and Schmidt, Eric and Whittle, Sam},
+  title = {The dataflow model: a practical approach to balancing correctness, latency, and cost in massive-scale, unbounded, out-of-order data processing},
+  year = {2015},
+  issue_date = {August 2015},
+  publisher = {VLDB Endowment},
+  volume = {8},
+  number = {12},
+  issn = {2150-8097},
+  url = {https://doi.org/10.14778/2824032.2824076},
+  doi = {10.14778/2824032.2824076},
+  abstract = {Unbounded, unordered, global-scale datasets are increasingly common in day-to-day business (e.g. Web logs, mobile usage statistics, and sensor networks). At the same time, consumers of these datasets have evolved sophisticated requirements, such as event-time ordering and windowing by features of the data themselves, in addition to an insatiable hunger for faster answers. Meanwhile, practicality dictates that one can never fully optimize along all dimensions of correctness, latency, and cost for these types of input. As a result, data processing practitioners are left with the quandary of how to reconcile the tensions between these seemingly competing propositions, often resulting in disparate implementations and systems.We propose that a fundamental shift of approach is necessary to deal with these evolved requirements in modern data processing. We as a field must stop trying to groom unbounded datasets into finite pools of information that eventually become complete, and instead live and breathe under the assumption that we will never know if or when we have seen all of our data, only that new data will arrive, old data may be retracted, and the only way to make this problem tractable is via principled abstractions that allow the practitioner the choice of appropriate tradeoffs along the axes of interest: correctness, latency, and cost.In this paper, we present one such approach, the Dataflow Model, along with a detailed examination of the semantics it enables, an overview of the core principles that guided its design, and a validation of the model itself via the real-world experiences that led to its development.},
+  journal = {Proc. VLDB Endow.},
+  month = aug,
+  pages = {1792–1803},
+  numpages = {12}
 }
 
 @misc{v8elementskinds,
@@ -285,45 +295,57 @@
   howpublished = {\url{https://people.freebsd.org/~lstewart/articles/cpumemory.pdf}}
 }
 
-@inproceedings{boncz2005monetdb,
-  title     = {MonetDB/X100: Hyper-Pipelining Query Execution},
-  author    = {Boncz, Peter A. and Zukowski, Marcin and Nes, Niels},
-  booktitle = {CIDR},
-  year      = {2005}
+@article{boncz2005monetdb,
+author = {Boncz, Peter and Zukowski, M. and Nes, Niels},
+year = {2005},
+month = {01},
+pages = {},
+title = {MonetDB/X100: Hyper-Pipelining Query Execution},
+journal = {2nd Biennial Conference on Innovative Data Systems Research, CIDR 2005}
 }
 
-@article{abadi2008columnstores,
-  title   = {Column-Stores vs. Row-Stores: How Different Are They Really?},
-  author  = {Abadi, Daniel J. and Madden, Samuel and Ferreira, Miguel},
-  journal = {VLDB},
-  year    = {2008}
+@inproceedings{10.1145/1376616.1376712,
+  author = {Abadi, Daniel J. and Madden, Samuel R. and Hachem, Nabil},
+  title = {Column-stores vs. row-stores: how different are they really?},
+  year = {2008},
+  isbn = {9781605581026},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/1376616.1376712},
+  doi = {10.1145/1376616.1376712},
+  abstract = {There has been a significant amount of excitement and recent work on column-oriented database systems ("column-stores"). These database systems have been shown to perform more than an order of magnitude better than traditional row-oriented database systems ("row-stores") on analytical workloads such as those found in data warehouses, decision support, and business intelligence applications. The elevator pitch behind this performance difference is straightforward: column-stores are more I/O efficient for read-only queries since they only have to read from disk (or from memory) those attributes accessed by a query.This simplistic view leads to the assumption that one can obtain the performance benefits of a column-store using a row-store: either by vertically partitioning the schema, or by indexing every column so that columns can be accessed independently. In this paper, we demonstrate that this assumption is false. We compare the performance of a commercial row-store under a variety of different configurations with a column-store and show that the row-store performance is significantly slower on a recently proposed data warehouse benchmark. We then analyze the performance difference and show that there are some important differences between the two systems at the query executor level (in addition to the obvious differences at the storage layer level). Using the column-store, we then tease apart these differences, demonstrating the impact on performance of a variety of column-oriented query execution techniques, including vectorized query processing, compression, and a new join algorithm we introduce in this paper. We conclude that while it is not impossible for a row-store to achieve some of the performance advantages of a column-store, changes must be made to both the storage layer and the query executor to fully obtain the benefits of a column-oriented approach.},
+  booktitle = {Proceedings of the 2008 ACM SIGMOD International Conference on Management of Data},
+  pages = {967–980},
+  numpages = {14},
+  keywords = {tuple reconstruction, tuple materialization, invisible join, compression, column-store, column-oriented dbms, c-store},
+  location = {Vancouver, Canada},
+  series = {SIGMOD '08}
 }
 
 @article{kronrod1969optimal,
-  author  = {A. S. Kronrod},
-  title   = {An Optimal Sorting Algorithm},
+  author  = {Kronrod, M. A.},
+  title   = {Optimal Ordering Algorithm without Operational Field},
   journal = {Soviet Mathematics Doklady},
   volume  = {10},
-  year    = {1969},
-  pages   = {211--215}
+  pages   = {744--748},
+  year    = {1969}
 }
 
-@article{katajainen1996practical,
-  author  = {Jyrki Katajainen and Tomi Pasanen and Jukka Teuhola},
-  title   = {Practical In-Place Merging},
-  journal = {Nordic Journal of Computing},
-  volume  = {3},
-  number  = {1},
-  pages   = {27--40},
-  year    = {1996}
-}
-
-@article{franceschini2003optimal,
-  author  = {Giovanni Franceschini and Roberto Grossi},
-  title   = {Optimal Worst-Case Bounds for Sorting and Selection},
-  journal = {Journal of the ACM},
-  volume  = {50},
-  number  = {4},
-  pages   = {497--540},
-  year    = {2003}
+@article{10.1145/42392.42403,
+  author = {Huang, Bing-Chao and Langston, Michael A.},
+  title = {Practical in-place merging},
+  year = {1988},
+  issue_date = {March 1988},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {31},
+  number = {3},
+  issn = {0001-0782},
+  url = {https://doi.org/10.1145/42392.42403},
+  doi = {10.1145/42392.42403},
+  abstract = {We present a novel, yet straightforward linear-time algorithm for merging two sorted lists in a fixed amount of additional space. Constant of proportionality estimates and empirical testing reveal that this procedure is reasonably competitive with merge routines free to squander unbounded additional memory, making it particularly attractive whenever space is a critical resource.},
+  journal = {Commun. ACM},
+  month = mar,
+  pages = {348–352},
+  numpages = {5}
 }

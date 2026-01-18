@@ -13,8 +13,8 @@ Once the indices of the updates are known, how do we exploit this extra informat
 
 Existing approaches for incrementally sorting arrays force a choice between two extremes:
 \begin{enumerate}
-  \item Binary-Insertion-Sort (\textbf{BIS}): Collect all updated values from the array and insert them back one by one using binary search. This approach uses $O(1)$ extra space but incurs $O(kn)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches. This is the \emph{space-efficient but time-inefficient} option.
-  \item Extract–Sort–Merge (\textbf{ESM}): Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time, but $O(n)$ extra space, even for small $k$, making it suitable only for larger update batches. This is the \emph{time-efficient but space-inefficient} option.
+  \item Binary-Insertion-Sort (\emph{BIS}): Collect all updated values from the array and insert them back one by one using binary search. This approach uses $O(1)$ extra space but incurs $O(kn)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches. This is the \emph{space-efficient but time-inefficient} option.
+  \item Extract–Sort–Merge (\emph{ESM}): Extract all updated values into a separate array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time, but $O(n)$ extra space, even for small $k$, making it suitable only for larger update batches. This is the \emph{time-efficient but space-inefficient} option.
 \end{enumerate}
 
 This raises the question: are there other algorithms that offer \emph{intermediate} trade-offs? To our knowledge, no prior work exploits knowledge of updated indices to achieve a better time-space trade-off than the two extremes listed above. In this paper, we fill that gap. Specifically, this paper makes the following contributions:

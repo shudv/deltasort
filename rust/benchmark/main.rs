@@ -73,7 +73,7 @@ fn timing_iterations_for_k(k: usize) -> usize {
         0..=5 => BASE_ITERATIONS * 50,
         6..=10 => BASE_ITERATIONS * 10,
         11..=50 => BASE_ITERATIONS * 5,
-        51..=200 => BASE_ITERATIONS * 2,
+        51..=1000 => BASE_ITERATIONS * 2,
         _ => BASE_ITERATIONS,
     }
 }

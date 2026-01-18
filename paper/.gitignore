@@ -8,6 +8,5 @@ out/**
 *.vtc
 *.fdb_latexmk
 *.fls
-*.synctex.gz
-*.synctex(busy)
+*.synctex*
 main.pdf

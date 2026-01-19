@@ -155,11 +155,11 @@ O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}
 
 \begin{theorem}[Time Complexity]
 \label{thm:time-complexity}
-Under the random bounded-range update model, DeltaSort runs in $O(k \log n + n\sqrt{k})$ expected time.
+Under the random bounded-range update model, DeltaSort runs in $O(n\sqrt{k})$ expected time.
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also incurs $O(k \log k)$ movement cost for sorting $k$ values. Combining all we get: $O(k \log n + n\sqrt{k})$.
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also incurs $O(k \log k)$ movement cost for sorting $k$ values. Since $k \log n = o(n\sqrt{k})$ for $k = o(n)$, the total is $O(n\sqrt{k})$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

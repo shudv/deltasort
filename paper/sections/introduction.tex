@@ -24,7 +24,7 @@ This raises the question: are there other algorithms that offer \emph{intermedia
 
   \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers distinct trade-offs (see~\figref{tab:incremental-sorting-algorithms}) as compared to existing approaches. Even though it uses insertion under the hood, it reduces data movement significantly by identifying \emph{independent regions}, and restricting movement within these regions (see~\figref{fig:algorithm-comparison}). Although we study DeltaSort as a standalone algorithm for clarity, for practical application, it is best viewed as a \emph{building block} in a hybrid strategy that combines multiple techniques.
   
-  \item \textbf{Theoretical analysis:} Under a random bounded-range update model, we show that DeltaSort achieves $O(k \log n + n \sqrt{k})$ amortized time complexity using only $O(k)$ space.
+  \item \textbf{Theoretical analysis:} Under a random bounded-range update model, we show that DeltaSort achieves $O(n\sqrt{k})$ amortized time complexity using only $O(k)$ space.
   
   \item \textbf{Experimental validation:} We benchmark Rust implementations of DeltaSort, BIS, and ESM on synthetic datasets. In our evaluation, DeltaSort is consistently faster than BIS and provides a space-efficient alternative to ESM across a wide range of update sizes.
 \end{enumerate}

@@ -138,7 +138,7 @@ After Phase~1, we have two sorted sequences of $k$ values each which form an \em
 \end{proof}
 
 \begin{remark}[Worst Case Movement]
-While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(kn)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement can be as high as $O(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
 \end{remark}
 
 \begin{lemma}[Comparison Count]

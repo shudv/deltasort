@@ -30,7 +30,7 @@ pnpm benchmark:export
 
 ## Benchmark (n = 100K, Rust)
 
-| k             | FullSort (µs) | BIS (µs)        | ESM (µs)        | DeltaSort (µs)        |
+| k             | FullSort (µs) | BIS (µs)        | ESM (µs)        | **DeltaSort** (µs)    |
 | ------------- | ------------- | --------------- | --------------- | --------------------- |
 | 1 (0.001%)    | 1215.0 ±0.3%  | 113.4 ±1.5% 🪶  | 797.8 ±0.4%     | **15.7 ±4.3%** ⚡     |
 | 10 (0.01%)    | 2012.6 ±0.5%  | 1127.8 ±1.1% 🪶 | 1006.8 ±0.6%    | **98.2 ±3.0%** ⚡     |
@@ -57,7 +57,7 @@ The key insight: pre-sorting dirty values creates _segments_ that can be fixed _
 ```
 paper/   — LaTeX source for the paper
 rust/    — Rust implementation + benchmarks
-js/      — JavaScript implementation
+js/      — JavaScript implementation + benchmarks
 ```
 
 ## Feedback Welcome

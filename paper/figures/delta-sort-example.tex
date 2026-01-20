@@ -6,6 +6,7 @@
     cellup/.style={cell, fill=yellow!40, font=\scriptsize\bfseries},
     cellL/.style={cell, fill=blue!25, font=\scriptsize\bfseries},
     cellR/.style={cell, fill=red!20, font=\scriptsize\bfseries},
+    cellgreen/.style={cell, fill=green!30, font=\scriptsize\bfseries},
     larrow/.style={->, >=stealth, thick, blue!70!black},
     rarrow/.style={->, >=stealth, thick, red!70!black},
     segbrace/.style={decorate, decoration={brace, amplitude=5pt}},
@@ -70,9 +71,20 @@
 \node[font=\small\bfseries, anchor=east] at (-0.3, -4.7) {After Phase 2:};
 
 % Final sorted: 1, 2, 4, 16, 24, 28, 32, 35, 45, 56, 58, 64, 70
-\foreach \i/\v in {0/1, 1/2, 2/4, 3/16, 4/24, 5/28, 6/32, 7/35, 8/45, 9/56, 10/58, 11/64, 12/70} {
-    \node[cell] (f\i) at (\i*0.58, -4.7) {\v};
-}
+% Green cells are the updated values in their final positions
+\node[cellgreen] (f0) at (0*0.58, -4.7) {1};
+\node[cellgreen] (f1) at (1*0.58, -4.7) {2};
+\node[cell] (f2) at (2*0.58, -4.7) {4};
+\node[cell] (f3) at (3*0.58, -4.7) {16};
+\node[cell] (f4) at (4*0.58, -4.7) {24};
+\node[cellgreen] (f5) at (5*0.58, -4.7) {28};
+\node[cellgreen] (f6) at (6*0.58, -4.7) {32};
+\node[cell] (f7) at (7*0.58, -4.7) {35};
+\node[cell] (f8) at (8*0.58, -4.7) {45};
+\node[cell] (f9) at (9*0.58, -4.7) {56};
+\node[cellgreen] (f10) at (10*0.58, -4.7) {58};
+\node[cell] (f11) at (11*0.58, -4.7) {64};
+\node[cellgreen] (f12) at (12*0.58, -4.7) {70};
 
 % Movement arrows from Phase 1 to Phase 2 (updated values only)
 % Labels show: #fix_number (leftBound, rightBound) - placed beside arrows

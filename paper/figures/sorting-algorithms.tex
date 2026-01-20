@@ -7,8 +7,8 @@
 Algorithm & Comparisons (C) & Movement (M) & Space (S) \\
 \midrule
 FullSort$^{*}$ $(\texttt{sort\_by})$ & $O(n \log n)$ & - & - \\
-BIS & $O(k \log n)$ & $O(kn)$ & $O(1)$ \\
-ESM & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
+BIS & $O(k \log n)$ & $O(nk)$ & $O(1)$ \\
+ESM & $O(n + k \log k)$ & $O(n)$ & $O(n)$ \\
 \textbf{DeltaSort} & $O(k \log n)$ & $O(n\sqrt{k})^{\dagger}$ & $O(k)$ \\
 \bottomrule
 \end{tabular}
@@ -17,5 +17,5 @@ ESM & $O(k \log k + n)$ & $O(n)$ & $O(n)$ \\
 {\small $^{*}$Not update-aware; hence complexity is a function of only $n$. The exact movement and space complexity are implementation-dependent and not required for the present discussion.}
 
 
-{\small $^{\dagger}$Expected. Worst-case time is $O(kn)$}
+{\small $^{\dagger}$Expected. Worst-case time is $O(nk)$}
 \end{table}

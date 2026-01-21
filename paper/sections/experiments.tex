@@ -3,8 +3,6 @@
 \label{sec:experiments}
 %==============================================================================
 
-\input{\figdir/sorting-algorithms}
-
 All benchmarks\footnote{Along with benchmarks, we also validated correctness by an extensive set of randomized tests~\cite{deltasort-repo} across various scales of $n$ and full range of $k$.} are run on Rust implementations of each algorithm on randomly generated synthetic datasets of user objects (name, age, country) on an Apple M series chip. We chose Rust due to its predictable performance characteristics\footnote{In contrast, managed execution environments like JavaScript on V8 have various factors like garbage collection, non-contiguous memory layouts~\cite{v8elementskinds} etc. that impact the underlying cost model.}. We used a realistic multi-key comparator to simulate a practical workload. Execution times are measured after sufficient warm-up, and each data point is the mean over repeated runs with 95\% CI within $5\%$. All the source code is available for reproducibility~\cite{deltasort-repo}.
 
 We evaluated the following algorithms:

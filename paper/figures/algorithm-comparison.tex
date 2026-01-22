@@ -136,14 +136,14 @@
 % Middle -> Output (fan in from 3 algorithms)
 % Horizontal then vertical - consistent with column 1->2 arrows
 % Labels showing total moves for each algorithm
-\node[black, anchor=west] at (7.7, \rowA + 0.6) {\scriptsize\bfseries \#Moves};
-\draw[arrow] (\xM + \arrayw + 0.1, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (8.0, \rowA + 0.25) {\scriptsize\bfseries 9+10};
-\draw[arrow] (\xM + \arrayw + 0.1, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (8.0, \rowB + 0.25) {\scriptsize\bfseries 6+8};
-\draw[arrow] (\xM + \arrayw + 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (8.0, \rowC + 0.25) {\scriptsize\bfseries 6+6};
+\node[black, anchor=west] at (7.25, \rowA + 0.6) {\scriptsize\bfseries Moves, Space};
+\draw[arrow] (\xM + \arrayw - 0.1, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.8, \rowA + 0.25) {\scriptsize\bfseries 18, 0};
+\draw[arrow] (\xM + \arrayw - 0.1, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.8, \rowB + 0.25) {\scriptsize\bfseries 14, 11};
+\draw[arrow] (\xM + \arrayw - 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
+\node[black, anchor=west] at (7.8, \rowC + 0.25) {\scriptsize\bfseries 15, 3};
 \end{tikzpicture}
-\caption{Data movement comparison for 3 updated values (yellow). BIS first uses 9 moves to shift updated values to the end (since insertion requires a fully sorted prefix), then 10 (0+4+6) moves to insert each updated value into the sorted prefix. ESM uses 6 moves to sort the extracted values, then writes all 8 values to produce the merged output. DeltaSort uses 6 moves to sort updated values, then just 6 (2+2+2) moves to place each value correctly within its segment (see~\defref{def:segment}), \textbf{without having to form a fully sorted prefix upfront} like BIS.}
+\caption{Movement and space comparison for all algorithms for sorting 3 updated values (yellow). ESM and DeltaSort are assumed to sort updated values using insertion sort. BIS first uses 8 moves to shift updated values to the end (since insertion requires a fully sorted prefix), then 10 (0+4+6) moves to insert each updated value into the sorted prefix. ESM uses 3+3 moves to extract and sort the updated values, then writes all 8 values to produce the merged output. DeltaSort uses 3+3+3 moves to collect sort and write the updated values back to the array, then just 6 (2+2+2) moves to place each value correctly within its \emph{segment} (see~\defref{def:segment}), \textbf{without having to form a fully sorted prefix upfront} like BIS.}
 \label{fig:algorithm-comparison}
 \end{figure}

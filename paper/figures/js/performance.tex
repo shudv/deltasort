@@ -17,13 +17,14 @@
     ymin=5, ymax=100000,
     xtick={1, 10, 100, 1000, 10000, 100000},
     xticklabels={.001\%, .01\%, .1\%, 1\%, 10\%, 100\%},
-    legend pos=south east,
-    legend style={font=\scriptsize, fill=white, fill opacity=0.95, draw=gray!50},
+    ytick pos=left,
     grid=major,
     major grid style={line width=0.3pt, draw=gray!30},
     tick label style={font=\scriptsize},
     label style={font=\small},
     title={\textbf{(a) Execution Time ($n=100$K)}},
+    legend to name=jslegend,
+    legend style={font=\scriptsize, legend columns=4, column sep=0.3em},
 ]
 
 % FullSort
@@ -62,9 +63,6 @@
     ytick={0, 20, 40, 60, 80},
     xtick={1000, 10000, 100000},
     xticklabels={1K, 10K, 100K},
-    legend pos=north west,
-    legend style={font=\scriptsize, fill=white, fill opacity=0.85, draw=gray!50, legend columns=3, xshift=-2pt, yshift=2pt, legend cell align=left, /tikz/every even column/.append style={column sep=2pt}},
-    legend image post style={scale=0.5},
     grid=both,
     grid style={line width=0.1pt, draw=gray!20},
     major grid style={line width=0.2pt, draw=gray!40},
@@ -85,10 +83,12 @@
 \addplot[color=green!70!black, mark=*, thick, mark size=2pt, line width=1.5pt] 
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/js/crossover-all.csv};
 
-\legend{BIS, ESM, \textbf{DeltaSort}}
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
-\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K. Note that DeltaSort and BIS overlap---V8's memory model does not reflect physical movement costs. (b)~Crossover thresholds. ESM maintains an advantage up to $\approx 40\%$, while BIS/DeltaSort thresholds are much lower.}
+
+\vspace{0.3em}
+\ref{jslegend}
+\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K. Note that DeltaSort and BIS overlap---V8's memory model does not reflect physical movement costs. (b)~Crossover thresholds. ESM is faster up to $\approx 40\%$, while BIS/DeltaSort thresholds are much lower.}
 \label{fig:js-performance}
 \end{figure}

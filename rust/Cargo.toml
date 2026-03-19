@@ -15,9 +15,18 @@ path = "src/lib.rs"
 
 [dependencies]
 rand = "0.8"
+rayon = "1.10"
 
 [dev-dependencies]
 
 [[bin]]
 name = "benchmark"
 path = "benchmark/main.rs"
+
+[[bin]]
+name = "parallel_benchmark"
+path = "benchmark/parallel_benchmark.rs"
+
+[[bin]]
+name = "applications_benchmark"
+path = "benchmark/applications_benchmark.rs"

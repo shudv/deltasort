@@ -1,6 +1,14 @@
 use crate::data::User;
 use std::collections::HashSet;
 
+/// Extract-Sort-Merge with O(k) auxiliary space.
+///
+/// 1. Swap-partition: move clean elements to front (sorted), dirty to back. O(n), O(1) aux.
+/// 2. Sort dirty tail in-place. O(k log k), O(1) aux.
+/// 3. Copy dirty tail to O(k) buffer.
+/// 4. Merge from right: clean prefix + buffer → final array. O(n).
+///
+/// Total: O(n + k log k) time, O(k) auxiliary space.
 pub fn extract_sort_merge(
     arr: &mut Vec<User>,
     dirty_indices: &HashSet<usize>,
@@ -11,54 +19,54 @@ pub fn extract_sort_merge(
     }
 
     let n = arr.len();
-    let k = dirty_indices.len();
 
-    // Sort indices ascending for single-pass extraction
-    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_indices.sort_unstable();
+    // Step 1: Swap-partition. Clean elements to front (preserving sorted order),
+    // dirty elements to back. O(n) time, O(1) auxiliary space.
+    let mut write_pos = 0;
+    for read_pos in 0..n {
+        if !dirty_indices.contains(&read_pos) {
+            if write_pos != read_pos {
+                arr.swap(write_pos, read_pos);
+            }
+            write_pos += 1;
+        }
+    }
+    let clean_count = write_pos;
+    // arr[0..clean_count] = sorted clean elements
+    // arr[clean_count..n] = dirty elements (unsorted)
 
-    // Single O(n) pass with index comparison (no HashSet lookups)
-    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
-    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    let mut dirty_ptr = 0;
+    // Step 2: Sort dirty tail in-place. O(k log k).
+    arr[clean_count..].sort_by(user_comparator);
 
-    for (i, val) in arr.drain(..).enumerate() {
-        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
-            dirty_values.push(val);
-            dirty_ptr += 1;
+    // Step 3: Copy dirty tail to buffer. O(k) auxiliary space.
+    let buffer: Vec<User> = arr[clean_count..].to_vec();
+    let k = buffer.len();
+
+    // Step 4: Merge from right. O(n) time.
+    // Write pointer starts k ahead of clean pointer, so no overwrites occur.
+    let mut ci = clean_count; // next clean to consume (counts down)
+    let mut di = k;           // next dirty to consume from buffer (counts down)
+    let mut wi = n;           // next write position (counts down)
+
+    while ci > 0 && di > 0 {
+        if user_comparator(&arr[ci - 1], &buffer[di - 1]) == std::cmp::Ordering::Greater {
+            wi -= 1;
+            ci -= 1;
+            arr.swap(wi, ci);
         } else {
-            clean_values.push(val);
+            wi -= 1;
+            di -= 1;
+            arr[wi] = buffer[di].clone();
         }
     }
 
-    // Sort dirty values - O(k log k)
-    dirty_values.sort_by(user_comparator);
-
-    // Merge - O(n)
-    let mut result: Vec<User> = Vec::with_capacity(n);
-    let clean_len = clean_values.len();
-    let dirty_len = dirty_values.len();
-    let mut i = 0;
-    let mut j = 0;
-
-    while i < clean_len && j < dirty_len {
-        if user_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut clean_values[i]));
-            i += 1;
-        } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
-            j += 1;
-        }
+    // Remaining dirty values from buffer
+    while di > 0 {
+        wi -= 1;
+        di -= 1;
+        arr[wi] = buffer[di].clone();
     }
-
-    for item in clean_values.drain(i..) {
-        result.push(item);
-    }
-    for item in dirty_values.drain(j..) {
-        result.push(item);
-    }
-
-    *arr = result;
+    // Remaining clean values are already in position (0..ci, and wi == ci here)
 }
 
 #[cfg(test)]

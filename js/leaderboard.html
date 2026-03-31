@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeltaSort — Realtime Leaderboard</title>
+    <style>
+        :root {
+            --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --border: #e5e5e5;
+            --accent: #2563eb; --card: #fff; --input-bg: #f5f5f5;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0a0a0a; --fg: #e5e5e5; --muted: #888; --border: #2a2a2a;
+                --accent: #3b82f6; --card: #141414; --input-bg: #1a1a1a;
+                --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg); color: var(--fg); line-height: 1.5;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+        h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 2px; }
+        .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px; margin-bottom: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        /* ── Controls ── */
+        .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+        .algo-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+        .algo-btn {
+            padding: 6px 18px; border: none; background: transparent;
+            color: var(--muted); cursor: pointer; font-size: 0.85rem; font-weight: 500;
+            transition: all 0.15s;
+        }
+        .algo-btn.active { background: var(--accent); color: #fff; }
+        .algo-btn:hover:not(.active) { background: var(--input-bg); }
+        .param { display: flex; flex-direction: column; gap: 2px; }
+        .param label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px; }
+        .param label span { color: var(--fg); font-weight: 600; font-size: 0.82rem; }
+        .param select {
+            padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
+            background: var(--input-bg); color: var(--fg); font-size: 0.82rem;
+        }
+        .param input[type="range"] { width: 100px; accent-color: var(--accent); }
+        .actions { display: flex; gap: 8px; margin-left: auto; }
+        .actions button {
+            padding: 6px 16px; border: 1px solid var(--border); border-radius: 8px;
+            background: var(--input-bg); color: var(--fg); font-size: 0.85rem;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .actions button:hover { border-color: var(--accent); }
+        .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Stats ── */
+        .stats { display: flex; gap: 0; justify-content: space-around; padding: 12px 16px; }
+        .stat { text-align: center; }
+        .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .stat-value small { font-size: 0.65rem; font-weight: 400; color: var(--muted); margin-left: 1px; }
+
+        /* ── Chart ── */
+        .chart-wrap { padding: 10px 16px; }
+        #chart { display: block; width: 100%; }
+
+        /* ── Leaderboard ── */
+        .lb-wrap { padding: 0; overflow: hidden; }
+        .lb-header, .lb-row {
+            display: flex; align-items: center; height: 28px; padding: 0 16px;
+            font-size: 0.78rem;
+        }
+        .lb-header {
+            font-weight: 600; color: var(--muted); font-size: 0.68rem;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border); background: var(--card);
+        }
+        .lb-viewport { height: 420px; overflow-y: auto; position: relative; }
+        #spacer { position: relative; }
+        .lb-row { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+        .rank { width: 70px; text-align: right; color: var(--muted); padding-right: 16px; }
+        .name { flex: 1; }
+        .score { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Realtime Leaderboard</h1>
+    <p class="sub">Compare sorting algorithms live — switch and watch the FPS change</p>
+
+    <div class="card controls">
+        <div class="algo-toggle">
+            <button id="btn-full" class="algo-btn active" onclick="setAlgo('full')">Array.sort()</button>
+            <button id="btn-bis" class="algo-btn" onclick="setAlgo('bis')">BIS</button>
+            <button id="btn-esm" class="algo-btn" onclick="setAlgo('esm')">ESM</button>
+            <button id="btn-delta" class="algo-btn" onclick="setAlgo('delta')">DeltaSort</button>
+        </div>
+        <div class="param">
+            <label for="sel-n">Players</label>
+            <select id="sel-n">
+                <option value="10000">10,000</option>
+                <option value="50000">50,000</option>
+                <option value="100000" selected>100,000</option>
+                <option value="500000">500,000</option>
+                <option value="1000000">1,000,000</option>
+            </select>
+        </div>
+        <div class="param">
+            <label>Updates/frame <span id="val-k">50</span></label>
+            <input type="range" id="inp-k" min="1" max="1000" value="50">
+        </div>
+        <div class="param">
+            <label>Score Δ <span id="val-delta">500</span></label>
+            <input type="range" id="inp-delta" min="1" max="10000" value="500">
+        </div>
+        <div class="actions">
+            <button id="btn-start" onclick="toggleRun()">▶ Start</button>
+            <button onclick="resetSim()">↻ Reset</button>
+        </div>
+    </div>
+
+    <div class="card stats">
+        <div class="stat">
+            <span class="stat-label">FPS</span>
+            <div class="stat-value" id="fps-val">—</div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Frame</span>
+            <div class="stat-value"><span id="frame-val">—</span><small>ms</small></div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Sort</span>
+            <div class="stat-value"><span id="sort-val">—</span><small>ms</small></div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Jank</span>
+            <div class="stat-value" id="jank-val">—</div>
+        </div>
+    </div>
+
+    <div class="card chart-wrap">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <div class="card lb-wrap">
+        <div class="lb-header">
+            <span class="rank">Rank</span>
+            <span class="name">Player</span>
+            <span class="score">Score</span>
+        </div>
+        <div class="lb-viewport" id="viewport">
+            <div id="spacer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════════
+//  DeltaSort for TypedArrays (Uint32Array)
+//  Uses copyWithin for O(distance) element moves
+// ════════════════════════════════════════════════════════════════════
+
+function deltaSortIndices(arr, dirtySet, cmp) {
+    const k = dirtySet.size;
+    if (k === 0) return;
+
+    // Phase 1: Extract values at dirty positions, pre-sort, write back
+    const dirty = Array.from(dirtySet).sort((a, b) => a - b);
+    const vals = new Uint32Array(k);
+    for (let i = 0; i < k; i++) vals[i] = arr[dirty[i]];
+    vals.sort(cmp);
+    for (let i = 0; i < k; i++) arr[dirty[i]] = vals[i];
+
+    const n = arr.length;
+    dirty.push(n); // sentinel
+
+    // Phase 2: Scan dirty positions, fix violations
+    const pending = new Array(k + 1);
+    let top = 0, lb = 0;
+
+    for (let p = 0; p <= k; p++) {
+        const i = dirty[p];
+        const isLeft = (i === n) || (i > 0 && cmp(arr[i - 1], arr[i]) > 0);
+
+        if (isLeft) {
+            let rb = i - 1;
+            while (top > 0) {
+                const ri = pending[--top];
+                if (ri < n - 1 && cmp(arr[ri], arr[ri + 1]) > 0) {
+                    rb = fixRight(arr, ri, rb, cmp) - 1;
+                }
+            }
+            if (i < n) lb = fixLeft(arr, i, lb, cmp) + 1;
+        } else {
+            if (top === 0) lb = i;
+            pending[top++] = i;
+        }
+    }
+}
+
+function fixRight(arr, i, rb, cmp) {
+    const v = arr[i];
+    let lo = i + 1, hi = rb;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (cmp(arr[mid], v) <= 0) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    if (hi > i) { arr.copyWithin(i, i + 1, hi + 1); arr[hi] = v; }
+    return hi;
+}
+
+function fixLeft(arr, i, lb, cmp) {
+    const v = arr[i];
+    let lo = lb, hi = i - 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (cmp(v, arr[mid]) < 0) hi = mid - 1;
+        else lo = mid + 1;
+    }
+    if (lo < i) { arr.copyWithin(lo + 1, lo, i); arr[lo] = v; }
+    return lo;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  BIS — Binary Insertion Sort for TypedArrays
+//  O(nk) time, O(1) auxiliary space
+//  Extract dirty elements, compact array, binary-insert each back
+// ════════════════════════════════════════════════════════════════════
+
+function bisIndices(arr, dirtySet, cmp) {
+    const k = dirtySet.size;
+    if (k === 0) return;
+    const dirty = Array.from(dirtySet).sort((a, b) => a - b);
+    const n = arr.length;
+
+    // Extract dirty values
+    const vals = new Uint32Array(k);
+    for (let i = 0; i < k; i++) vals[i] = arr[dirty[i]];
+
+    // Compact: remove dirty positions by shifting left
+    let w = 0, di = 0;
+    for (let i = 0; i < n; i++) {
+        if (di < k && dirty[di] === i) { di++; continue; }
+        arr[w++] = arr[i];
+    }
+    // w === n - k (compacted length)
+
+    // Binary-insert each extracted value
+    for (let j = 0; j < k; j++) {
+        const v = vals[j];
+        let lo = 0, hi = w;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (cmp(arr[mid], v) <= 0) lo = mid + 1;
+            else hi = mid;
+        }
+        // Shift right to make room
+        arr.copyWithin(lo + 1, lo, w);
+        arr[lo] = v;
+        w++;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ESM — Extract-Sort-Merge for TypedArrays
+//  O(n + k log k) time, O(n) auxiliary space
+//  Separate clean/dirty, sort dirty, merge back
+// ════════════════════════════════════════════════════════════════════
+
+function esmIndices(arr, dirtySet, cmp) {
+    const k = dirtySet.size;
+    if (k === 0) return;
+    const dirty = Array.from(dirtySet).sort((a, b) => a - b);
+    const n = arr.length;
+
+    const clean = new Uint32Array(n - k);
+    const dirtyVals = new Uint32Array(k);
+    let ci = 0, dv = 0, dp = 0;
+
+    for (let i = 0; i < n; i++) {
+        if (dp < k && dirty[dp] === i) {
+            dirtyVals[dv++] = arr[i];
+            dp++;
+        } else {
+            clean[ci++] = arr[i];
+        }
+    }
+
+    // Sort dirty values using the comparator
+    dirtyVals.sort(cmp);
+
+    // Merge clean + dirty back into arr
+    ci = 0; dv = 0;
+    for (let i = 0; i < n; i++) {
+        if (ci < clean.length && (dv >= dirtyVals.length || cmp(clean[ci], dirtyVals[dv]) <= 0)) {
+            arr[i] = clean[ci++];
+        } else {
+            arr[i] = dirtyVals[dv++];
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  State
+// ════════════════════════════════════════════════════════════════════
+
+let n = 100000;
+let k = 50;
+let maxDelta = 500;
+let algo = 'full';
+let running = false;
+
+let scores;      // Float64Array — score per player ID
+let indices;     // Uint32Array — sorted permutation: indices[rank] = playerId
+const cmp = (a, b) => scores[b] - scores[a]; // descending by score
+
+// Metrics
+let fps = 0, emaFrame = 0, emaSort = 0, lastTs = 0;
+let totalFrames = 0, jankCount = 0;
+const JANK_WINDOW = 300;
+let jankBuf = new Uint8Array(JANK_WINDOW);
+
+// Chart
+let frameHist, sortHist, HISTORY;
+const BAR_W = 2;
+const CHART_H = 120;
+let chartCtx;
+
+// Virtual scroll
+const ROW_H = 28;
+const POOL_SIZE = 60;
+let rowPool = [];
+
+// Formatting
+const numFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+// ════════════════════════════════════════════════════════════════════
+//  Data Init
+// ════════════════════════════════════════════════════════════════════
+
+function initData() {
+    scores = new Float64Array(n);
+    indices = new Uint32Array(n);
+    for (let i = 0; i < n; i++) {
+        scores[i] = Math.random() * 1_000_000;
+        indices[i] = i;
+    }
+    indices.sort(cmp);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Score Updates
+// ════════════════════════════════════════════════════════════════════
+
+function applyUpdates() {
+    const dirty = new Set();
+    for (let j = 0; j < k; j++) {
+        const pos = (Math.random() * n) | 0;
+        const pid = indices[pos];
+        const sign = Math.random() < 0.8 ? 1 : -1;
+        const delta = ((Math.random() * maxDelta) | 0) + 1;
+        scores[pid] = Math.max(0, scores[pid] + sign * delta);
+        dirty.add(pos);
+    }
+    return dirty;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Virtual Scroll
+// ════════════════════════════════════════════════════════════════════
+
+function setupVirtualScroll() {
+    const spacer = document.getElementById('spacer');
+    spacer.style.height = (n * ROW_H) + 'px';
+
+    // Clear existing pool
+    for (const r of rowPool) r.remove();
+    rowPool = [];
+
+    for (let i = 0; i < POOL_SIZE; i++) {
+        const row = document.createElement('div');
+        row.className = 'lb-row';
+        row.style.position = 'absolute';
+        row.style.left = '0';
+        row.style.right = '0';
+        row.style.height = ROW_H + 'px';
+        row.innerHTML = '<span class="rank"></span><span class="name"></span><span class="score"></span>';
+        spacer.appendChild(row);
+        rowPool.push(row);
+    }
+    renderLeaderboard();
+}
+
+function renderLeaderboard() {
+    const vp = document.getElementById('viewport');
+    const first = Math.max(0, Math.floor(vp.scrollTop / ROW_H) - 3);
+
+    for (let i = 0; i < POOL_SIZE; i++) {
+        const di = first + i;
+        const row = rowPool[i];
+        if (di >= n) { row.style.visibility = 'hidden'; continue; }
+        row.style.visibility = 'visible';
+        row.style.transform = `translateY(${di * ROW_H}px)`;
+        row.style.background = di & 1 ? 'rgba(128,128,128,0.04)' : 'transparent';
+        const pid = indices[di];
+        row.children[0].textContent = '#' + (di + 1);
+        row.children[1].textContent = 'Player ' + pid;
+        row.children[2].textContent = numFmt.format(scores[pid]);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Chart
+// ════════════════════════════════════════════════════════════════════
+
+function initChart() {
+    const canvas = document.getElementById('chart');
+    const w = canvas.parentElement.clientWidth - 32 || 600;
+    const dpr = devicePixelRatio || 1;
+    canvas.style.width = w + 'px';
+    canvas.style.height = CHART_H + 'px';
+    canvas.width = w * dpr;
+    canvas.height = CHART_H * dpr;
+    chartCtx = canvas.getContext('2d');
+    chartCtx.scale(dpr, dpr);
+    HISTORY = Math.floor(w / BAR_W);
+    frameHist = new Float64Array(HISTORY);
+    sortHist = new Float64Array(HISTORY);
+}
+
+function drawChart() {
+    const canvas = document.getElementById('chart');
+    const w = parseFloat(canvas.style.width);
+    const ctx = chartCtx;
+    if (!ctx) return;
+    const h = CHART_H;
+    const maxMs = 50;
+    const s = h / maxMs;
+
+    // Background
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(128,128,128,0.15)';
+    ctx.lineWidth = 0.5;
+    for (const ms of [8, 33]) {
+        ctx.beginPath(); ctx.moveTo(0, h - ms * s); ctx.lineTo(w, h - ms * s); ctx.stroke();
+    }
+
+    // 16.67ms budget line
+    const y60 = h - 16.67 * s;
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(0, y60); ctx.lineTo(w, y60); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillText('16.7ms — 60 fps budget', 4, y60 - 4);
+
+    // Bars
+    const filled = Math.min(totalFrames, HISTORY);
+    const oldest = totalFrames >= HISTORY ? totalFrames % HISTORY : 0;
+
+    for (let i = 0; i < filled; i++) {
+        const bi = (oldest + i) % HISTORY;
+        const ft = frameHist[bi];
+        const st = sortHist[bi];
+        const x = i * BAR_W;
+        const barH = Math.min(h, ft * s);
+        const ok = ft <= 16.67;
+
+        // Total frame time (translucent)
+        ctx.fillStyle = ok ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
+        ctx.fillRect(x, h - barH, BAR_W - 0.5, barH);
+
+        // Sort time portion (solid)
+        const sortH = Math.min(barH, st * s);
+        ctx.fillStyle = ok ? '#22c55e' : '#ef4444';
+        ctx.fillRect(x, h - sortH, BAR_W - 0.5, sortH);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Metrics
+// ════════════════════════════════════════════════════════════════════
+
+const elFps   = document.getElementById('fps-val');
+const elFrame = document.getElementById('frame-val');
+const elSort  = document.getElementById('sort-val');
+const elJank  = document.getElementById('jank-val');
+
+function recordFrame(ts, frameMs, sortMs) {
+    const dt = lastTs ? ts - lastTs : 16.67;
+    lastTs = ts;
+    fps = fps * 0.95 + (1000 / dt) * 0.05;
+    emaFrame = emaFrame * 0.9 + frameMs * 0.1;
+    emaSort  = emaSort  * 0.9 + sortMs  * 0.1;
+
+    // Jank tracking
+    const ji = totalFrames % JANK_WINDOW;
+    jankCount -= jankBuf[ji];
+    jankBuf[ji] = frameMs > 16.67 ? 1 : 0;
+    jankCount += jankBuf[ji];
+
+    // Chart history
+    frameHist[totalFrames % HISTORY] = frameMs;
+    sortHist[totalFrames % HISTORY] = sortMs;
+    totalFrames++;
+
+    // Update display
+    elFps.textContent = Math.round(fps);
+    elFps.style.color = fps >= 55 ? '#22c55e' : fps >= 35 ? '#eab308' : '#ef4444';
+    elFrame.textContent = emaFrame.toFixed(1);
+    elSort.textContent = emaSort.toFixed(1);
+    const pct = totalFrames > 0
+        ? (jankCount / Math.min(totalFrames, JANK_WINDOW) * 100) : 0;
+    elJank.textContent = pct.toFixed(0) + '%';
+    elJank.style.color = pct < 5 ? '#22c55e' : pct < 30 ? '#eab308' : '#ef4444';
+}
+
+function resetMetrics() {
+    fps = 0; emaFrame = 0; emaSort = 0; lastTs = 0;
+    totalFrames = 0; jankCount = 0;
+    jankBuf = new Uint8Array(JANK_WINDOW);
+    if (HISTORY) {
+        frameHist = new Float64Array(HISTORY);
+        sortHist = new Float64Array(HISTORY);
+    }
+    elFps.textContent = '—'; elFps.style.color = '';
+    elFrame.textContent = '—';
+    elSort.textContent = '—';
+    elJank.textContent = '—'; elJank.style.color = '';
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Frame Loop
+// ════════════════════════════════════════════════════════════════════
+
+function frameLoop(ts) {
+    if (!running) return;
+
+    const t0 = performance.now();
+    const dirty = applyUpdates();
+
+    const tSort = performance.now();
+    switch (algo) {
+        case 'full':  indices.sort(cmp); break;
+        case 'bis':   bisIndices(indices, dirty, cmp); break;
+        case 'esm':   esmIndices(indices, dirty, cmp); break;
+        case 'delta': deltaSortIndices(indices, dirty, cmp); break;
+    }
+    const sortMs = performance.now() - tSort;
+
+    renderLeaderboard();
+    const frameMs = performance.now() - t0;
+
+    recordFrame(ts, frameMs, sortMs);
+    drawChart();
+
+    requestAnimationFrame(frameLoop);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  UI Controls
+// ════════════════════════════════════════════════════════════════════
+
+function setAlgo(a) {
+    algo = a;
+    for (const id of ['btn-full', 'btn-bis', 'btn-esm', 'btn-delta']) {
+        document.getElementById(id).classList.toggle('active', id === 'btn-' + a);
+    }
+}
+
+function toggleRun() {
+    if (running) {
+        running = false;
+        document.getElementById('btn-start').textContent = '▶ Start';
+    } else {
+        running = true;
+        document.getElementById('btn-start').textContent = '⏸ Pause';
+        requestAnimationFrame(frameLoop);
+    }
+}
+
+async function resetSim() {
+    running = false;
+    const btn = document.getElementById('btn-start');
+    btn.textContent = 'Initializing…';
+    btn.disabled = true;
+    await new Promise(r => setTimeout(r, 50));
+
+    n = parseInt(document.getElementById('sel-n').value);
+    initData();
+    setupVirtualScroll();
+    resetMetrics();
+    drawChart();
+
+    btn.textContent = '▶ Start';
+    btn.disabled = false;
+}
+
+// Live parameter controls
+document.getElementById('inp-k').addEventListener('input', e => {
+    k = parseInt(e.target.value);
+    document.getElementById('val-k').textContent = k;
+});
+document.getElementById('inp-delta').addEventListener('input', e => {
+    maxDelta = parseInt(e.target.value);
+    document.getElementById('val-delta').textContent = maxDelta;
+});
+document.getElementById('sel-n').addEventListener('change', resetSim);
+
+// Scroll while paused
+document.getElementById('viewport').addEventListener('scroll', () => {
+    if (!running) renderLeaderboard();
+}, { passive: true });
+
+// ════════════════════════════════════════════════════════════════════
+//  Init
+// ════════════════════════════════════════════════════════════════════
+
+requestAnimationFrame(() => {
+    initData();
+    initChart();
+    setupVirtualScroll();
+    drawChart();
+});
+
+window.addEventListener('resize', () => { initChart(); drawChart(); });
+
+</script>
+</body>
+</html>

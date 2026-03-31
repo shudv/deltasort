@@ -4,6 +4,14 @@
 //! restores sorted order more efficiently than a full re-sort by exploiting
 //! knowledge of which indices changed.
 //!
+//! # Algorithm
+//!
+//! DeltaSort achieves O(n√k) time with O(1) auxiliary space (the
+//! `updated_indices` slice is input, not auxiliary). Phase 1 sorts the
+//! dirty values in-place at their scattered positions using heapsort via
+//! indirection. Phase 2 scans left-to-right and fixes violations using
+//! binary-search + rotation, reusing the indices array as a stack.
+//!
 //! # Example
 //!
 //! ```
@@ -20,6 +28,8 @@
 //!
 //! assert_eq!(arr, vec![1, 2, 5, 8, 9]);
 //! ```
+
+pub mod parallel;
 
 use std::collections::HashSet;
 
@@ -62,7 +72,7 @@ enum Direction {
 /// ```
 pub fn delta_sort<T>(arr: &mut [T], updated_indices: &HashSet<usize>)
 where
-    T: Clone + Ord,
+    T: Ord,
 {
     delta_sort_by(arr, updated_indices, T::cmp)
 }
@@ -70,8 +80,8 @@ where
 /// Sorts an array that was previously sorted but has had some values updated,
 /// using a custom comparator.
 ///
-/// This function efficiently restores sorted order by only moving the values
-/// that need to be repositioned, rather than performing a full sort.
+/// This is a convenience wrapper around [`delta_sort_by_inplace`] that accepts
+/// a `HashSet`. The `HashSet` is converted to a `Vec` internally.
 ///
 /// # Arguments
 ///
@@ -100,48 +110,64 @@ where
 /// ```
 pub fn delta_sort_by<T, F>(arr: &mut [T], updated_indices: &HashSet<usize>, cmp: F)
 where
-    T: Clone,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     if updated_indices.is_empty() {
         return;
     }
+    let mut indices: Vec<usize> = updated_indices.iter().copied().collect();
+    delta_sort_by_inplace(arr, &mut indices, cmp);
+}
 
-    // Phase 1: Extract and sort dirty values, write back in index order
-    let mut dirty: Vec<usize> = updated_indices.iter().copied().collect();
-    dirty.sort_unstable();
-
-    let mut values: Vec<T> = dirty.iter().map(|&i| arr[i].clone()).collect();
-    values.sort_by(&cmp);
-
-    for (i, &idx) in dirty.iter().enumerate() {
-        arr[idx] = values[i].clone();
+/// Sorts an array that was previously sorted but has had some values updated.
+///
+/// O(1) auxiliary space variant. The `updated_indices` slice is treated as
+/// input (not auxiliary space) and is used as working storage: it will be
+/// sorted in-place and partially overwritten during Phase 2.
+///
+/// # Arguments
+///
+/// * `arr` - A mutable slice that was previously sorted but has had some values changed
+/// * `updated_indices` - Mutable slice of indices where values were updated.
+///   Will be sorted in-place and used as scratch space.
+/// * `cmp` - Comparison function returning `Ordering`
+///
+/// # Panics
+///
+/// Panics if any index in `updated_indices` is out of bounds for `arr`.
+pub fn delta_sort_by_inplace<T, F>(arr: &mut [T], updated_indices: &mut [usize], cmp: F)
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    let k = updated_indices.len();
+    if k == 0 {
+        return;
     }
 
-    dirty.push(arr.len()); // Add sentinel to trigger final flush
+    // Sort the indices in-place
+    updated_indices.sort_unstable();
 
-    // Phase 2: Scan updated indices left to right
+    // Phase 1: Sort dirty values in-place at their scattered positions
+    // using heapsort with indirection. O(k log k) time, O(1) aux space.
+    heapsort_scattered(arr, updated_indices, &cmp);
 
-    // Stack for pending RIGHT values
-    let mut pending_right: Vec<usize> = Vec::with_capacity(dirty.len());
+    // Phase 2: Scan updated indices left to right, fixing violations.
+    // Reuse updated_indices as the pending-RIGHT stack.
+    // Invariant: stack_top <= read_pos, so stack writes never overwrite unread data.
+    let mut stack_top: usize = 0;
+    let mut left_bound: usize = 0;
 
-    // Left boundary for fixing LEFT violations
-    let mut left_bound = 0;
-
-    for &i in &dirty {
-        // Determine direction (sentinel is treated as LEFT to trigger final flush)
-        let direction = if i == arr.len() {
-            Direction::Left
-        } else {
-            get_direction(arr, i, &cmp)
-        };
+    for read_pos in 0..k {
+        let i = updated_indices[read_pos];
+        let direction = get_direction(arr, i, &cmp);
 
         match direction {
             Direction::Left => {
                 // Fix all pending RIGHT directions before fixing LEFT
                 let mut right_bound = i - 1;
-                while let Some(idx) = pending_right.pop() {
-                    // Fix RIGHT direction at idx if needed
+                while stack_top > 0 {
+                    stack_top -= 1;
+                    let idx = updated_indices[stack_top];
                     if idx < arr.len() - 1
                         && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
                     {
@@ -149,20 +175,85 @@ where
                     }
                 }
 
-                // Fix actual (non-sentinel) LEFT directions
-                if i < arr.len() {
-                    left_bound = fix_left(arr, i, left_bound, &cmp) + 1;
-                }
+                left_bound = fix_left(arr, i, left_bound, &cmp) + 1;
             }
             Direction::Right => {
-                if pending_right.is_empty() {
-                    // First RIGHT in segment extends right bound
+                if stack_top == 0 {
                     left_bound = i;
                 }
-
-                pending_right.push(i);
+                // Safe: stack_top <= read_pos
+                updated_indices[stack_top] = i;
+                stack_top += 1;
             }
         }
+    }
+
+    // Final flush: fix any remaining pending RIGHTs (replaces sentinel logic)
+    if stack_top > 0 {
+        let mut right_bound = arr.len() - 1;
+        while stack_top > 0 {
+            stack_top -= 1;
+            let idx = updated_indices[stack_top];
+            if idx < arr.len() - 1
+                && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
+            {
+                right_bound = fix_right(arr, idx, right_bound, &cmp) - 1;
+            }
+        }
+    }
+}
+
+/// Heapsort values at scattered positions via indirection.
+///
+/// Sorts `arr[indices[0]], arr[indices[1]], ..., arr[indices[k-1]]` in
+/// ascending order (according to `cmp`) without touching other elements.
+/// O(k log k) time, O(1) auxiliary space.
+fn heapsort_scattered<T, F>(arr: &mut [T], indices: &[usize], cmp: &F)
+where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    let k = indices.len();
+    if k <= 1 {
+        return;
+    }
+
+    // Build max-heap
+    for i in (0..k / 2).rev() {
+        sift_down_scattered(arr, indices, i, k, cmp);
+    }
+
+    // Extract max repeatedly
+    for end in (1..k).rev() {
+        arr.swap(indices[0], indices[end]);
+        sift_down_scattered(arr, indices, 0, end, cmp);
+    }
+}
+
+/// Sift-down for heapsort on scattered positions.
+fn sift_down_scattered<T, F>(
+    arr: &mut [T],
+    indices: &[usize],
+    mut root: usize,
+    end: usize,
+    cmp: &F,
+) where
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    loop {
+        let mut child = 2 * root + 1;
+        if child >= end {
+            break;
+        }
+        if child + 1 < end
+            && cmp(&arr[indices[child]], &arr[indices[child + 1]]) == std::cmp::Ordering::Less
+        {
+            child += 1;
+        }
+        if cmp(&arr[indices[root]], &arr[indices[child]]) != std::cmp::Ordering::Less {
+            break;
+        }
+        arr.swap(indices[root], indices[child]);
+        root = child;
     }
 }
 

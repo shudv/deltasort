@@ -43,7 +43,7 @@ const N: usize = 100_000;
 const BIS_MAX_K: usize = 2000;
 
 /// Base number of iterations per benchmark (scaled up for small k)
-const BASE_ITERATIONS: usize = 100;
+const BASE_ITERATIONS: usize = 5;
 
 /// Delta counts to test for time benchmarks
 const DELTA_COUNTS: &[usize] = &[
@@ -51,15 +51,15 @@ const DELTA_COUNTS: &[usize] = &[
 ];
 
 /// Number of iterations for crossover measurements (higher = more stable but slower)
-const CROSSOVER_ITERATIONS: usize = 10;
+const CROSSOVER_ITERATIONS: usize = 2;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
-    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000,
+    1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000,
 ];
 
 /// Array sizes for movement/comparator analysis
-const ANALYSIS_N_VALUES: &[usize] = &[1_000, 10_000, 100_000, 1_000_000];
+const ANALYSIS_N_VALUES: &[usize] = &[1_000, 10_000, 100_000];
 
 /// k percentages for movement/comparator analysis
 const ANALYSIS_K_FRACTIONS: &[f64] = &[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2];
@@ -215,7 +215,7 @@ fn find_crossover_bis(n: usize) -> usize {
 }
 
 fn find_crossover_esm(n: usize) -> usize {
-    find_crossover_generic(n, if n > 5000 { 0.7 } else { 0.6 }, 0.95, esm_is_faster)
+    find_crossover_generic(n, 0.0, 0.95, esm_is_faster)
 }
 
 // ============================================================================

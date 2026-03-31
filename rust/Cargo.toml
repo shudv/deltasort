@@ -30,3 +30,7 @@ path = "benchmark/parallel_benchmark.rs"
 [[bin]]
 name = "applications_benchmark"
 path = "benchmark/applications_benchmark.rs"
+
+[[bin]]
+name = "parallel_bevy_bench"
+path = "benchmark/parallel_bevy_bench.rs"

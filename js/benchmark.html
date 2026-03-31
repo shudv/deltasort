@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DeltaSort Browser Benchmark</title>
+        <style>
+            :root {
+                --bg: #fafafa;
+                --fg: #1a1a1a;
+                --muted: #666;
+                --border: #ddd;
+                --accent: #2563eb;
+                --accent-light: #dbeafe;
+                --bis: #ef4444;
+                --ds: #2563eb;
+                --esm: #16a34a;
+                --full: #9333ea;
+                --card: #fff;
+                --input-bg: #fff;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #111;
+                    --fg: #e5e5e5;
+                    --muted: #999;
+                    --border: #333;
+                    --accent: #3b82f6;
+                    --accent-light: #1e3a5f;
+                    --card: #1a1a1a;
+                    --input-bg: #222;
+                }
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+                line-height: 1.5;
+            }
+            .container {
+                max-width: 960px;
+                margin: 0 auto;
+                padding: 24px 16px;
+            }
+            h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .subtitle {
+                color: var(--muted);
+                font-size: 0.875rem;
+                margin-bottom: 24px;
+            }
+            .card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 16px;
+            }
+            .card h2 {
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 12px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 12px;
+            }
+            label {
+                display: block;
+                font-size: 0.8rem;
+                color: var(--muted);
+                margin-bottom: 4px;
+            }
+            input,
+            select {
+                width: 100%;
+                padding: 6px 10px;
+                font-size: 0.9rem;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                background: var(--input-bg);
+                color: var(--fg);
+            }
+            input:focus,
+            select:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+            .checkbox-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .checkbox-row input {
+                width: auto;
+            }
+            .checkbox-row label {
+                margin-bottom: 0;
+                font-size: 0.85rem;
+                color: var(--fg);
+            }
+            .btn-row {
+                display: flex;
+                gap: 8px;
+                margin-top: 16px;
+                flex-wrap: wrap;
+            }
+            button {
+                padding: 8px 20px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: opacity 0.1s;
+            }
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .btn-primary {
+                background: var(--accent);
+                color: #fff;
+            }
+            .btn-secondary {
+                background: var(--border);
+                color: var(--fg);
+            }
+            .btn-primary:hover:not(:disabled) {
+                opacity: 0.9;
+            }
+            #status {
+                font-size: 0.85rem;
+                color: var(--muted);
+                margin-top: 12px;
+                min-height: 1.3em;
+            }
+            #progress-bar {
+                width: 100%;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+                margin-top: 8px;
+                overflow: hidden;
+                display: none;
+            }
+            #progress-fill {
+                height: 100%;
+                background: var(--accent);
+                width: 0%;
+                transition: width 0.2s;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.85rem;
+                margin-top: 8px;
+            }
+            thead th {
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 2px solid var(--border);
+                font-weight: 600;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            tbody td {
+                padding: 6px 10px;
+                border-bottom: 1px solid var(--border);
+                font-variant-numeric: tabular-nums;
+            }
+            tbody tr:last-child td {
+                border-bottom: none;
+            }
+            .algo-bis {
+                color: var(--bis);
+            }
+            .algo-ds {
+                color: var(--ds);
+            }
+            .algo-esm {
+                color: var(--esm);
+            }
+            .algo-full {
+                color: var(--full);
+            }
+            .fastest {
+                font-weight: 700;
+            }
+            .speedup {
+                font-size: 0.75rem;
+                color: var(--muted);
+            }
+            canvas {
+                width: 100%;
+                height: 300px;
+                margin-top: 12px;
+            }
+            .legend {
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-top: 8px;
+                font-size: 0.8rem;
+            }
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            .legend-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+            }
+            .results-empty {
+                color: var(--muted);
+                font-size: 0.9rem;
+                padding: 40px 0;
+                text-align: center;
+            }
+            .help {
+                font-size: 0.8rem;
+                color: var(--muted);
+                margin-top: 8px;
+                line-height: 1.4;
+            }
+            .tabs {
+                display: flex;
+                gap: 0;
+                margin-bottom: 12px;
+            }
+            .tab {
+                padding: 6px 16px;
+                font-size: 0.85rem;
+                cursor: pointer;
+                border: 1px solid var(--border);
+                background: var(--bg);
+                color: var(--muted);
+            }
+            .tab:first-child {
+                border-radius: 4px 0 0 4px;
+            }
+            .tab:last-child {
+                border-radius: 0 4px 4px 0;
+            }
+            .tab.active {
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent);
+            }
+            .tab + .tab {
+                border-left: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>DeltaSort Browser Benchmark</h1>
+            <p class="subtitle">
+                Compare BIS, DeltaSort, ESM, and FullSort in V8 — object arrays vs typed arrays
+            </p>
+
+            <div class="card">
+                <h2>Configuration</h2>
+                <div class="grid">
+                    <div>
+                        <label for="n">Array size (n)</label>
+                        <input
+                            type="number"
+                            id="n"
+                            value="10000"
+                            min="100"
+                            max="1000000"
+                            step="100"
+                        />
+                    </div>
+                    <div>
+                        <label for="k-values">k values (comma-sep or %)</label>
+                        <input
+                            type="text"
+                            id="k-values"
+                            value="1, 10, 50, 100, 500, 1000, 5%, 10%, 50%"
+                            placeholder="e.g. 10, 100, 1%, 5%"
+                        />
+                    </div>
+                    <div>
+                        <label for="iterations">Iterations per point</label>
+                        <input type="number" id="iterations" value="10" min="1" max="200" />
+                    </div>
+                    <div>
+                        <label for="warmup">Warm-up iterations</label>
+                        <input type="number" id="warmup" value="3" min="0" max="20" />
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px">
+                    <label>Data type</label>
+                    <div class="tabs" id="data-type-tabs">
+                        <div class="tab active" data-value="objects">Objects (User)</div>
+                        <div class="tab" data-value="numbers">Float64Array</div>
+                        <div class="tab" data-value="both">Both</div>
+                    </div>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="algo-bis" checked />
+                    <label for="algo-bis" style="color: var(--bis)">BIS</label>
+                    <input type="checkbox" id="algo-ds" checked />
+                    <label for="algo-ds" style="color: var(--ds)">DeltaSort</label>
+                    <input type="checkbox" id="algo-esm" checked />
+                    <label for="algo-esm" style="color: var(--esm)">ESM</label>
+                    <input type="checkbox" id="algo-full" checked />
+                    <label for="algo-full" style="color: var(--full)">FullSort</label>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-primary" id="run-btn" onclick="runBenchmark()">
+                        Run Benchmark
+                    </button>
+                    <button class="btn-secondary" id="stop-btn" onclick="stopBenchmark()" disabled>
+                        Stop
+                    </button>
+                    <button class="btn-secondary" onclick="exportCSV()">Export CSV</button>
+                </div>
+                <div id="status"></div>
+                <div id="progress-bar"><div id="progress-fill"></div></div>
+                <p class="help">
+                    Tip: Use small n (1000–5000) for quick tests, larger n (50000–100000) for
+                    serious benchmarks. % values in k are relative to n.
+                </p>
+            </div>
+
+            <div class="card" id="results-card">
+                <h2>Results</h2>
+                <div id="results-area">
+                    <div class="results-empty">Run a benchmark to see results</div>
+                </div>
+            </div>
+
+            <div class="card" id="chart-card" style="display: none">
+                <h2>Execution Time (log-log)</h2>
+                <canvas id="chart"></canvas>
+                <div class="legend" id="legend"></div>
+            </div>
+        </div>
+
+        <script>
+            // ============================================================================
+            // DATA GENERATION
+            // ============================================================================
+            const COUNTRIES = [
+                "USA",
+                "Canada",
+                "UK",
+                "Germany",
+                "France",
+                "Spain",
+                "Italy",
+                "Japan",
+                "Australia",
+                "Brazil",
+                "India",
+                "China",
+                "Mexico",
+                "Argentina",
+                "Sweden",
+                "Norway",
+                "Denmark",
+                "Finland",
+                "Netherlands",
+                "Belgium",
+            ];
+            const FIRST_NAMES = [
+                "Vijay",
+                "Meera",
+                "Akash",
+                "Kashish",
+                "Sunita",
+                "Aviral",
+                "Saumya",
+                "Aman",
+                "Sanjay",
+                "Kavitha",
+                "Radhika",
+                "Meenakshi",
+                "Suresh",
+                "Krishna",
+            ];
+            const LAST_NAMES = [
+                "Sharma",
+                "Patel",
+                "Dwivedi",
+                "Kumar",
+                "Singh",
+                "Gupta",
+                "Nair",
+                "Iyer",
+                "Rao",
+                "Menon",
+                "Pillai",
+                "Joshi",
+                "Verma",
+            ];
+
+            function generateUser(seed) {
+                return {
+                    name:
+                        FIRST_NAMES[seed % FIRST_NAMES.length] +
+                        " " +
+                        LAST_NAMES[Math.floor(seed / FIRST_NAMES.length) % LAST_NAMES.length],
+                    age: 18 + (seed % 62),
+                    country:
+                        COUNTRIES[
+                            Math.floor(seed / (FIRST_NAMES.length * LAST_NAMES.length)) %
+                                COUNTRIES.length
+                        ],
+                };
+            }
+
+            function userCmp(a, b) {
+                const c = a.country < b.country ? -1 : a.country > b.country ? 1 : 0;
+                if (c !== 0) return c;
+                const d = a.age - b.age;
+                if (d !== 0) return d;
+                return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+            }
+
+            function numCmp(a, b) {
+                return a - b;
+            }
+
+            function generateSortedUsers(n) {
+                const arr = [];
+                for (let i = 0; i < n; i++) arr.push(generateUser(i * 7919));
+                arr.sort(userCmp);
+                return arr;
+            }
+
+            function generateSortedNumbers(n) {
+                const arr = new Float64Array(n);
+                for (let i = 0; i < n; i++) arr[i] = Math.random();
+                arr.sort(); // Float64Array.sort is numeric by default
+                return arr;
+            }
+
+            function cloneUsers(arr) {
+                return arr.map((u) => ({ name: u.name, age: u.age, country: u.country }));
+            }
+
+            function cloneNumbers(arr) {
+                return new Float64Array(arr);
+            }
+
+            function mutateUsers(arr, k) {
+                const indices = new Set();
+                while (indices.size < k) indices.add(Math.floor(Math.random() * arr.length));
+                for (const i of indices) {
+                    const m = Math.floor(Math.random() * 3);
+                    if (m === 0)
+                        arr[i] = {
+                            ...arr[i],
+                            country: COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)],
+                        };
+                    else if (m === 1)
+                        arr[i] = { ...arr[i], age: 18 + Math.floor(Math.random() * 62) };
+                    else
+                        arr[i] = {
+                            ...arr[i],
+                            name:
+                                FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)] +
+                                " " +
+                                LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)],
+                        };
+                }
+                return indices;
+            }
+
+            function mutateNumbers(arr, k) {
+                const indices = new Set();
+                while (indices.size < k) indices.add(Math.floor(Math.random() * arr.length));
+                for (const i of indices) arr[i] = Math.random();
+                return indices;
+            }
+
+            // ============================================================================
+            // SORTING ALGORITHMS — OBJECTS (regular arrays)
+            // ============================================================================
+
+            function bisObjects(arr, dirtyIndices, cmp) {
+                if (dirtyIndices.size === 0) return arr;
+                const desc = Array.from(dirtyIndices).sort((a, b) => b - a);
+                const extracted = [];
+                for (const idx of desc) {
+                    extracted.push(arr[idx]);
+                    arr.splice(idx, 1);
+                }
+                for (const value of extracted) {
+                    let lo = 0,
+                        hi = arr.length;
+                    while (lo < hi) {
+                        const mid = (lo + hi) >> 1;
+                        if (cmp(arr[mid], value) < 0) lo = mid + 1;
+                        else hi = mid;
+                    }
+                    arr.splice(lo, 0, value);
+                }
+                return arr;
+            }
+
+            function esmObjects(arr, dirtyIndices, cmp) {
+                if (dirtyIndices.size === 0) return arr;
+                const n = arr.length,
+                    k = dirtyIndices.size;
+                const sortedIdx = Array.from(dirtyIndices).sort((a, b) => a - b);
+                const clean = [],
+                    dirty = [];
+                let dp = 0;
+                for (let i = 0; i < n; i++) {
+                    if (dp < k && sortedIdx[dp] === i) {
+                        dirty.push(arr[i]);
+                        dp++;
+                    } else clean.push(arr[i]);
+                }
+                dirty.sort(cmp);
+                const result = [];
+                let ci = 0,
+                    di = 0;
+                while (ci < clean.length && di < dirty.length) {
+                    if (cmp(clean[ci], dirty[di]) <= 0) result.push(clean[ci++]);
+                    else result.push(dirty[di++]);
+                }
+                while (ci < clean.length) result.push(clean[ci++]);
+                while (di < dirty.length) result.push(dirty[di++]);
+                for (let i = 0; i < n; i++) arr[i] = result[i];
+                return arr;
+            }
+
+            function deltaSortObjects(arr, updatedIndices, cmp) {
+                if (updatedIndices.size === 0) return arr;
+                const updated = Array.from(updatedIndices).sort((a, b) => a - b);
+                const values = updated.map((i) => arr[i]).sort(cmp);
+                for (let i = 0; i < updated.length; i++) arr[updated[i]] = values[i];
+                updated.push(arr.length);
+                const stack = new Array(updated.length);
+                let top = 0,
+                    lb = 0;
+                for (let p = 0; p < updated.length; p++) {
+                    const idx = updated[p];
+                    const dir =
+                        idx === arr.length ? 0 : idx > 0 && cmp(arr[idx - 1], arr[idx]) > 0 ? 0 : 1;
+                    if (dir === 0) {
+                        let rb = idx - 1;
+                        while (top > 0) {
+                            const ri = stack[--top];
+                            if (ri < arr.length - 1 && cmp(arr[ri], arr[ri + 1]) > 0) {
+                                rb = fixRightObj(arr, ri, rb, cmp) - 1;
+                            }
+                        }
+                        if (idx < arr.length) lb = fixLeftObj(arr, idx, lb, cmp) + 1;
+                    } else {
+                        if (top === 0) lb = idx;
+                        stack[top++] = idx;
+                    }
+                }
+                return arr;
+            }
+
+            function fixRightObj(arr, i, rb, cmp) {
+                const v = arr[i];
+                let lo = i + 1,
+                    hi = rb;
+                while (lo <= hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (cmp(arr[mid], v) <= 0) lo = mid + 1;
+                    else hi = mid - 1;
+                }
+                const [removed] = arr.splice(i, 1);
+                arr.splice(hi, 0, removed);
+                return hi;
+            }
+
+            function fixLeftObj(arr, i, lb, cmp) {
+                const v = arr[i];
+                let lo = lb,
+                    hi = i - 1;
+                while (lo <= hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (cmp(v, arr[mid]) < 0) hi = mid - 1;
+                    else lo = mid + 1;
+                }
+                const [removed] = arr.splice(i, 1);
+                arr.splice(lo, 0, removed);
+                return lo;
+            }
+
+            function fullSortObjects(arr, _indices, cmp) {
+                arr.sort(cmp);
+                return arr;
+            }
+
+            // ============================================================================
+            // SORTING ALGORITHMS — TYPED ARRAYS (Float64Array)
+            // Uses copyWithin for contiguous moves (no splice) to test cache-locality thesis
+            // ============================================================================
+
+            function bisNumbers(arr, dirtyIndices) {
+                if (dirtyIndices.size === 0) return arr;
+                // Work with a regular array copy, insert via binary search with copyWithin-style moves
+                const sorted = Array.from(dirtyIndices).sort((a, b) => a - b);
+                // Process each dirty index: extract, shift, insert
+                for (const idx of sorted) {
+                    const val = arr[idx];
+                    // Find insertion position via binary search in clean portion
+                    // First remove: shift everything after idx left by 1
+                    // But we need to work on the full array; BIS processes one at a time
+                }
+                // Simpler approach: extract all, sort, re-insert with binary search
+                const desc = Array.from(dirtyIndices).sort((a, b) => b - a);
+                const n = arr.length;
+                // Convert to regular array for splice-like ops
+                const a = Array.from(arr);
+                const extracted = [];
+                for (const idx of desc) {
+                    extracted.push(a[idx]);
+                    a.splice(idx, 1);
+                }
+                for (const value of extracted) {
+                    let lo = 0,
+                        hi = a.length;
+                    while (lo < hi) {
+                        const mid = (lo + hi) >> 1;
+                        if (a[mid] < value) lo = mid + 1;
+                        else hi = mid;
+                    }
+                    a.splice(lo, 0, value);
+                }
+                for (let i = 0; i < n; i++) arr[i] = a[i];
+                return arr;
+            }
+
+            function bisNumbersInPlace(arr, dirtyIndices) {
+                // True in-place BIS using copyWithin — no array conversion
+                if (dirtyIndices.size === 0) return arr;
+                const indices = Array.from(dirtyIndices).sort((a, b) => a - b);
+                const n = arr.length;
+                // Extract dirty values, remove them (shift left), then binary insert
+                const values = indices.map((i) => arr[i]);
+                // Remove dirty elements: compact array
+                let write = 0,
+                    readIdx = 0;
+                for (let i = 0; i < n; i++) {
+                    if (readIdx < indices.length && indices[readIdx] === i) {
+                        readIdx++;
+                        continue;
+                    }
+                    arr[write++] = arr[i];
+                }
+                const cleanLen = write;
+                // Binary insert each value
+                for (const val of values) {
+                    let lo = 0,
+                        hi = write;
+                    while (lo < hi) {
+                        const mid = (lo + hi) >> 1;
+                        if (arr[mid] < val) lo = mid + 1;
+                        else hi = mid;
+                    }
+                    // Shift right from write down to lo
+                    for (let j = write; j > lo; j--) arr[j] = arr[j - 1];
+                    arr[lo] = val;
+                    write++;
+                }
+                return arr;
+            }
+
+            function esmNumbers(arr, dirtyIndices) {
+                if (dirtyIndices.size === 0) return arr;
+                const n = arr.length,
+                    k = dirtyIndices.size;
+                const sorted = Array.from(dirtyIndices).sort((a, b) => a - b);
+                const clean = new Float64Array(n - k);
+                const dirty = new Float64Array(k);
+                let ci = 0,
+                    di = 0,
+                    dp = 0;
+                for (let i = 0; i < n; i++) {
+                    if (dp < k && sorted[dp] === i) {
+                        dirty[di++] = arr[i];
+                        dp++;
+                    } else clean[ci++] = arr[i];
+                }
+                dirty.sort();
+                // Merge back into arr
+                ci = 0;
+                di = 0;
+                for (let i = 0; i < n; i++) {
+                    if (ci < clean.length && (di >= dirty.length || clean[ci] <= dirty[di]))
+                        arr[i] = clean[ci++];
+                    else arr[i] = dirty[di++];
+                }
+                return arr;
+            }
+
+            function deltaSortNumbers(arr, updatedIndices) {
+                if (updatedIndices.size === 0) return arr;
+                const updated = Array.from(updatedIndices).sort((a, b) => a - b);
+                // Pre-sort: extract, sort, write back
+                const values = new Float64Array(updated.length);
+                for (let i = 0; i < updated.length; i++) values[i] = arr[updated[i]];
+                values.sort();
+                for (let i = 0; i < updated.length; i++) arr[updated[i]] = values[i];
+                const n = arr.length;
+                updated.push(n); // sentinel
+                const stack = new Array(updated.length);
+                let top = 0,
+                    lb = 0;
+                for (let p = 0; p < updated.length; p++) {
+                    const idx = updated[p];
+                    const dir = idx === n ? 0 : idx > 0 && arr[idx - 1] > arr[idx] ? 0 : 1;
+                    if (dir === 0) {
+                        let rb = idx - 1;
+                        while (top > 0) {
+                            const ri = stack[--top];
+                            if (ri < n - 1 && arr[ri] > arr[ri + 1])
+                                rb = fixRightNum(arr, ri, rb) - 1;
+                        }
+                        if (idx < n) lb = fixLeftNum(arr, idx, lb) + 1;
+                    } else {
+                        if (top === 0) lb = idx;
+                        stack[top++] = idx;
+                    }
+                }
+                return arr;
+            }
+
+            function fixRightNum(arr, i, rb) {
+                const v = arr[i];
+                let lo = i + 1,
+                    hi = rb;
+                while (lo <= hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (arr[mid] <= v) lo = mid + 1;
+                    else hi = mid - 1;
+                }
+                // Shift left: move [i+1..hi] to [i..hi-1], place v at hi
+                if (hi > i) {
+                    // Use copyWithin if available (Float64Array has it)
+                    if (arr.copyWithin) {
+                        arr.copyWithin(i, i + 1, hi + 1);
+                        arr[hi] = v;
+                    } else {
+                        for (let j = i; j < hi; j++) arr[j] = arr[j + 1];
+                        arr[hi] = v;
+                    }
+                }
+                return hi;
+            }
+
+            function fixLeftNum(arr, i, lb) {
+                const v = arr[i];
+                let lo = lb,
+                    hi = i - 1;
+                while (lo <= hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (v < arr[mid]) hi = mid - 1;
+                    else lo = mid + 1;
+                }
+                // Shift right: move [lo..i-1] to [lo+1..i], place v at lo
+                if (lo < i) {
+                    if (arr.copyWithin) {
+                        arr.copyWithin(lo + 1, lo, i);
+                        arr[lo] = v;
+                    } else {
+                        for (let j = i; j > lo; j--) arr[j] = arr[j - 1];
+                        arr[lo] = v;
+                    }
+                }
+                return lo;
+            }
+
+            function fullSortNumbers(arr) {
+                arr.sort();
+                return arr;
+            }
+
+            // ============================================================================
+            // VERIFICATION
+            // ============================================================================
+
+            function isSorted(arr, cmp) {
+                for (let i = 1; i < arr.length; i++) {
+                    if (cmp ? cmp(arr[i - 1], arr[i]) > 0 : arr[i - 1] > arr[i]) return false;
+                }
+                return true;
+            }
+
+            // ============================================================================
+            // BENCHMARK ENGINE
+            // ============================================================================
+
+            let running = false;
+            let shouldStop = false;
+            let allResults = [];
+
+            function parseKValues(raw, n) {
+                return raw
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .map((s) => {
+                        if (s.endsWith("%"))
+                            return Math.max(1, Math.round((n * parseFloat(s)) / 100));
+                        return parseInt(s, 10);
+                    })
+                    .filter((k) => k > 0 && k <= n)
+                    .sort((a, b) => a - b);
+            }
+
+            function getDataType() {
+                const active = document.querySelector("#data-type-tabs .tab.active");
+                return active ? active.dataset.value : "objects";
+            }
+
+            function getAlgos() {
+                const a = [];
+                if (document.getElementById("algo-bis").checked) a.push("BIS");
+                if (document.getElementById("algo-ds").checked) a.push("DeltaSort");
+                if (document.getElementById("algo-esm").checked) a.push("ESM");
+                if (document.getElementById("algo-full").checked) a.push("FullSort");
+                return a;
+            }
+
+            function setStatus(msg) {
+                document.getElementById("status").textContent = msg;
+            }
+            function setProgress(pct) {
+                const bar = document.getElementById("progress-bar");
+                const fill = document.getElementById("progress-fill");
+                bar.style.display = pct < 0 ? "none" : "block";
+                fill.style.width = Math.min(100, Math.max(0, pct)) + "%";
+            }
+
+            // Yield to UI
+            function yieldUI() {
+                return new Promise((r) => setTimeout(r, 0));
+            }
+
+            async function runBenchmark() {
+                if (running) return;
+                running = true;
+                shouldStop = false;
+                document.getElementById("run-btn").disabled = true;
+                document.getElementById("stop-btn").disabled = false;
+
+                const n = parseInt(document.getElementById("n").value, 10);
+                const kValues = parseKValues(document.getElementById("k-values").value, n);
+                const iters = parseInt(document.getElementById("iterations").value, 10);
+                const warmup = parseInt(document.getElementById("warmup").value, 10);
+                const dataType = getDataType();
+                const algos = getAlgos();
+
+                if (kValues.length === 0) {
+                    setStatus("No valid k values");
+                    running = false;
+                    return;
+                }
+                if (algos.length === 0) {
+                    setStatus("Select at least one algorithm");
+                    running = false;
+                    return;
+                }
+
+                const modes = [];
+                if (dataType === "objects" || dataType === "both") modes.push("objects");
+                if (dataType === "numbers" || dataType === "both") modes.push("numbers");
+
+                allResults = [];
+                const totalSteps = modes.length * kValues.length * algos.length;
+                let step = 0;
+
+                for (const mode of modes) {
+                    if (shouldStop) break;
+                    setStatus(
+                        `Generating ${mode === "objects" ? "object" : "Float64"} array (n=${n.toLocaleString()})...`,
+                    );
+                    await yieldUI();
+
+                    const baseArr =
+                        mode === "objects" ? generateSortedUsers(n) : generateSortedNumbers(n);
+                    const cloneFn = mode === "objects" ? cloneUsers : cloneNumbers;
+                    const mutateFn = mode === "objects" ? mutateUsers : mutateNumbers;
+                    const cmp = mode === "objects" ? userCmp : numCmp;
+
+                    const algoFns = {
+                        BIS:
+                            mode === "objects"
+                                ? (a, idx) => bisObjects(a, idx, cmp)
+                                : (a, idx) => bisNumbersInPlace(a, idx),
+                        DeltaSort:
+                            mode === "objects"
+                                ? (a, idx) => deltaSortObjects(a, idx, cmp)
+                                : (a, idx) => deltaSortNumbers(a, idx),
+                        ESM:
+                            mode === "objects"
+                                ? (a, idx) => esmObjects(a, idx, cmp)
+                                : (a, idx) => esmNumbers(a, idx),
+                        FullSort:
+                            mode === "objects"
+                                ? (a, _) => fullSortObjects(a, null, cmp)
+                                : (a, _) => fullSortNumbers(a),
+                    };
+
+                    for (const k of kValues) {
+                        if (shouldStop) break;
+                        for (const algo of algos) {
+                            if (shouldStop) break;
+                            step++;
+                            const pct = (step / totalSteps) * 100;
+                            setStatus(
+                                `[${mode}] ${algo} k=${k.toLocaleString()} (${Math.round(pct)}%)`,
+                            );
+                            setProgress(pct);
+                            await yieldUI();
+
+                            const fn = algoFns[algo];
+
+                            // Warm-up
+                            for (let w = 0; w < warmup; w++) {
+                                const a = cloneFn(baseArr);
+                                const idx = mutateFn(a, k);
+                                fn(a, idx);
+                            }
+
+                            // Auto-calibrate batch size: target >= 10ms per timing window
+                            // This defeats browser timer coarsening (Spectre: ~100μs resolution)
+                            let batchSize = 1;
+                            {
+                                const calArr = cloneFn(baseArr);
+                                const calIdx = mutateFn(calArr, k);
+                                const ct0 = performance.now();
+                                fn(calArr, calIdx);
+                                const ct1 = performance.now();
+                                const singleMs = ct1 - ct0;
+                                // Verify correctness on calibration run
+                                const sorted = isSorted(calArr, mode === "objects" ? cmp : null);
+                                if (!sorted) console.warn(`${algo} (${mode}) k=${k}: NOT SORTED!`);
+                                if (singleMs < 10) {
+                                    batchSize = Math.max(
+                                        2,
+                                        Math.ceil(10 / Math.max(singleMs, 0.001)),
+                                    );
+                                    // Cap to avoid excessive memory use: max 500 for objects, 2000 for numbers
+                                    batchSize = Math.min(
+                                        batchSize,
+                                        mode === "objects" ? 500 : 2000,
+                                    );
+                                }
+                            }
+
+                            // Measure with batched timing
+                            const times = [];
+                            for (let it = 0; it < iters; it++) {
+                                // Pre-generate batch of test arrays (clone+mutate outside timing)
+                                const batch = [];
+                                for (let b = 0; b < batchSize; b++) {
+                                    const a = cloneFn(baseArr);
+                                    const idx = mutateFn(a, k);
+                                    batch.push({ a, idx });
+                                }
+                                // Time the sorting of all batch items in a tight loop
+                                const t0 = performance.now();
+                                for (let b = 0; b < batchSize; b++) {
+                                    fn(batch[b].a, batch[b].idx);
+                                }
+                                const t1 = performance.now();
+                                times.push(((t1 - t0) / batchSize) * 1000); // per-operation μs
+                            }
+
+                            const mean = times.reduce((s, v) => s + v, 0) / times.length;
+                            const sd = Math.sqrt(
+                                times.reduce((s, v) => s + (v - mean) ** 2, 0) /
+                                    Math.max(1, times.length - 1),
+                            );
+                            const ci95 = (1.96 * sd) / Math.sqrt(times.length);
+
+                            allResults.push({
+                                mode,
+                                algo,
+                                k,
+                                n,
+                                mean,
+                                sd,
+                                ci95,
+                                batchSize,
+                                kPct: ((k / n) * 100).toFixed(2),
+                            });
+                        }
+                    }
+                }
+
+                renderResults();
+                running = false;
+                shouldStop = false;
+                document.getElementById("run-btn").disabled = false;
+                document.getElementById("stop-btn").disabled = true;
+                setStatus(shouldStop ? "Stopped." : "Done.");
+                setProgress(-1);
+            }
+
+            function stopBenchmark() {
+                shouldStop = true;
+                setStatus("Stopping...");
+            }
+
+            // ============================================================================
+            // RESULTS RENDERING
+            // ============================================================================
+
+            function renderResults() {
+                if (allResults.length === 0) return;
+                const area = document.getElementById("results-area");
+
+                // Group by mode
+                const modes = [...new Set(allResults.map((r) => r.mode))];
+                let html = "";
+
+                for (const mode of modes) {
+                    const rows = allResults.filter((r) => r.mode === mode);
+                    const kVals = [...new Set(rows.map((r) => r.k))].sort((a, b) => a - b);
+                    const algos = [...new Set(rows.map((r) => r.algo))];
+                    const n = rows[0].n;
+
+                    html += `<h3 style="margin:16px 0 8px;font-size:0.95rem">${mode === "objects" ? "📦 Object Array" : "🔢 Float64Array"} (n=${n.toLocaleString()})</h3>`;
+                    html += "<table><thead><tr><th>k</th><th>k%</th>";
+                    for (const a of algos) html += `<th class="algo-${algoClass(a)}">${a}</th>`;
+                    if (algos.length > 1) html += "<th>Fastest</th>";
+                    html += "</tr></thead><tbody>";
+
+                    for (const k of kVals) {
+                        html += `<tr><td>${k.toLocaleString()}</td><td>${((k / n) * 100).toFixed(1)}%</td>`;
+                        const times = {};
+                        for (const a of algos) {
+                            const r = rows.find((r) => r.algo === a && r.k === k);
+                            times[a] = r ? r.mean : Infinity;
+                        }
+                        const minTime = Math.min(...Object.values(times));
+                        for (const a of algos) {
+                            const r = rows.find((r) => r.algo === a && r.k === k);
+                            if (!r) {
+                                html += "<td>—</td>";
+                                continue;
+                            }
+                            const isFastest = r.mean === minTime && algos.length > 1;
+                            const ciPct = r.mean > 0 ? ((r.ci95 / r.mean) * 100).toFixed(0) : "0";
+                            const batchHint =
+                                r.batchSize > 1
+                                    ? ` <span class="speedup" title="Batched ${r.batchSize}× to defeat timer coarsening">⌀${r.batchSize}</span>`
+                                    : "";
+                            html += `<td class="${isFastest ? "fastest" : ""}">${formatTime(r.mean)} <span class="speedup">±${ciPct}%</span>${batchHint}</td>`;
+                        }
+                        if (algos.length > 1) {
+                            const fastest = Object.entries(times).sort((a, b) => a[1] - b[1])[0];
+                            const second = Object.entries(times).sort((a, b) => a[1] - b[1])[1];
+                            const speedup = second ? (second[1] / fastest[1]).toFixed(1) : "";
+                            html += `<td class="algo-${algoClass(fastest[0])}">${fastest[0]} ${speedup ? `(${speedup}×)` : ""}</td>`;
+                        }
+                        html += "</tr>";
+                    }
+                    html += "</tbody></table>";
+                }
+
+                area.innerHTML = html;
+                renderChart();
+            }
+
+            function algoClass(name) {
+                if (name === "BIS") return "bis";
+                if (name === "DeltaSort") return "ds";
+                if (name === "ESM") return "esm";
+                return "full";
+            }
+
+            function algoColor(name) {
+                const colors = {
+                    BIS: "#ef4444",
+                    DeltaSort: "#2563eb",
+                    ESM: "#16a34a",
+                    FullSort: "#9333ea",
+                };
+                return colors[name] || "#888";
+            }
+
+            function formatTime(us) {
+                if (us < 1) return us.toFixed(2) + " μs";
+                if (us < 1000) return us.toFixed(0) + " μs";
+                if (us < 1000000) return (us / 1000).toFixed(1) + " ms";
+                return (us / 1000000).toFixed(2) + " s";
+            }
+
+            // ============================================================================
+            // CHART (canvas, no dependencies)
+            // ============================================================================
+
+            function renderChart() {
+                const card = document.getElementById("chart-card");
+                const canvas = document.getElementById("chart");
+                const legendEl = document.getElementById("legend");
+                if (allResults.length === 0) {
+                    card.style.display = "none";
+                    return;
+                }
+                card.style.display = "";
+
+                const modes = [...new Set(allResults.map((r) => r.mode))];
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                const ctx = canvas.getContext("2d");
+                ctx.scale(dpr, dpr);
+                const W = rect.width,
+                    H = rect.height;
+                const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+
+                // If both modes, split vertically
+                const chartH = modes.length > 1 ? (H - 30) / 2 : H;
+
+                ctx.clearRect(0, 0, W, H);
+                ctx.font = "11px -apple-system, sans-serif";
+
+                legendEl.innerHTML = "";
+                const algos = [...new Set(allResults.map((r) => r.algo))];
+                for (const a of algos) {
+                    legendEl.innerHTML += `<span class="legend-item"><span class="legend-dot" style="background:${algoColor(a)}"></span>${a}</span>`;
+                }
+                if (modes.length > 1) {
+                    legendEl.innerHTML += `<span class="legend-item" style="margin-left:12px">— solid = Objects, ‐‐ dashed = Float64</span>`;
+                }
+
+                modes.forEach((mode, mi) => {
+                    const offsetY = mi * (chartH + 15);
+                    const rows = allResults.filter((r) => r.mode === mode);
+                    const kVals = [...new Set(rows.map((r) => r.k))].sort((a, b) => a - b);
+                    const allTimes = rows.map((r) => r.mean).filter((t) => t > 0);
+                    if (allTimes.length === 0) return;
+
+                    const minK = Math.min(...kVals),
+                        maxK = Math.max(...kVals);
+                    const minT = Math.min(...allTimes) * 0.8,
+                        maxT = Math.max(...allTimes) * 1.2;
+                    const logMinK = Math.log10(minK),
+                        logMaxK = Math.log10(maxK);
+                    const logMinT = Math.log10(minT),
+                        logMaxT = Math.log10(maxT);
+
+                    const xScale = (k) =>
+                        pad.left +
+                        ((Math.log10(k) - logMinK) / (logMaxK - logMinK)) *
+                            (W - pad.left - pad.right);
+                    const yScale = (t) =>
+                        offsetY +
+                        pad.top +
+                        (1 - (Math.log10(t) - logMinT) / (logMaxT - logMinT)) *
+                            (chartH - pad.top - pad.bottom);
+
+                    // Title
+                    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted");
+                    ctx.textAlign = "left";
+                    ctx.fillText(
+                        mode === "objects" ? "Object Array" : "Float64Array",
+                        pad.left,
+                        offsetY + 14,
+                    );
+
+                    // Grid
+                    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue("--border");
+                    ctx.lineWidth = 0.5;
+                    for (let e = Math.ceil(logMinK); e <= Math.floor(logMaxK); e++) {
+                        const x = xScale(10 ** e);
+                        ctx.beginPath();
+                        ctx.moveTo(x, offsetY + pad.top);
+                        ctx.lineTo(x, offsetY + chartH - pad.bottom);
+                        ctx.stroke();
+                        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted");
+                        ctx.textAlign = "center";
+                        ctx.fillText(
+                            10 ** e >= 1000 ? 10 ** e / 1000 + "K" : 10 ** e,
+                            x,
+                            offsetY + chartH - pad.bottom + 14,
+                        );
+                    }
+                    for (let e = Math.ceil(logMinT); e <= Math.floor(logMaxT); e++) {
+                        const y = yScale(10 ** e);
+                        ctx.beginPath();
+                        ctx.moveTo(pad.left, y);
+                        ctx.lineTo(W - pad.right, y);
+                        ctx.stroke();
+                        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted");
+                        ctx.textAlign = "right";
+                        const label =
+                            10 ** e >= 1000000
+                                ? (10 ** e / 1000000).toFixed(0) + "s"
+                                : 10 ** e >= 1000
+                                  ? (10 ** e / 1000).toFixed(0) + "ms"
+                                  : 10 ** e + "μs";
+                        ctx.fillText(label, pad.left - 6, y + 4);
+                    }
+
+                    // Axis labels
+                    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted");
+                    ctx.textAlign = "center";
+                    ctx.fillText("k (updated elements)", W / 2, offsetY + chartH - 2);
+
+                    // Lines
+                    for (const algo of algos) {
+                        const pts = kVals
+                            .map((k) => {
+                                const r = rows.find((r) => r.algo === algo && r.k === k);
+                                return r ? { x: xScale(k), y: yScale(r.mean) } : null;
+                            })
+                            .filter(Boolean);
+                        if (pts.length < 2) continue;
+
+                        ctx.strokeStyle = algoColor(algo);
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash(modes.length > 1 && mode === "numbers" ? [6, 3] : []);
+                        ctx.beginPath();
+                        pts.forEach((p, i) =>
+                            i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y),
+                        );
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        // Dots
+                        for (const p of pts) {
+                            ctx.fillStyle = algoColor(algo);
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                });
+            }
+
+            // ============================================================================
+            // CSV EXPORT
+            // ============================================================================
+
+            function exportCSV() {
+                if (allResults.length === 0) {
+                    setStatus("No results to export");
+                    return;
+                }
+                let csv = "mode,algorithm,n,k,k_pct,mean_us,sd_us,ci95_us\n";
+                for (const r of allResults) {
+                    csv += `${r.mode},${r.algo},${r.n},${r.k},${r.kPct},${r.mean.toFixed(1)},${r.sd.toFixed(1)},${r.ci95.toFixed(1)}\n`;
+                }
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `deltasort-benchmark-${Date.now()}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setStatus("CSV exported.");
+            }
+
+            // ============================================================================
+            // UI SETUP
+            // ============================================================================
+
+            document.querySelectorAll("#data-type-tabs .tab").forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    document
+                        .querySelectorAll("#data-type-tabs .tab")
+                        .forEach((t) => t.classList.remove("active"));
+                    tab.classList.add("active");
+                });
+            });
+
+            // Resize chart on window resize
+            window.addEventListener("resize", () => {
+                if (allResults.length > 0) renderChart();
+            });
+        </script>
+    </body>
+</html>

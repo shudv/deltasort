@@ -54,26 +54,42 @@ type Comparator<T> = (a: T, b: T) => number;
 function binaryInsertionSort<T>(arr: T[], dirtyIndices: Set<number>, cmp: Comparator<T>): T[] {
     if (dirtyIndices.size === 0) return arr;
 
-    // Sort indices descending for back-to-front extraction
-    const sortedDesc = Array.from(dirtyIndices).sort((a, b) => b - a);
-    const extracted: T[] = [];
+    const n = arr.length;
+    const k = dirtyIndices.size;
 
-    // Extract dirty values from back to front
-    for (const idx of sortedDesc) {
-        extracted.push(arr[idx]!);
-        arr.splice(idx, 1);
+    // Step 1: Partition - move dirty elements to end while keeping clean order - O(n)
+    let writePos = 0;
+    for (let readPos = 0; readPos < n; readPos++) {
+        if (!dirtyIndices.has(readPos)) {
+            if (writePos !== readPos) {
+                [arr[writePos]!, arr[readPos]!] = [arr[readPos]!, arr[writePos]!];
+            }
+            writePos++;
+        }
     }
+    // arr[0..n-k] = clean elements in sorted order
+    // arr[n-k..n] = dirty elements in arbitrary order
 
-    // Binary insert each dirty value
-    for (const value of extracted) {
+    // Step 2: Binary insert each dirty element using rotation - O(kn)
+    const cleanLen = n - k;
+    for (let i = 0; i < k; i++) {
+        const sortedLen = cleanLen + i;
+        const value = arr[sortedLen]!;
+
+        // Binary search in the sorted portion
         let lo = 0;
-        let hi = arr.length;
+        let hi = sortedLen;
         while (lo < hi) {
             const mid = (lo + hi) >> 1;
             if (cmp(arr[mid]!, value) < 0) lo = mid + 1;
             else hi = mid;
         }
-        arr.splice(lo, 0, value);
+
+        // Rotate right: shift elements [lo..sortedLen) right by 1, place value at lo
+        for (let j = sortedLen; j > lo; j--) {
+            arr[j] = arr[j - 1]!;
+        }
+        arr[lo] = value;
     }
 
     return arr;

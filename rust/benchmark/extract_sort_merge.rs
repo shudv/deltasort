@@ -32,10 +32,10 @@ pub fn extract_sort_merge(
     }
 
     // Sort dirty values - O(k log k)
-    dirty_values.sort_by(user_comparator);
+    dirty_values.sort_unstable_by(user_comparator);
 
-    // Merge - O(n)
-    let mut result: Vec<User> = Vec::with_capacity(n);
+    // Merge into arr (already empty after drain) - O(n)
+    arr.reserve(n);
     let clean_len = clean_values.len();
     let dirty_len = dirty_values.len();
     let mut i = 0;
@@ -43,22 +43,20 @@ pub fn extract_sort_merge(
 
     while i < clean_len && j < dirty_len {
         if user_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut clean_values[i]));
+            arr.push(std::mem::take(&mut clean_values[i]));
             i += 1;
         } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
+            arr.push(std::mem::take(&mut dirty_values[j]));
             j += 1;
         }
     }
 
     for item in clean_values.drain(i..) {
-        result.push(item);
+        arr.push(item);
     }
     for item in dirty_values.drain(j..) {
-        result.push(item);
+        arr.push(item);
     }
-
-    *arr = result;
 }
 
 #[cfg(test)]

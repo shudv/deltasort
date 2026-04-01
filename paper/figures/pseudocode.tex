@@ -9,32 +9,59 @@
 \State \textbf{Phase 1: Establish structure}
 \State $\texttt{updatedIndices} \gets \text{sort}(U)$
 \State $\texttt{updatedValues} \gets \text{sort}([A[u] : u \in \texttt{updatedIndices}], \texttt{cmp})$
-\For{$i \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
-\State $A[\texttt{updatedIndices}[i]] \gets \texttt{updatedValues}[i]$
+\For{$(u, v) \in \text{zip}(\texttt{updatedIndices}, \texttt{updatedValues})$}
+\State $A[u] \gets v$
 \EndFor
-\State $\texttt{updatedIndices.push}(n)$; \Comment{Sentinel for handling trailing segment with no LEFT's}
+\State $\texttt{updatedIndices.push}(n)$ \Comment{Sentinel for trailing $R$-segment}
 \Statex
 \State \textbf{Phase 2: Fix violations}
-\State $\texttt{pendingRight} \gets []$; $\texttt{leftBound} \gets 0$
-\For{$p \gets 0$ \textbf{to} $|\texttt{updatedIndices}| - 1$}
-    \State $i \gets \texttt{updatedIndices}[p]$; $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
+\State $\ell \gets 0$; $\texttt{pendingRight} \gets []$
+\For{$i \in \texttt{updatedIndices}$}
+    \State $\texttt{dir} \gets (i = n)$ ? \textsc{Left} : $\Call{GetDirection}{A, i}$
     \If{$\texttt{dir} = \textsc{Left}$}
-        \State $\texttt{rightBound} \gets i - 1$
+        \State $r \gets i - 1$
         \While{$\texttt{pendingRight} \neq \emptyset$}
             \State $j \gets \texttt{pendingRight.pop}()$
             \If{$\texttt{cmp}(A[j], A[j+1]) > 0$}
-                \State $\texttt{rightBound} \gets \Call{FixRight}{A, j, \texttt{rightBound}} - 1$
+                \State $r \gets \Call{FixRight}{A, j, r} - 1$
             \EndIf
         \EndWhile
-        \If{$i < n$} \Comment{Ensure it is not the LEFT sentinel}
-            \State $\texttt{leftBound} \gets \Call{FixLeft}{A, i, \texttt{leftBound}} + 1$
+        \If{$i < n$} \Comment{Skip the sentinel}
+            \State $\ell \gets \Call{FixLeft}{A, i, \ell} + 1$
         \EndIf
     \Else
-        \If{$\texttt{pendingRight} = \emptyset$} \Comment{First RIGHT in a segment}
-            \State $\texttt{leftBound} \gets i$
+        \If{$\texttt{pendingRight} = \emptyset$} \Comment{First $R$ in a segment}
+            \State $\ell \gets i$
         \EndIf
-        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer RIGHT}
+        \State $\texttt{pendingRight.push}(i)$ \Comment{Defer $R$}
     \EndIf
 \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!t]
+\small
+\caption{Helper procedures}
+\label{alg:helpers}
+\begin{algorithmic}[1]
+\Function{GetDirection}{$A$, $i$}
+  \If{$i > 0$ \textbf{and} $A[i-1] > A[i]$}
+    \State \Return \textsc{Left}
+  \Else
+    \State \Return \textsc{Right}
+  \EndIf
+\EndFunction
+\Statex
+\Function{FixRight}{$A$, $j$, $r$}
+  \State $p \gets$ binary search for insertion position of $A[j]$ in $A[j{+}1..r]$
+  \State rotate $A[j..p{-}1]$ left by one position \Comment{Shift $A[j]$ to position $p{-}1$}
+  \State \Return $p$
+\EndFunction
+\Statex
+\Function{FixLeft}{$A$, $i$, $\ell$}
+  \State $p \gets$ binary search for insertion position of $A[i]$ in $A[\ell..i{-}1]$
+  \State rotate $A[p..i]$ right by one position \Comment{Shift $A[i]$ to position $p$}
+  \State \Return $p$
+\EndFunction
 \end{algorithmic}
 \end{algorithm}

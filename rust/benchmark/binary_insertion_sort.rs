@@ -1,14 +1,20 @@
 use crate::data::User;
-use std::collections::HashSet;
 
-/// In-place binary insertion sort using partition and rotation - O(1) auxiliary space.
-/// 1. Partition: move dirty elements to end while keeping clean elements sorted - O(n)
-/// 2. Binary insert each dirty element using rotation - O(kn)
-pub fn binary_insertion_sort(
+/// In-place binary insertion sort — O(1) auxiliary space, Θ(kn) time.
+///
+/// 1. Sort dirty indices descending (modifies the input slice).
+/// 2. Remove each dirty element right-to-left via rotation, collecting at tail.
+/// 3. Binary-insert each collected element back.
+///
+/// Precondition: dirty_indices contains distinct valid indices into arr.
+pub fn binary_insertion_sort<F>(
     arr: &mut Vec<User>,
-    dirty_indices: &HashSet<usize>,
-    user_comparator: fn(&User, &User) -> std::cmp::Ordering,
-) {
+    dirty_indices: &mut [usize],
+    cmp: F,
+)
+where
+    F: Fn(&User, &User) -> std::cmp::Ordering,
+{
     if dirty_indices.is_empty() {
         return;
     }
@@ -16,33 +22,27 @@ pub fn binary_insertion_sort(
     let n = arr.len();
     let k = dirty_indices.len();
 
-    // Step 1: Partition - collect dirty to end while maintaining clean order
-    // Single O(n) pass instead of k separate O(n) removals
-    let mut write_pos = 0;
-    for read_pos in 0..n {
-        if !dirty_indices.contains(&read_pos) {
-            if write_pos != read_pos {
-                arr.swap(write_pos, read_pos);
-            }
-            write_pos += 1;
-        }
-    }
-    // Now arr[0..n-k] contains clean elements in sorted order
-    // arr[n-k..n] contains dirty elements in arbitrary order
+    // Sort dirty indices descending so removals don't shift unprocessed positions
+    dirty_indices.sort_unstable_by(|a, b| b.cmp(a));
+    debug_assert!(
+        dirty_indices.windows(2).all(|w| w[0] > w[1]),
+        "dirty indices must be distinct"
+    );
 
-    // Step 2: Binary insert each dirty element using rotation - O(kn)
+    // Phase 1: Remove dirty elements right-to-left, collecting at tail — O(kn)
+    let mut clean_end = n;
+    for &idx in dirty_indices.iter() {
+        arr[idx..clean_end].rotate_left(1);
+        clean_end -= 1;
+    }
+    // arr[0..n-k] = sorted clean elements, arr[n-k..n] = dirty elements
+
+    // Phase 2: Binary insert each dirty element — O(kn)
     let clean_len = n - k;
     for i in 0..k {
-        // Current dirty element is at position clean_len + i
-        // The sorted portion is arr[0..clean_len + i]
         let sorted_len = clean_len + i;
-
-        // Binary search in the sorted portion
         let pos = arr[..sorted_len]
-            .partition_point(|x| user_comparator(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
-
-        // Rotate to insert: [sorted_part | element] -> insert element at pos
-        // This is equivalent to insert but done in-place via rotation
+            .partition_point(|x| cmp(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
         arr[pos..=sorted_len].rotate_right(1);
     }
 }
@@ -70,20 +70,27 @@ mod tests {
 
     // ===== Correctness tests =====
 
+    fn sample_distinct(rng: &mut impl rand::Rng, n: usize, k: usize) -> Vec<usize> {
+        let mut pool: Vec<usize> = (0..n).collect();
+        for i in 0..k {
+            let j = rng.gen_range(i..n);
+            pool.swap(i, j);
+        }
+        pool[..k].to_vec()
+    }
+
     #[test]
     fn test_small_k() {
         let mut rng = rand::thread_rng();
         for _ in 0..50 {
             let n = 100;
-            let k = rng.gen_range(1..=10); // Small k
+            let k = rng.gen_range(1..=10);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            while dirty.len() < k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            binary_insertion_sort(&mut arr, &dirty, user_cmp);
+            binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr));
         }
     }
@@ -93,15 +100,13 @@ mod tests {
         let mut rng = rand::thread_rng();
         for _ in 0..20 {
             let n = 1000;
-            let k = rng.gen_range(50..=200); // Large k
+            let k = rng.gen_range(50..=200);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            while dirty.len() < k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            binary_insertion_sort(&mut arr, &dirty, user_cmp);
+            binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr));
         }
     }
@@ -111,8 +116,8 @@ mod tests {
     #[test]
     fn test_empty_dirty_indices() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
-        let dirty: HashSet<usize> = HashSet::new();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -120,8 +125,8 @@ mod tests {
     fn test_single_dirty_index_move_left() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[5] = make_user(2); // 5 -> 2, should move left
-        let dirty: HashSet<usize> = [5].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![5];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -129,8 +134,8 @@ mod tests {
     fn test_single_dirty_index_move_right() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(8); // 2 -> 8, should move right
-        let dirty: HashSet<usize> = [2].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![2];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -140,8 +145,8 @@ mod tests {
         arr[1] = make_user(9);
         arr[3] = make_user(0);
         arr[7] = make_user(5);
-        let dirty: HashSet<usize> = [1, 3, 7].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![1, 3, 7];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -154,8 +159,8 @@ mod tests {
             make_user(1),
             make_user(5),
         ];
-        let dirty: HashSet<usize> = (0..5).collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = (0..5).collect();
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -164,8 +169,8 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[4] = make_user(8);
         arr[5] = make_user(2);
-        let dirty: HashSet<usize> = [4, 5].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![4, 5];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -174,8 +179,8 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[0] = make_user(5);
         arr[9] = make_user(3);
-        let dirty: HashSet<usize> = [0, 9].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![0, 9];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -184,8 +189,8 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(5);
         arr[7] = make_user(5);
-        let dirty: HashSet<usize> = [2, 7].into_iter().collect();
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![2, 7];
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -196,13 +201,11 @@ mod tests {
             let n = 20;
             let k = rng.gen_range(1..=n);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            for _ in 0..k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            binary_insertion_sort(&mut arr, &dirty, user_cmp);
+            binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr), "Failed with dirty indices: {:?}", dirty);
         }
     }
@@ -214,13 +217,11 @@ mod tests {
             let n = 1000;
             let k = rng.gen_range(1..=100);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            for _ in 0..k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            binary_insertion_sort(&mut arr, &dirty, user_cmp);
+            binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr));
         }
     }
@@ -230,12 +231,12 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(15);
         arr[5] = make_user(20);
-        let dirty: HashSet<usize> = [2, 5].into_iter().collect();
+        let mut dirty: Vec<usize> = vec![2, 5];
 
         let mut expected_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         expected_ages.sort();
 
-        binary_insertion_sort(&mut arr, &dirty, user_cmp);
+        binary_insertion_sort(&mut arr, &mut dirty, user_cmp);
 
         let actual_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         assert_eq!(actual_ages, expected_ages);

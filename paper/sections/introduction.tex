@@ -13,8 +13,8 @@ Once the indices of the updates are known, how do we exploit this extra informat
 
 Existing approaches for incrementally sorting arrays force a choice between two extremes:
 \begin{enumerate}
-  \item Binary-Insertion-Sort (\emph{BIS}): Collect all updated values from the array and insert them back one by one using binary search. This approach uses $O(1)$ space but incurs $\Theta(nk)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches. This is the \emph{space-efficient but time-inefficient} option.
-  \item Extract–Sort–Merge (\emph{ESM}): Extract all updated values into a new array, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach uses $O(k \log k + n)$ time, but $\Theta(n)$ space even for small $k$, making it suitable only for larger update batches. This is the \emph{time-efficient but space-inefficient} option.
+  \item Binary-Insertion-Sort (\emph{BIS}): Collect all updated values from the array and insert them back one by one using binary search. This approach uses $O(1)$ auxiliary space but incurs $\Theta(nk)$ data movement for $k$ updates in an array of size $n$, making it suitable only for very small update batches. This is the \emph{space-efficient but time-inefficient} option.
+  \item Extract–Sort–Merge (\emph{ESM}): Extract all updated values into a buffer, sort them using an efficient $O(k \log k)$ algorithm, and then merge them back into the original array. This approach runs in $O(k \log k + n)$ time, but requires $O(k)$ auxiliary space for the extracted values. This is the \emph{time-efficient but space-inefficient} option.
 \end{enumerate}
 
 This raises the question: are there other algorithms that offer \emph{intermediate} trade-offs? To our knowledge, no prior work exploits knowledge of updated indices to achieve a better time-space trade-off than the two extremes listed above. In this paper, we fill that gap. Specifically, this paper makes the following contributions:
@@ -24,7 +24,7 @@ This raises the question: are there other algorithms that offer \emph{intermedia
 
   \item \textbf{DeltaSort algorithm:} We present \emph{DeltaSort}, an update-aware sorting algorithm, which offers distinct trade-offs (see~\figref{tab:incremental-sorting-algorithms}) as compared to existing approaches. Even though it uses insertion under the hood, it reduces data movement significantly by identifying \emph{independent regions}, and restricting movement within these regions (see~\figref{fig:algorithm-comparison}). Although we study DeltaSort as a standalone algorithm for clarity, for practical application, it is best viewed as a \emph{building block} in a hybrid strategy that combines multiple techniques.
   
-  \item \textbf{Theoretical analysis:} Under a random bounded-range update model, we show that DeltaSort achieves $O(n\sqrt{k})$ amortized time complexity using only $O(k)$ space.
+  \item \textbf{Theoretical analysis:} Under a random bounded-range update model, we show that DeltaSort achieves $O(n\sqrt{k})$ amortized time complexity using only $O(1)$ auxiliary space.
   
   \item \textbf{Experimental validation:} We benchmark Rust implementations of DeltaSort, BIS, and ESM on synthetic datasets. In our evaluation, DeltaSort is consistently faster than BIS and provides a space-efficient alternative to ESM across a wide range of update sizes.
 \end{enumerate}

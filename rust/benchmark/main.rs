@@ -13,6 +13,7 @@
 
 mod binary_insertion_sort;
 mod data;
+mod esm_variants;
 mod extract_sort_merge;
 mod instrumented_deltasort;
 mod statistics;
@@ -27,7 +28,6 @@ use crate::instrumented_deltasort::{delta_sort_instrumented, InstrumentedResult}
 use crate::statistics::{calculate_stats, calculate_stats_u64};
 use deltasort::delta_sort_by;
 use rand::Rng;
-use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Write};
 use std::time::Instant;
@@ -45,13 +45,19 @@ const BIS_MAX_K: usize = 2000;
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;
 
+/// Fast mode iterations (for rapid iteration on variants)
+const FAST_BASE_ITERATIONS: usize = 5;
+
 /// Delta counts to test for time benchmarks
 const DELTA_COUNTS: &[usize] = &[
     1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000,
 ];
 
-/// Number of iterations for crossover measurements (higher = more stable but slower)
-const CROSSOVER_ITERATIONS: usize = 10;
+/// Number of iterations per crossover probe (higher = more stable but slower)
+const CROSSOVER_ITERATIONS: usize = 5;
+
+/// Fast mode crossover iterations per probe
+const FAST_CROSSOVER_ITERATIONS: usize = 2;
 
 /// Array sizes for crossover analysis
 const CROSSOVER_SIZES: &[usize] = &[
@@ -68,14 +74,15 @@ const ANALYSIS_K_FRACTIONS: &[f64] = &[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.
 const ANALYSIS_ITERATIONS: usize = 100;
 
 /// Get number of iterations for a given k value
-fn timing_iterations_for_k(k: usize) -> usize {
+fn timing_iterations_for_k(k: usize, fast: bool) -> usize {
+    let base = if fast { FAST_BASE_ITERATIONS } else { BASE_ITERATIONS };
     match k {
-        1 => BASE_ITERATIONS * 100,
-        2..=5 => BASE_ITERATIONS * 50,
-        6..=10 => BASE_ITERATIONS * 10,
-        11..=50 => BASE_ITERATIONS * 5,
-        51..=1000 => BASE_ITERATIONS * 2,
-        _ => BASE_ITERATIONS,
+        1 => base * 100,
+        2..=5 => base * 50,
+        6..=10 => base * 10,
+        11..=50 => base * 5,
+        51..=1000 => base * 2,
+        _ => base,
     }
 }
 
@@ -92,25 +99,23 @@ struct BenchmarkResult {
 }
 
 /// Measure timing using non-counting comparator (accurate timing)
-fn run_benchmark<F>(base_users: &[User], k: usize, mut sort_fn: F) -> BenchmarkResult
+fn run_benchmark<F>(base_users: &[User], k: usize, fast: bool, mut sort_fn: F) -> BenchmarkResult
 where
-    F: FnMut(&mut Vec<User>, &HashSet<usize>, fn(&User, &User) -> std::cmp::Ordering),
+    F: FnMut(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
-    let iters = timing_iterations_for_k(k);
+    let iters = timing_iterations_for_k(k, fast);
 
     let mut times_us = Vec::with_capacity(iters);
     for _ in 0..iters {
         let mut users = base_users.to_vec();
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        let mut dirty_indices = HashSet::with_capacity(k);
-        for idx in indices {
+        let mut dirty_indices = sample_distinct_indices(&mut rng, n, k);
+        for &idx in &dirty_indices {
             users[idx].mutate(&mut rng);
-            dirty_indices.insert(idx);
         }
         let start = Instant::now();
-        sort_fn(&mut users, &dirty_indices, user_comparator);
+        sort_fn(&mut users, &mut dirty_indices, user_comparator);
         times_us.push(start.elapsed().as_secs_f64() * 1_000_000.0);
     }
 
@@ -129,93 +134,87 @@ where
 // CROSSOVER ANALYSIS
 // ============================================================================
 
-fn algorithm_is_faster<F>(base_users: &[User], k: usize, n: usize, mut algo: F) -> bool
+/// Measure mean execution time (µs) — same methodology as run_benchmark.
+fn measure_mean_us<F>(base_users: &[User], k: usize, iters: usize, mut sort_fn: F) -> f64
 where
-    F: FnMut(&mut Vec<User>, &HashSet<usize>),
+    F: FnMut(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
+    let n = base_users.len();
+    let mut total = 0.0;
 
-    let mut native_time = 0.0;
-    let mut algo_time = 0.0;
-
-    for _ in 0..CROSSOVER_ITERATIONS {
+    for _ in 0..iters {
         let mut users = base_users.to_vec();
-        let indices = sample_distinct_indices(&mut rng, n, k);
-        let mut dirty_indices = HashSet::with_capacity(k);
-        for idx in indices {
+        let mut dirty_indices = sample_distinct_indices(&mut rng, n, k);
+        for &idx in &dirty_indices {
             users[idx].mutate(&mut rng);
-            dirty_indices.insert(idx);
         }
-
         let start = Instant::now();
-        let mut test_users = users.clone();
-        test_users.sort_by(user_comparator);
-        native_time += start.elapsed().as_secs_f64();
-
-        let start = Instant::now();
-        let mut test_users = users.clone();
-        algo(&mut test_users, &dirty_indices);
-        algo_time += start.elapsed().as_secs_f64();
+        sort_fn(&mut users, &mut dirty_indices, user_comparator);
+        total += start.elapsed().as_secs_f64();
     }
 
-    algo_time < native_time
+    (total / iters as f64) * 1_000_000.0
 }
 
-fn deltasort_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
-    algorithm_is_faster(base_users, k, n, |arr, indices| {
-        delta_sort_by(arr.as_mut_slice(), indices, user_comparator);
-    })
-}
-
-fn bis_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
-    algorithm_is_faster(base_users, k, n, |arr, indices| {
-        binary_insertion_sort(arr, indices, user_comparator);
-    })
-}
-
-fn esm_is_faster(base_users: &[User], k: usize, n: usize) -> bool {
-    algorithm_is_faster(base_users, k, n, |arr, indices| {
-        extract_sort_merge(arr, indices, user_comparator);
-    })
-}
-
-fn find_crossover_generic<F>(n: usize, lo_ratio: f64, hi_ratio: f64, is_faster: F) -> usize
-where
-    F: Fn(&[User], usize, usize) -> bool,
-{
+fn find_crossover_bis(n: usize, iters: usize) -> usize {
     let base_users = generate_sorted_users(n);
+    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
 
-    // Warmup
-    for _ in 0..5 {
-        let mut users = base_users.clone();
-        users.sort_by(user_comparator);
-    }
-
-    let mut lo: usize = ((n as f64) * lo_ratio).max(1.0) as usize;
-    let mut hi: usize = ((n as f64) * hi_ratio) as usize;
-
+    let mut lo = 1_usize;
+    let mut hi = ((n as f64) * 0.1) as usize;
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
-        if is_faster(&base_users, mid, n) {
-            lo = mid;
-        } else {
-            hi = mid - 1;
-        }
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { binary_insertion_sort(arr, idx, cmp); });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
+        if a < b { lo = mid; } else { hi = mid - 1; }
     }
-
     lo
 }
 
-fn find_crossover(n: usize) -> usize {
-    find_crossover_generic(n, 0.0, 0.5, deltasort_is_faster)
+fn find_crossover_ds_vs_esm(n: usize, iters: usize) -> usize {
+    let base_users = generate_sorted_users(n);
+    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+
+    let mut lo = 1_usize;
+    let mut hi = ((n as f64) * 0.1) as usize;
+    while lo < hi {
+        let mid = lo + (hi - lo).div_ceil(2);
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { delta_sort_by(arr.as_mut_slice(), idx, cmp); });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { extract_sort_merge(arr, idx, cmp); });
+        if a < b { lo = mid; } else { hi = mid - 1; }
+    }
+    lo
 }
 
-fn find_crossover_bis(n: usize) -> usize {
-    find_crossover_generic(n, 0.0, 0.1, bis_is_faster)
+fn find_crossover_ds(n: usize, iters: usize) -> usize {
+    let base_users = generate_sorted_users(n);
+    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+
+    let mut lo = 1_usize;
+    let mut hi = ((n as f64) * 0.5) as usize;
+    while lo < hi {
+        let mid = lo + (hi - lo).div_ceil(2);
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { delta_sort_by(arr.as_mut_slice(), idx, cmp); });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
+        if a < b { lo = mid; } else { hi = mid - 1; }
+    }
+    lo
 }
 
-fn find_crossover_esm(n: usize) -> usize {
-    find_crossover_generic(n, if n > 5000 { 0.7 } else { 0.6 }, 0.95, esm_is_faster)
+fn find_crossover_esm(n: usize, iters: usize) -> usize {
+    let base_users = generate_sorted_users(n);
+    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+
+    let mut lo = ((n as f64) * 0.6) as usize;
+    let mut hi = ((n as f64) * 0.95) as usize;
+    while lo < hi {
+        let mid = lo + (hi - lo).div_ceil(2);
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { extract_sort_merge(arr, idx, cmp); });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
+        if a < b { lo = mid; } else { hi = mid - 1; }
+    }
+    lo
 }
 
 // ============================================================================
@@ -251,7 +250,7 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
 
     for _ in 0..ANALYSIS_ITERATIONS {
         let mut arr = base_arr.clone();
-        let indices: Vec<usize> = {
+        let indices = {
             let mut idx: Vec<usize> = (0..n).collect();
             for i in 0..k {
                 let j = rng.gen_range(i..n);
@@ -260,22 +259,21 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
             idx.truncate(k);
             idx
         };
-        let mut dirty_indices = HashSet::with_capacity(k);
+        let mut dirty_indices = indices.clone();
 
-        for idx in indices {
+        for &idx in &indices {
             arr[idx] = rng.gen_range(0..n as i32);
-            dirty_indices.insert(idx);
         }
 
         let result: InstrumentedResult =
-            delta_sort_instrumented(&mut arr, &dirty_indices, i32::cmp);
+            delta_sort_instrumented(&mut arr, &mut dirty_indices, i32::cmp);
         movements.push(result.movement);
         segments.push(result.segments);
 
         // For comparisons, use the counting comparator on User data
         let base_users = generate_sorted_users(n);
         let mut users = base_users.clone();
-        let indices: Vec<usize> = {
+        let mut indices = {
             let mut idx: Vec<usize> = (0..n).collect();
             for i in 0..k {
                 let j = rng.gen_range(i..n);
@@ -284,13 +282,11 @@ fn run_analysis(n: usize, k: usize) -> AnalysisResult {
             idx.truncate(k);
             idx
         };
-        let mut dirty_indices = HashSet::with_capacity(k);
-        for idx in indices {
+        for &idx in &indices {
             users[idx].mutate(&mut rng);
-            dirty_indices.insert(idx);
         }
         reset_comparison_count();
-        delta_sort_by(&mut users, &dirty_indices, counting_comparator);
+        delta_sort_by(&mut users, &mut indices, counting_comparator);
         comparisons.push(get_comparison_count());
     }
 
@@ -346,10 +342,12 @@ struct CrossoverResultsAll {
     n: usize,
     bis_k_c: usize,
     bis_ratio: f64,
-    esm_k_c: usize,
-    esm_ratio: f64,
+    ds_esm_k_c: usize,
+    ds_esm_ratio: f64,
     deltasort_k_c: usize,
     deltasort_ratio: f64,
+    esm_k_c: usize,
+    esm_ratio: f64,
 }
 
 // ============================================================================
@@ -381,9 +379,9 @@ fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
 // EXECUTION TIME BENCHMARK
 // ============================================================================
 
-fn run_time_benchmark(export: bool) {
+fn run_time_benchmark(export: bool, fast: bool) {
     println!();
-    println!("Execution Time Benchmark");
+    println!("Execution Time Benchmark{}", if fast { " (fast mode)" } else { "" });
     println!("========================");
 
     let base_users = generate_sorted_users(N);
@@ -405,7 +403,7 @@ fn run_time_benchmark(export: bool) {
         print!("  k={:>5}...", k);
         io::stdout().flush().unwrap();
 
-        let native = run_benchmark(&base_users, k, |arr, _indices, cmp| {
+        let native = run_benchmark(&base_users, k, fast, |arr, _indices, cmp| {
             arr.sort_by(cmp);
         });
         results.native.push(AlgorithmResult {
@@ -418,7 +416,9 @@ fn run_time_benchmark(export: bool) {
         });
 
         if k <= BIS_MAX_K {
-            let bis = run_benchmark(&base_users, k, binary_insertion_sort);
+            let bis = run_benchmark(&base_users, k, fast, |arr, indices, cmp| {
+                binary_insertion_sort(arr, indices, cmp)
+            });
             results.bis.push(Some(AlgorithmResult {
                 k,
                 iterations: bis.iterations,
@@ -431,7 +431,7 @@ fn run_time_benchmark(export: bool) {
             results.bis.push(None);
         }
 
-        let esm = run_benchmark(&base_users, k, extract_sort_merge);
+        let esm = run_benchmark(&base_users, k, fast, extract_sort_merge);
         results.esm.push(AlgorithmResult {
             k,
             iterations: esm.iterations,
@@ -441,7 +441,7 @@ fn run_time_benchmark(export: bool) {
             time_cv: esm.time_cv,
         });
 
-        let ds = run_benchmark(&base_users, k, |arr, indices, cmp| {
+        let ds = run_benchmark(&base_users, k, fast, |arr, indices, cmp| {
             delta_sort_by(arr.as_mut_slice(), indices, cmp)
         });
         results.deltasort.push(AlgorithmResult {
@@ -590,38 +590,43 @@ fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
 // CROSSOVER BENCHMARK
 // ============================================================================
 
-fn run_crossover_benchmark(export: bool) {
+fn run_crossover_benchmark(export: bool, fast: bool) {
     println!();
-    println!("Crossover Benchmark");
+    println!("Crossover Benchmark{}", if fast { " (fast mode)" } else { "" });
     println!("===================");
 
-    // --- Crossover Analysis (All Algorithms vs Native) ---
+    let iters = if fast { FAST_CROSSOVER_ITERATIONS } else { CROSSOVER_ITERATIONS };
+
     println!();
-    println!("Running crossover analysis: All algorithms vs Native...");
+    println!("Running crossover analysis...");
     let mut crossover_all: Vec<CrossoverResultsAll> = Vec::new();
 
     for &size in CROSSOVER_SIZES {
         print!("  n={:>10}...", format_number(size));
         io::stdout().flush().unwrap();
 
-        let bis_k_c = find_crossover_bis(size);
-        let esm_k_c = find_crossover_esm(size);
-        let ds_k_c = find_crossover(size);
+        let bis_k_c = find_crossover_bis(size, iters);
+        let ds_esm_k_c = find_crossover_ds_vs_esm(size, iters);
+        let ds_k_c = find_crossover_ds(size, iters);
+        let esm_k_c = find_crossover_esm(size, iters);
 
         crossover_all.push(CrossoverResultsAll {
             n: size,
             bis_k_c,
             bis_ratio: (bis_k_c as f64 / size as f64) * 100.0,
-            esm_k_c,
-            esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
+            ds_esm_k_c,
+            ds_esm_ratio: (ds_esm_k_c as f64 / size as f64) * 100.0,
             deltasort_k_c: ds_k_c,
             deltasort_ratio: (ds_k_c as f64 / size as f64) * 100.0,
+            esm_k_c,
+            esm_ratio: (esm_k_c as f64 / size as f64) * 100.0,
         });
         println!(
-            " BIS={:.1}%, ESM={:.1}%, DS={:.1}%",
+            " BIS={:.1}%, DS>ESM={:.1}%, DS={:.1}%, ESM={:.1}%",
             (bis_k_c as f64 / size as f64) * 100.0,
-            (esm_k_c as f64 / size as f64) * 100.0,
-            (ds_k_c as f64 / size as f64) * 100.0
+            (ds_esm_k_c as f64 / size as f64) * 100.0,
+            (ds_k_c as f64 / size as f64) * 100.0,
+            (esm_k_c as f64 / size as f64) * 100.0
         );
     }
 
@@ -636,31 +641,34 @@ fn run_crossover_benchmark(export: bool) {
 
 fn print_crossover_table_all(results: &[CrossoverResultsAll]) {
     println!();
-    println!("Crossover Threshold (All Algorithms vs Native)");
-    println!("┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐");
-    println!("│     n      │  BIS k_c   │  BIS k_c%  │  ESM k_c   │  ESM k_c%  │   DS k_c   │  DS k_c%   │");
-    println!("├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤");
+    println!("Crossover Thresholds");
+    println!("┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐");
+    println!("│     n      │  BIS k_c   │  BIS k_c%  │ DS>ESM k_c │ DS>ESM k_c%│   DS k_c   │  DS k_c%   │  ESM k_c   │  ESM k_c%  │");
+    println!("│            │  BIS>Native│            │  DS>ESM    │            │  DS>Native │            │  ESM>Native│            │");
+    println!("├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤");
     for r in results {
         println!(
-            "│ {:>10} │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │",
+            "│ {:>10} │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │ {:>10} │ {:>9.3}% │",
             format_number(r.n),
             format_number(r.bis_k_c),
             r.bis_ratio,
-            format_number(r.esm_k_c),
-            r.esm_ratio,
+            format_number(r.ds_esm_k_c),
+            r.ds_esm_ratio,
             format_number(r.deltasort_k_c),
-            r.deltasort_ratio
+            r.deltasort_ratio,
+            format_number(r.esm_k_c),
+            r.esm_ratio
         );
     }
-    println!("└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘");
+    println!("└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘");
 }
 
 fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
-    let mut csv = String::from("n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n");
+    let mut csv = String::from("n,bis_kc,bis,ds_esm_kc,ds_esm,deltasort_kc,deltasort,esm_kc,esm\n");
     for r in results {
         csv.push_str(&format!(
-            "{},{},{:.3},{},{:.3},{},{:.3}\n",
-            r.n, r.bis_k_c, r.bis_ratio, r.esm_k_c, r.esm_ratio, r.deltasort_k_c, r.deltasort_ratio
+            "{},{},{:.3},{},{:.3},{},{:.3},{},{:.3}\n",
+            r.n, r.bis_k_c, r.bis_ratio, r.ds_esm_k_c, r.ds_esm_ratio, r.deltasort_k_c, r.deltasort_ratio, r.esm_k_c, r.esm_ratio
         ));
     }
     fs::write(path, csv).expect("Failed to write crossover-all.csv");
@@ -849,6 +857,80 @@ fn export_movement_csv(results: &[AnalysisResult], path: &str) {
 }
 
 // ============================================================================
+// ESM VARIANT COMPARISON
+// ============================================================================
+
+fn run_esm_comparison() {
+    use crate::esm_variants::{esm_backwards_merge, esm_original, esm_binary_search};
+
+    println!();
+    println!("ESM Variant Comparison");
+    println!("======================");
+
+    let test_ks: &[usize] = &[10, 50, 100, 500, 1000, 5000, 10_000, 50_000];
+    let n = 100_000;
+    let iters = 50;
+
+    let base_users = generate_sorted_users(n);
+
+    // Warmup
+    for _ in 0..5 {
+        let mut users = base_users.clone();
+        users.sort_by(user_comparator);
+    }
+
+    type EsmFn = fn(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
+
+    let variants: &[(&str, EsmFn)] = &[
+        ("Back+compact O(k)", esm_backwards_merge),
+        ("Original     O(k)", esm_original),
+        ("Binary Search O(k)", esm_binary_search),
+    ];
+
+    println!();
+    print!("  {:>8} │", "k");
+    for (name, _) in variants {
+        print!(" {:>18} │", name);
+    }
+    println!();
+    print!("  ─────────┼");
+    for _ in variants {
+        print!("────────────────────┼");
+    }
+    println!();
+
+    for &k in test_ks {
+        if k > n {
+            continue;
+        }
+        print!("  {:>8} │", k);
+        io::stdout().flush().unwrap();
+
+        for (_, sort_fn) in variants {
+            let mut rng = rand::thread_rng();
+            let mut times = Vec::with_capacity(iters);
+
+            for _ in 0..iters {
+                let mut users = base_users.to_vec();
+                let mut dirty = sample_distinct_indices(&mut rng, n, k);
+                for &idx in &dirty {
+                    users[idx].mutate(&mut rng);
+                }
+                let start = Instant::now();
+                sort_fn(&mut users, &mut dirty, user_comparator);
+                let elapsed = start.elapsed().as_secs_f64() * 1_000_000.0;
+                times.push(elapsed);
+            }
+
+            let stats = calculate_stats(&times);
+            print!(" {:>10.1} ±{:>4.1}% │", stats.mean, if stats.mean > 0.0 { (stats.ci_95 / stats.mean) * 100.0 } else { 0.0 });
+        }
+        println!();
+    }
+    println!();
+}
+
+// ============================================================================
 // MAIN
 // ============================================================================
 
@@ -859,33 +941,52 @@ fn main() {
     let run_crossover = args.iter().any(|a| a == "--crossover");
     let run_comparator = args.iter().any(|a| a == "--comparator");
     let run_movement = args.iter().any(|a| a == "--movement");
+    let run_esm_compare = args.iter().any(|a| a == "--esm-compare");
     let export = args.iter().any(|a| a == "--export");
+    let fast = args.iter().any(|a| a == "--fast");
 
-    // If no specific flags, run all
-    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement;
+    // If no specific flags, run all (excluding esm-compare which is opt-in)
+    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement && !run_esm_compare;
 
     println!();
     println!("DeltaSort Benchmark");
     println!("===================");
 
+    let total = Instant::now();
+
+    if run_esm_compare {
+        let phase = Instant::now();
+        run_esm_comparison();
+        println!("  ⏱  ESM comparison: {:.1}s", phase.elapsed().as_secs_f64());
+        return;
+    }
+
     if run_all || run_time {
-        run_time_benchmark(export);
+        let phase = Instant::now();
+        run_time_benchmark(export, fast);
+        println!("  ⏱  Execution time: {:.1}s", phase.elapsed().as_secs_f64());
     }
 
     if run_all || run_crossover {
-        run_crossover_benchmark(export);
+        let phase = Instant::now();
+        run_crossover_benchmark(export, fast);
+        println!("  ⏱  Crossover: {:.1}s", phase.elapsed().as_secs_f64());
     }
 
     if run_all || run_comparator {
+        let phase = Instant::now();
         run_comparator_analysis(export);
+        println!("  ⏱  Comparator: {:.1}s", phase.elapsed().as_secs_f64());
     }
 
     if run_all || run_movement {
+        let phase = Instant::now();
         run_movement_analysis(export);
+        println!("  ⏱  Movement: {:.1}s", phase.elapsed().as_secs_f64());
     }
 
     println!();
-    println!("Done!");
+    println!("Done! Total: {:.1}s", total.elapsed().as_secs_f64());
     if !export {
         println!("Run with --export to write CSV files");
     }

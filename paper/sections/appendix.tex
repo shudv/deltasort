@@ -66,10 +66,10 @@ The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to
 
 \begin{enumerate}
   \item Both BIS and DeltaSort have rapidly declining crossover thresholds as $n$ increases. For $n \ge 10$K, BIS's crossover drops below $1\%$ and DeltaSort's drops below $5\%$. This indicates that \emph{V8's memory movement cost model does not favor insertion-based approaches at scale}. The high variance in execution times (CIs often exceeding $30\%$) further reflects V8's unpredictable performance characteristics from garbage collection and non-contiguous array representations~\cite{v8elementskinds}.
-  \item ESM is $\sim 30$--$40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 40\%$. This indicates that \emph{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
+  \item ESM is $\sim 30$--$50\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 45\%$. This indicates that \emph{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
 \end{enumerate}
 
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8. Hence in V8, a valid hybrid strategy can be: use DeltaSort for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
+The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8. Hence in V8, a valid hybrid strategy can be: use DeltaSort for $k \ll n$, ESM for $k \lesssim 45\%$, \texttt{Array.prototype.sort} for $k \gtrsim 45\%$.
 
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}

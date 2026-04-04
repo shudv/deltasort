@@ -51,32 +51,34 @@ function iterationsForK(k: number): number {
 
 type Comparator<T> = (a: T, b: T) => number;
 
-function binaryInsertionSort<T>(arr: T[], dirtyIndices: Set<number>, cmp: Comparator<T>): T[] {
-    if (dirtyIndices.size === 0) return arr;
+function binaryInsertionSort<T>(arr: T[], dirtyIndices: number[], cmp: Comparator<T>): T[] {
+    if (dirtyIndices.length === 0) return arr;
 
     const n = arr.length;
-    const k = dirtyIndices.size;
+    const k = dirtyIndices.length;
 
-    // Step 1: Partition - move dirty elements to end while keeping clean order - O(n)
-    let writePos = 0;
-    for (let readPos = 0; readPos < n; readPos++) {
-        if (!dirtyIndices.has(readPos)) {
-            if (writePos !== readPos) {
-                [arr[writePos]!, arr[readPos]!] = [arr[readPos]!, arr[writePos]!];
-            }
-            writePos++;
+    // Sort dirty indices descending so removals don't shift unprocessed positions
+    const sorted = dirtyIndices.slice().sort((a, b) => b - a);
+
+    // Phase 1: Remove dirty elements right-to-left, collecting at tail — O(kn)
+    let cleanEnd = n;
+    for (const idx of sorted) {
+        // Shift arr[idx+1..cleanEnd] left by 1, dirty element goes to cleanEnd-1
+        const tmp = arr[idx]!;
+        for (let j = idx; j < cleanEnd - 1; j++) {
+            arr[j] = arr[j + 1]!;
         }
+        arr[cleanEnd - 1] = tmp;
+        cleanEnd--;
     }
-    // arr[0..n-k] = clean elements in sorted order
-    // arr[n-k..n] = dirty elements in arbitrary order
+    // arr[0..n-k] = sorted clean, arr[n-k..n] = dirty
 
-    // Step 2: Binary insert each dirty element using rotation - O(kn)
+    // Phase 2: Binary insert each dirty element — O(kn)
     const cleanLen = n - k;
     for (let i = 0; i < k; i++) {
         const sortedLen = cleanLen + i;
         const value = arr[sortedLen]!;
 
-        // Binary search in the sorted portion
         let lo = 0;
         let hi = sortedLen;
         while (lo < hi) {
@@ -85,7 +87,6 @@ function binaryInsertionSort<T>(arr: T[], dirtyIndices: Set<number>, cmp: Compar
             else hi = mid;
         }
 
-        // Rotate right: shift elements [lo..sortedLen) right by 1, place value at lo
         for (let j = sortedLen; j > lo; j--) {
             arr[j] = arr[j - 1]!;
         }
@@ -95,54 +96,58 @@ function binaryInsertionSort<T>(arr: T[], dirtyIndices: Set<number>, cmp: Compar
     return arr;
 }
 
-function extractSortMerge<T>(arr: T[], dirtyIndices: Set<number>, cmp: Comparator<T>): T[] {
-    if (dirtyIndices.size === 0) return arr;
+function extractSortMerge<T>(arr: T[], dirtyIndices: number[], cmp: Comparator<T>): T[] {
+    if (dirtyIndices.length === 0) return arr;
 
     const n = arr.length;
-    const k = dirtyIndices.size;
+    const k = dirtyIndices.length;
 
-    // Sort indices ascending for single-pass extraction
-    const sortedIndices = Array.from(dirtyIndices).sort((a, b) => a - b);
+    // Sort dirty indices for linear scanning
+    const sortedDirty = dirtyIndices.slice().sort((a, b) => a - b);
 
-    // Single O(n) pass with index comparison
-    const cleanValues: T[] = [];
-    const dirtyValues: T[] = [];
-    let dirtyPtr = 0;
-
-    for (let i = 0; i < n; i++) {
-        if (dirtyPtr < k && sortedIndices[dirtyPtr] === i) {
-            dirtyValues.push(arr[i]!);
-            dirtyPtr++;
+    // Step 1: Extract dirty to buffer, compact clean to the left — O(n), O(k) space
+    const dirtyBuf: T[] = [];
+    let write = 0;
+    let di = 0;
+    for (let read = 0; read < n; read++) {
+        if (di < k && sortedDirty[di] === read) {
+            dirtyBuf.push(arr[read]!);
+            di++;
         } else {
-            cleanValues.push(arr[i]!);
+            if (write !== read) {
+                arr[write] = arr[read]!;
+            }
+            write++;
         }
     }
+    // arr[0..n-k] = sorted clean, dirtyBuf = unsorted dirty
 
-    // Sort dirty values
-    dirtyValues.sort(cmp);
+    // Step 2: Sort dirty values — O(k log k)
+    dirtyBuf.sort(cmp);
 
-    // Merge
-    const result: T[] = [];
-    let i = 0;
-    let j = 0;
+    // Step 3: Backwards merge — pick larger of clean tail / dirty tail — O(n)
+    let ci = n - k - 1; // clean cursor
+    let dj = k - 1; // dirty cursor
+    let wi = n - 1; // write cursor
 
-    while (i < cleanValues.length && j < dirtyValues.length) {
-        if (cmp(cleanValues[i]!, dirtyValues[j]!) <= 0) {
-            result.push(cleanValues[i]!);
-            i++;
+    while (wi >= 0) {
+        const takeClean = ci >= 0 && dj >= 0 ? cmp(arr[ci]!, dirtyBuf[dj]!) >= 0 : ci >= 0;
+
+        if (takeClean) {
+            if (wi !== ci) {
+                arr[wi] = arr[ci]!;
+            }
+            ci--;
+        } else if (dj >= 0) {
+            arr[wi] = dirtyBuf[dj]!;
+            dj--;
         } else {
-            result.push(dirtyValues[j]!);
-            j++;
+            break;
         }
+        wi--;
     }
 
-    while (i < cleanValues.length) result.push(cleanValues[i++]!);
-    while (j < dirtyValues.length) result.push(dirtyValues[j++]!);
-
-    // Copy back
-    for (let idx = 0; idx < n; idx++) arr[idx] = result[idx]!;
-
-    return result;
+    return arr;
 }
 
 // ============================================================================
@@ -211,10 +216,12 @@ interface CrossoverResultsAll {
     n: number;
     bisKc: number;
     bisRatio: number;
-    esmKc: number;
-    esmRatio: number;
+    dsEsmKc: number;
+    dsEsmRatio: number;
     deltasortKc: number;
     deltasortRatio: number;
+    esmKc: number;
+    esmRatio: number;
 }
 
 function sampleDistinctIndices(n: number, k: number): number[] {
@@ -232,7 +239,7 @@ function sampleDistinctIndices(n: number, k: number): number[] {
 function runBenchmark(
     baseUsers: User[],
     k: number,
-    sortFn: (arr: User[], dirty: Set<number>, cmp: Comparator<User>) => void,
+    sortFn: (arr: User[], dirty: number[], cmp: Comparator<User>) => void,
 ): BenchmarkResult {
     const n = baseUsers.length;
     const iters = iterationsForK(k);
@@ -241,11 +248,9 @@ function runBenchmark(
     const times: number[] = [];
     for (let i = 0; i < iters; i++) {
         const users = baseUsers.map((u) => ({ ...u }));
-        const indices = sampleDistinctIndices(n, k);
-        const dirtyIndices = new Set<number>();
-        for (const idx of indices) {
+        const dirtyIndices = sampleDistinctIndices(n, k);
+        for (const idx of dirtyIndices) {
             users[idx] = mutateUser(users[idx]!);
-            dirtyIndices.add(idx);
         }
         const start = performance.now();
         sortFn(users, dirtyIndices, userComparator);
@@ -256,11 +261,9 @@ function runBenchmark(
     const compCounts: number[] = [];
     for (let i = 0; i < 10; i++) {
         const users = baseUsers.map((u) => ({ ...u }));
-        const indices = sampleDistinctIndices(n, k);
-        const dirtyIndices = new Set<number>();
-        for (const idx of indices) {
+        const dirtyIndices = sampleDistinctIndices(n, k);
+        for (const idx of dirtyIndices) {
             users[idx] = mutateUser(users[idx]!);
-            dirtyIndices.add(idx);
         }
         let count = 0;
         const countingCmp = (a: User, b: User): number => {
@@ -295,18 +298,16 @@ function algorithmIsFaster(
     baseUsers: User[],
     k: number,
     n: number,
-    algo: (arr: User[], dirty: Set<number>) => void,
+    algo: (arr: User[], dirty: number[]) => void,
 ): boolean {
     let nativeTime = 0;
     let algoTime = 0;
 
     for (let i = 0; i < CROSSOVER_ITERATIONS; i++) {
         const users = baseUsers.map((u) => ({ ...u }));
-        const indices = sampleDistinctIndices(n, k);
-        const dirtyIndices = new Set<number>();
-        for (const idx of indices) {
+        const dirtyIndices = sampleDistinctIndices(n, k);
+        for (const idx of dirtyIndices) {
             users[idx] = mutateUser(users[idx]!);
-            dirtyIndices.add(idx);
         }
 
         const usersNative = users.map((u) => ({ ...u }));
@@ -383,6 +384,36 @@ function findCrossoverEsm(n: number): number {
     return findCrossoverGeneric(n, 0.0, 1.0, esmIsFaster);
 }
 
+function deltasortBeatsEsm(baseUsers: User[], k: number, n: number): boolean {
+    let dsTime = 0;
+    let esmTime = 0;
+
+    for (let i = 0; i < CROSSOVER_ITERATIONS; i++) {
+        const users = baseUsers.map((u) => ({ ...u }));
+        const dirtyIndices = sampleDistinctIndices(n, k);
+        for (const idx of dirtyIndices) {
+            users[idx] = mutateUser(users[idx]!);
+        }
+
+        const dsUsers = users.map((u) => ({ ...u }));
+        const dsIndices = [...dirtyIndices];
+        const startDs = performance.now();
+        deltaSort(dsUsers, dsIndices, userComparator);
+        dsTime += performance.now() - startDs;
+
+        const esmUsers = users.map((u) => ({ ...u }));
+        const startEsm = performance.now();
+        extractSortMerge(esmUsers, dirtyIndices, userComparator);
+        esmTime += performance.now() - startEsm;
+    }
+
+    return dsTime < esmTime;
+}
+
+function findCrossoverDsVsEsm(n: number): number {
+    return findCrossoverGeneric(n, 0.0, 0.5, deltasortBeatsEsm);
+}
+
 // ============================================================================
 // OUTPUT
 // ============================================================================
@@ -430,23 +461,23 @@ function printExecutionTimeTable(results: BenchmarkResults): void {
 
 function printCrossoverTableAll(results: CrossoverResultsAll[]): void {
     console.log();
-    console.log("Crossover Threshold (All Algorithms vs Native)");
+    console.log("Crossover Thresholds");
     console.log(
-        "┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐",
+        "┌────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────┐",
     );
     console.log(
-        "│     n      │  BIS k_c   │  BIS k_c%  │  ESM k_c   │  ESM k_c%  │   DS k_c   │  DS k_c%   │",
+        "│     n      │  BIS k_c   │  BIS k_c%  │ DS>ESM k_c │ DS>ESM k_c%│   DS k_c   │  DS k_c%   │  ESM k_c   │  ESM k_c%  │",
     );
     console.log(
-        "├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤",
+        "├────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────┤",
     );
     for (const r of results) {
         console.log(
-            `│ ${formatNumber(r.n).padStart(10)} │ ${formatNumber(r.bisKc).padStart(10)} │ ${r.bisRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.esmKc).padStart(10)} │ ${r.esmRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.deltasortKc).padStart(10)} │ ${r.deltasortRatio.toFixed(3).padStart(9)}% │`,
+            `│ ${formatNumber(r.n).padStart(10)} │ ${formatNumber(r.bisKc).padStart(10)} │ ${r.bisRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.dsEsmKc).padStart(10)} │ ${r.dsEsmRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.deltasortKc).padStart(10)} │ ${r.deltasortRatio.toFixed(3).padStart(9)}% │ ${formatNumber(r.esmKc).padStart(10)} │ ${r.esmRatio.toFixed(3).padStart(9)}% │`,
         );
     }
     console.log(
-        "└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘",
+        "└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────┘",
     );
 }
 
@@ -469,9 +500,9 @@ function exportExecutionTimeCsv(results: BenchmarkResults, filePath: string): vo
 }
 
 function exportCrossoverAllCsv(results: CrossoverResultsAll[], filePath: string): void {
-    let csv = "n,bis_kc,bis,esm_kc,esm,deltasort_kc,deltasort\n";
+    let csv = "n,bis_kc,bis,ds_esm_kc,ds_esm,deltasort_kc,deltasort,esm_kc,esm\n";
     for (const r of results) {
-        csv += `${r.n},${r.bisKc},${r.bisRatio.toFixed(3)},${r.esmKc},${r.esmRatio.toFixed(3)},${r.deltasortKc},${r.deltasortRatio.toFixed(3)}\n`;
+        csv += `${r.n},${r.bisKc},${r.bisRatio.toFixed(3)},${r.dsEsmKc},${r.dsEsmRatio.toFixed(3)},${r.deltasortKc},${r.deltasortRatio.toFixed(3)},${r.esmKc},${r.esmRatio.toFixed(3)}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -566,27 +597,30 @@ async function main(): Promise<void> {
 
     // --- Crossover Analysis (All Algorithms vs Native) ---
     console.log();
-    console.log("Running crossover analysis: All algorithms vs Native...");
+    console.log("Running crossover analysis...");
     const crossoverAllResults: CrossoverResultsAll[] = [];
 
     for (const size of CROSSOVER_SIZES) {
         process.stdout.write(`  n=${formatNumber(size).padStart(10)}...`);
 
         const bisKc = findCrossoverBis(size);
-        const esmKc = findCrossoverEsm(size);
+        const dsEsmKc = findCrossoverDsVsEsm(size);
         const dsKc = findCrossover(size);
+        const esmKc = findCrossoverEsm(size);
 
         crossoverAllResults.push({
             n: size,
             bisKc,
             bisRatio: (bisKc / size) * 100,
-            esmKc,
-            esmRatio: (esmKc / size) * 100,
+            dsEsmKc,
+            dsEsmRatio: (dsEsmKc / size) * 100,
             deltasortKc: dsKc,
             deltasortRatio: (dsKc / size) * 100,
+            esmKc,
+            esmRatio: (esmKc / size) * 100,
         });
         console.log(
-            ` BIS=${((bisKc / size) * 100).toFixed(1)}%, ESM=${((esmKc / size) * 100).toFixed(1)}%, DS=${((dsKc / size) * 100).toFixed(1)}%`,
+            ` BIS=${((bisKc / size) * 100).toFixed(1)}%, DS>ESM=${((dsEsmKc / size) * 100).toFixed(1)}%, DS=${((dsKc / size) * 100).toFixed(1)}%, ESM=${((esmKc / size) * 100).toFixed(1)}%`,
         );
     }
 

@@ -12,70 +12,71 @@ const enum Direction {
  * Sort a previously sorted array using the provided comparator.
  *
  * @param arr The array which was previously sorted and has some updated indices
- * @param updatedIndices Set of indices in the array which have been updated
+ * @param updatedIndices Array of indices in the array which have been updated (need not be sorted)
  * @param cmp The comparator function
  *
  * @returns The sorted array
  */
-export function deltaSort<T>(
-    arr: T[],
-    updatedIndices: Set<number>,
-    cmp: (a: T, b: T) => number,
-): T[] {
-    if (updatedIndices.size === 0) {
+export function deltaSort<T>(arr: T[], updatedIndices: number[], cmp: (a: T, b: T) => number): T[] {
+    if (updatedIndices.length === 0) {
         return arr;
     }
 
-    // Phase 1: Extract and sort updated values
-    const updated = Array.from(updatedIndices).sort((a, b) => a - b);
-    const values = updated.map((i) => arr[i]!).sort(cmp);
-    for (let i = 0; i < updated.length; i++) {
-        arr[updated[i]!] = values[i]!;
+    // Sort dirty indices — O(k log k)
+    const dirty = updatedIndices.slice().sort((a, b) => a - b);
+    const k = dirty.length;
+
+    // Phase 1: Extract dirty values, sort (stable), write back — O(k log k) time, O(k) space
+    const values: T[] = new Array(k);
+    for (let i = 0; i < k; i++) {
+        values[i] = arr[dirty[i]!]!;
+    }
+    values.sort(cmp);
+    for (let i = 0; i < k; i++) {
+        arr[dirty[i]!] = values[i]!;
     }
 
-    // Add a sentinel at the end to trigger final flush
-    updated.push(arr.length);
-
-    // Phase 2: Scan updated indices left to right
-
-    // Stack for pending RIGHT directions
-    const pendingRightDirections = new Array<number>(updated.length);
-    let stackTop = 0;
-
-    // Left boundary for fixing LEFT violations, everything before the leftBound is already fixed
+    // Phase 2: Fix ordering violations left to right — O(1) aux
     let leftBound = 0;
+    let rightSegStart = -1; // -1 means no active RIGHT segment
 
-    for (let p = 0; p < updated.length; p++) {
-        const i = updated[p]!;
-
-        // Determine direction (sentinel is considered LEFT to trigger final flush)
-        const direction = i == arr.length ? Direction.LEFT : getDirection(arr, i, cmp);
+    for (let d = 0; d < k; d++) {
+        const i = dirty[d]!;
+        const direction = getDirection(arr, i, cmp);
 
         switch (direction) {
             case Direction.LEFT: {
-                // Fix all pending indices before fixing LEFT
-                let rightBound = i - 1;
-                while (stackTop > 0) {
-                    const ri = pendingRightDirections[--stackTop]!;
-                    // Fix RIGHT direction at ri if needed
-                    if (ri < arr.length - 1 && cmp(arr[ri]!, arr[ri + 1]!) > 0) {
-                        rightBound = fixRight(arr, ri, rightBound, cmp) - 1;
+                // Flush pending RIGHT segment in reverse order
+                if (rightSegStart >= 0) {
+                    let rightBound = i - 1;
+                    for (let rd = d - 1; rd >= rightSegStart; rd--) {
+                        const idx = dirty[rd]!;
+                        if (idx < arr.length - 1 && cmp(arr[idx]!, arr[idx + 1]!) > 0) {
+                            rightBound = fixRight(arr, idx, rightBound, cmp) - 1;
+                        }
                     }
+                    rightSegStart = -1;
                 }
-
-                // Fix actual (non-sentinel) LEFT directions
-                if (i < arr.length) {
-                    leftBound = fixLeft(arr, i, leftBound, cmp) + 1;
-                }
+                leftBound = fixLeft(arr, i, leftBound, cmp) + 1;
                 break;
             }
             case Direction.RIGHT:
-                if (stackTop === 0) {
-                    // First RIGHT in segment advances left bound
+                if (rightSegStart < 0) {
+                    rightSegStart = d;
                     leftBound = i;
                 }
-                pendingRightDirections[stackTop++] = i;
                 break;
+        }
+    }
+
+    // Flush trailing RIGHT segment
+    if (rightSegStart >= 0) {
+        let rightBound = arr.length - 1;
+        for (let rd = k - 1; rd >= rightSegStart; rd--) {
+            const idx = dirty[rd]!;
+            if (idx < arr.length - 1 && cmp(arr[idx]!, arr[idx + 1]!) > 0) {
+                rightBound = fixRight(arr, idx, rightBound, cmp) - 1;
+            }
         }
     }
 

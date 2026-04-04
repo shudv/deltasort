@@ -7,15 +7,15 @@
 Algorithm & Time (Expected / Worst) & Space \\
 \midrule
 Binary-Insertion-Sort$^{\dagger}$ & $\Theta(nk)$ & $O(1)$ \\
-Extract–Sort–Merge$^{*}$$^{\dagger}$ & $\Theta(k \log k + n)$ & $\Theta(n)$ \\
-\textbf{DeltaSort}$^{*}$ & $O(n\sqrt{k})\,/\,\Theta(nk)$ & $O(k)$ \\
+Extract–Sort–Merge$^{*}$$^{\dagger}$ & $\Theta(k \log k + n)$ & $O(k)$ \\
+\textbf{DeltaSort}$^{*}$ & $O(n\sqrt{k})\,/\,\Theta(nk)$ & $O(1)$ \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.3em}
 {$n$ = array size, $k$ = number of updates}
 
-\small $^{*}$These use a full sort primitive internally assumed to run in $O(k \log k)$ time and $\le O(k)$ space.
+\small $^{*}$These use a sort primitive internally, assumed to run in $O(k \log k)$ time. DeltaSort uses an in-place sort (e.g., heapsort) requiring $O(1)$ auxiliary space; ESM extracts the $k$ values, requiring $O(k)$ auxiliary space for the buffer.
 
 \small $^{\dagger}$These have the same expected and worst case time complexity.
 \end{table}

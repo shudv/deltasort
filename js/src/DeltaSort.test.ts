@@ -14,13 +14,18 @@ describe("DeltaSort", () => {
                     // Minimum one delta to ensure some change, otherwise volume proportional to size
                     const deltaCount = Math.max(1, Math.floor((deltaVolume / 100.0) * size));
                     const array = Array.from({ length: size }, (_, i) => i);
-                    const dirtyIndices = new Set<number>();
 
-                    // Edit random deltaCount values
+                    // Generate distinct dirty indices via Fisher-Yates partial shuffle
+                    const pool = Array.from({ length: size }, (_, i) => i);
                     for (let i = 0; i < deltaCount; i++) {
-                        const indexToEdit = Math.floor(Math.random() * size);
-                        array[indexToEdit] = Math.floor(Math.random() * size);
-                        dirtyIndices.add(indexToEdit);
+                        const j = i + Math.floor(Math.random() * (size - i));
+                        [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+                    }
+                    const dirtyIndices = pool.slice(0, deltaCount);
+
+                    // Edit dirty values
+                    for (const idx of dirtyIndices) {
+                        array[idx] = Math.floor(Math.random() * size);
                     }
 
                     // Create a copy and sort it natively for verification
@@ -40,6 +45,6 @@ describe("DeltaSort", () => {
 
     test("no dirty indices - should be no-op", () => {
         // deltaSort bails out if no dirty indices are provided
-        expect(deltaSort([1, 2, 3, 2, 1], new Set(), (a, b) => a - b)).toEqual([1, 2, 3, 2, 1]);
+        expect(deltaSort([1, 2, 3, 2, 1], [], (a, b) => a - b)).toEqual([1, 2, 3, 2, 1]);
     });
 }, 200000);

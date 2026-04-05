@@ -53,11 +53,11 @@ where
     // Phase 1: Sort dirty values in-place using indirect heapsort — O(k log k), O(1) aux
     if k > 1 {
         for i in (0..k / 2).rev() {
-            sift_down_indirect(arr, &dirty, i, k, &cmp);
+            sift_down_indirect(arr, dirty, i, k, &cmp);
         }
         for end in (1..k).rev() {
             arr.swap(dirty[0], dirty[end]);
-            sift_down_indirect(arr, &dirty, 0, end, &cmp);
+            sift_down_indirect(arr, dirty, 0, end, &cmp);
         }
     }
 

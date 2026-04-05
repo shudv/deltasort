@@ -123,7 +123,7 @@ pub fn esm_binary_search(
     let clean_len = n - k;
 
     // Sort dirty buffer — O(k log k)
-    dirty_buf.sort_by(|a, b| cmp(a, b));
+    dirty_buf.sort_by(&cmp);
 
     // Merge right-to-left using binary search — O(k log n) comparisons
     // arr[0..clean_len] = sorted clean, dirty_buf[0..k] = sorted dirty
@@ -193,7 +193,7 @@ pub fn esm_inplace(
     // Stability is needed: equal-keyed elements must retain their relative order.
     // Rust's stable sort (driftsort) allocates O(k) internally, so total auxiliary
     // space is O(k) — same as standard ESM despite the in-place merge.
-    arr[n - k..n].sort_by(|a, b| cmp(a, b));
+    arr[n - k..n].sort_by(&cmp);
 
     // Step 3: In-place merge — O(n log k) time, O(log n) stack
     inplace_merge(arr.as_mut_slice(), 0, n - k, n, cmp);

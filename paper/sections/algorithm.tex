@@ -3,7 +3,7 @@
 \label{sec:algorithm}
 %==============================================================================
 
-DeltaSort is an insertion-based update-aware sorting algorithm. In following sections, we first give an overview of the algorithm, then formally prove its correctness, and finally analyze its expected complexity under a random update model.
+DeltaSort is an insertion-based update-aware sorting algorithm. In the following sections, we first give an overview of the algorithm, then formally prove its correctness, and finally analyze its expected complexity under a random update model.
 
 \subsection{Overview}
 
@@ -27,7 +27,7 @@ During Phase~2, for an index $i \in U$, we define its \emph{direction} based on 
 
 A few important things to note about this definition:
 \begin{itemize}
-  \item Direction captures which side does the target position of an updated index lie relative to its current position. Hence, the notion of direction is not defined (or needed) for unchanged indices ($i \notin U$).
+  \item Direction captures on which side of its current position the target of an updated index lies. Hence, direction is not defined (or needed) for unchanged indices ($i \notin U$).
   \item The definition of direction is asymmetric. $L$ requires a strict violation ($A[i-1] > A[i]$), while $R$ includes both violating and non-violating cases, as it may or may not violate order with its right neighbor. This is deliberate because DeltaSort treats all $R$ values identically, so combining these cases simplifies the implementation (see~\algoref{alg:deltasort}).
 \end{itemize}
 
@@ -57,13 +57,13 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
 \textbf{Case 1: $\texttt{dir} = L$}
 \begin{enumerate}
   \item We first set $r \gets i - 1$. This marks the right boundary beyond which the $R$ values in \texttt{pendingRight} cannot move, because after Phase~1, updated values are ordered and hence cannot cross each other in either direction.
-  \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, r]$, where $r$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, it is guaranteed that the range $[j+1, r]$ contains no violations and hence binary search can always find the right insertion point. This step preserves conditions (3) and (4) of the loop invariant.
-  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above, and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves conditions (1) and (2) of the loop invariant.
+  \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, r]$, where $r$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, the range $[j+1, r]$ contains no violations, so binary search finds the correct insertion point. This step preserves conditions (3) and (4) of the loop invariant.
+  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above, and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$ (not needed for correctness, but reduces the search range). This preserves conditions (1) and (2) of the loop invariant.
 \end{enumerate}
 
 \textbf{Case 2: $\texttt{dir} = R$}
 \begin{enumerate}
-  \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$. This preserves condition (1) and (2) of the loop invariant.
+  \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$. This preserves conditions (1) and (2) of the loop invariant.
   \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
 \end{enumerate}
 
@@ -109,7 +109,7 @@ Let $S$ be a segment with $R$-indices $r_0,\ldots,r_{r-1}$ followed by $L$-indic
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens up opportunities for \textbf{parallelization} that can \emph{improve performance even further on multi-core systems and distributed environments}. To avoid expanding scope, we leave this investigation for future work.
+  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens opportunities for \textbf{parallelization}, where segments could be fixed concurrently. We leave this investigation to future work.
 \end{remark}
 
 \subsection{Complexity Analysis}
@@ -119,7 +119,7 @@ We analyze the expected total data movement incurred during Phase~2 of DeltaSort
 
 \begin{remark}[Choice of Update Model]
 \label{rem:update-model}
-Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model as a neutral baseline}. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates towards worst-case configurations (see~\figref{fig:worst-case} for an example of a worst case). Analyzing DeltaSort under more structured update models is left to future work.
+Several update models could be considered. For example, a \emph{bounded rank displacement} model constrains updates such that for every updated value $|Rank_{\text{new}} - Rank_{\text{old}}| \le b$ for some bound $b$, while a \emph{clustered update} model restricts updated indices to a region with $u_{\max} - u_{\min} \le c$. Different models interact with DeltaSort’s structure in different ways: bounded displacement directly limits movement and is therefore favorable, whereas clustered updates may either help or hinder performance depending on the induced directional pattern. In this work, we adopt a \emph{random update model as a neutral baseline}. Specifically, updated indices are chosen uniformly at random from $\{0, \ldots, n-1\}$, and updated values are drawn independently from a fixed range of permissible values. This model introduces no additional structure that the algorithm can exploit, nor does it adversarially bias updates toward worst-case configurations (see~\figref{fig:worst-case} for an illustration). Analyzing DeltaSort under more structured update models is left to future work.
 \end{remark}
 
 \begin{lemma}[Expected Movement]

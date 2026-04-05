@@ -139,13 +139,8 @@ These form an \emph{order statistic} of $k$ uniform samples. Using a result from
 \]
 \end{proof}
 
-\begin{remark}[Tightness of Expected Movement]
-\label{rem:tightness}
-The bound is tight: $\mathbb{E}[\text{total movement}] = \Theta(n\sqrt{k})$. The matching lower bound follows because the symmetric random walk on the gaps $g_j$ (see~\lemref{lem:expected-segments}) has $\Theta(\sqrt{k})$ zero crossings by Feller's classical result~\cite{feller1968}, and each zero crossing corresponds to a direction change that forces $\Omega(n/k)$ expected movement (since the involved element must cross a gap between consecutive dirty indices, which has expected size $n/k$). Summing over $\Theta(\sqrt{k})$ crossings gives $\Omega(n\sqrt{k})$ expected movement. The empirical data in~\appref{sec:appendix-complexity} confirms this: movement normalized by $n\sqrt{k}$ converges to $\approx 0.4$ across four orders of magnitude.
-\end{remark}
-
 \begin{remark}[Worst Case Movement]
-While the expected movement is $\Theta(n\sqrt{k})$, the worst-case movement is $\Theta(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement is $O(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
 \end{remark}
 
 \begin{lemma}[Comparison Count]
@@ -166,7 +161,7 @@ DeltaSort runs in $O(n\sqrt{k})$ expected time.
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also incurs $O(k \log k)$ movement cost for sorting $k$ values. Since $k \log n = o(n\sqrt{k})$ for $k = o(n)$, the total is $O(n\sqrt{k})$.
+By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also contributes $O(k \log k)$ movement for sorting $k$ values. Since $k \log n = o(n\sqrt{k})$ for $k = o(n)$, the total is $O(n\sqrt{k})$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

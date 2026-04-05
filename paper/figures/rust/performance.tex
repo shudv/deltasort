@@ -34,11 +34,11 @@
 \draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:46954,5) -- (axis cs:46954,100000);
 \draw[purple!50, densely dashed, line width=0.8pt] (axis cs:83002,5) -- (axis cs:83002,100000);
 
-% Crossover labels (below x-axis)
-\node[font=\tiny, orange!80!black, anchor=south] at (axis cs:22,3.2) {.02\%};
-\node[font=\tiny, cyan!70!black, anchor=south] at (axis cs:1017,3.2) {1\%};
-\node[font=\tiny, green!60!black, anchor=south] at (axis cs:46954,3.2) {47\%};
-\node[font=\tiny, purple!70, anchor=south] at (axis cs:83002,3.2) {83\%};
+% Crossover labels (horizontal, same height, outside axis for rightmost two)
+\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:22,6) {.02\%};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:1017,6) {1\%};
+\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:46954,6) {47\%};
+\node[font=\tiny, purple!70, anchor=south west] at (axis cs:83002,6) {83\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 

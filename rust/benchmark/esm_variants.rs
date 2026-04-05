@@ -81,20 +81,6 @@ pub fn esm_backwards_merge(
 }
 
 // =============================================================================
-// Variant 2: Forward merge with O(n) boolean mask
-// =============================================================================
-// Note: despite the name, this uses O(n) space for the is_dirty mask.
-// Kept for comparison.
-
-pub fn esm_original(
-    arr: &mut Vec<User>,
-    dirty_indices: &mut [usize],
-    cmp: fn(&User, &User) -> std::cmp::Ordering,
-) {
-    crate::extract_sort_merge::extract_sort_merge(arr, dirty_indices, cmp);
-}
-
-// =============================================================================
 // Variant 5: Binary Search ESM — O(k log n) comparisons, O(k) space
 // =============================================================================
 // Same as backwards merge but replaces the element-by-element merge comparison
@@ -151,8 +137,8 @@ pub fn esm_binary_search(
         let split = arr[..ci]
             .partition_point(|x| cmp(x, &dirty_buf[dj]) != std::cmp::Ordering::Greater);
 
-        // Shift clean[split..ci] right into arr[wi-num_clean..wi]
-        // The destination region arr[ci..wi] is consumed garbage — non-overlapping.
+        // Shift clean[split..ci] right into arr[wi-num_clean..wi].
+        // Source and dest don't overlap (gap = remaining dirty elements between them).
         let num_clean = ci - split;
         if num_clean > 0 {
             for i in (0..num_clean).rev() {
@@ -393,11 +379,6 @@ mod tests {
     #[test]
     fn test_backwards_merge() {
         test_variant(esm_backwards_merge);
-    }
-
-    #[test]
-    fn test_original() {
-        test_variant(esm_original);
     }
 
     #[test]

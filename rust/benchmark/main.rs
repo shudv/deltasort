@@ -861,7 +861,7 @@ fn export_movement_csv(results: &[AnalysisResult], path: &str) {
 // ============================================================================
 
 fn run_esm_comparison() {
-    use crate::esm_variants::{esm_backwards_merge, esm_original, esm_binary_search, esm_inplace};
+    use crate::esm_variants::{esm_backwards_merge, esm_binary_search, esm_inplace};
 
     println!();
     println!("ESM Variant Comparison");
@@ -883,9 +883,80 @@ fn run_esm_comparison() {
 
     let variants: &[(&str, EsmFn)] = &[
         ("Back+compact O(k)", esm_backwards_merge),
-        ("Original     O(k)", esm_original),
         ("Binary Search O(k)", esm_binary_search),
         ("In-place     O(k)", esm_inplace),
+    ];
+
+    println!();
+    print!("  {:>8} │", "k");
+    for (name, _) in variants {
+        print!(" {:>18} │", name);
+    }
+    println!();
+    print!("  ─────────┼");
+    for _ in variants {
+        print!("────────────────────┼");
+    }
+    println!();
+
+    for &k in test_ks {
+        if k > n {
+            continue;
+        }
+        print!("  {:>8} │", k);
+        io::stdout().flush().unwrap();
+
+        for (_, sort_fn) in variants {
+            let mut rng = rand::thread_rng();
+            let mut times = Vec::with_capacity(iters);
+
+            for _ in 0..iters {
+                let mut users = base_users.to_vec();
+                let mut dirty = sample_distinct_indices(&mut rng, n, k);
+                for &idx in &dirty {
+                    users[idx].mutate(&mut rng);
+                }
+                let start = Instant::now();
+                sort_fn(&mut users, &mut dirty, user_comparator);
+                let elapsed = start.elapsed().as_secs_f64() * 1_000_000.0;
+                times.push(elapsed);
+            }
+
+            let stats = calculate_stats(&times);
+            print!(" {:>10.1} ±{:>4.1}% │", stats.mean, if stats.mean > 0.0 { (stats.ci_95 / stats.mean) * 100.0 } else { 0.0 });
+        }
+        println!();
+    }
+    println!();
+}
+
+// ============================================================================
+// BIS VARIANT COMPARISON
+// ============================================================================
+
+fn run_bis_comparison() {
+    use crate::binary_insertion_sort::{binary_insertion_sort, bis_presorted};
+
+    println!();
+    println!("BIS Variant Comparison");
+    println!("======================");
+
+    let test_ks: &[usize] = &[1, 5, 10, 50, 100, 500, 1000, 2000];
+    let n = 100_000;
+    let iters = 50;
+
+    let base_users = generate_sorted_users(n);
+
+    for _ in 0..5 {
+        let mut users = base_users.clone();
+        users.sort_by(user_comparator);
+    }
+
+    type BisFn = fn(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
+
+    let variants: &[(&str, BisFn)] = &[
+        ("Current   O(1)", binary_insertion_sort),
+        ("Presorted O(1)", bis_presorted),
     ];
 
     println!();
@@ -943,11 +1014,12 @@ fn main() {
     let run_comparator = args.iter().any(|a| a == "--comparator");
     let run_movement = args.iter().any(|a| a == "--movement");
     let run_esm_compare = args.iter().any(|a| a == "--esm-compare");
+    let run_bis_compare = args.iter().any(|a| a == "--bis-compare");
     let export = args.iter().any(|a| a == "--export");
     let fast = args.iter().any(|a| a == "--fast");
 
-    // If no specific flags, run all (excluding esm-compare which is opt-in)
-    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement && !run_esm_compare;
+    // If no specific flags, run all (excluding variant comparisons which are opt-in)
+    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement && !run_esm_compare && !run_bis_compare;
 
     println!();
     println!("DeltaSort Benchmark");
@@ -959,6 +1031,13 @@ fn main() {
         let phase = Instant::now();
         run_esm_comparison();
         println!("  ⏱  ESM comparison: {:.1}s", phase.elapsed().as_secs_f64());
+        return;
+    }
+
+    if run_bis_compare {
+        let phase = Instant::now();
+        run_bis_comparison();
+        println!("  ⏱  BIS comparison: {:.1}s", phase.elapsed().as_secs_f64());
         return;
     }
 

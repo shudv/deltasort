@@ -49,6 +49,53 @@ where
     }
 }
 
+/// BIS variant: pre-sort dirty tail before insertion.
+///
+/// Same as binary_insertion_sort but sorts the extracted dirty region
+/// before re-inserting, so insertions proceed in value order.
+/// O(1) value space (in-place sort of tail), Θ(kn) time.
+pub fn bis_presorted<F>(
+    arr: &mut Vec<User>,
+    dirty_indices: &mut [usize],
+    cmp: F,
+)
+where
+    F: Fn(&User, &User) -> std::cmp::Ordering,
+{
+    if dirty_indices.is_empty() {
+        return;
+    }
+
+    let n = arr.len();
+    let k = dirty_indices.len();
+
+    dirty_indices.sort_unstable_by(|a, b| b.cmp(a));
+
+    // Phase 1: Extract dirty to tail — O(kn)
+    let mut clean_end = n;
+    for &idx in dirty_indices.iter() {
+        arr[idx..clean_end].rotate_left(1);
+        clean_end -= 1;
+    }
+
+    // Phase 1.5: Sort dirty tail in-place using insertion sort — O(k²) time, O(1) space
+    for i in 1..k {
+        let cur = n - k + i;
+        let pos = arr[n - k..cur]
+            .partition_point(|x| cmp(x, &arr[cur]) == std::cmp::Ordering::Less);
+        arr[n - k + pos..=cur].rotate_right(1);
+    }
+
+    // Phase 2: Binary insert each (now in sorted order) — O(kn)
+    let clean_len = n - k;
+    for i in 0..k {
+        let sorted_len = clean_len + i;
+        let pos = arr[..sorted_len]
+            .partition_point(|x| cmp(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
+        arr[pos..=sorted_len].rotate_right(1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

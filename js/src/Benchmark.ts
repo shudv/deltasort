@@ -19,7 +19,7 @@ import { execSync } from "child_process";
 const N = 100_000;
 
 /** Base number of iterations per benchmark (scaled up for small k) */
-const BASE_ITERATIONS = 20;
+const BASE_ITERATIONS = 100;
 
 /** Delta counts to test */
 const DELTA_COUNTS = [
@@ -30,7 +30,13 @@ const DELTA_COUNTS = [
 const CROSSOVER_ITERATIONS = 10;
 
 /** Array sizes for crossover analysis */
-const CROSSOVER_SIZES = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000]; // 200_000, 500_000, 1_000_000];
+const CROSSOVER_SIZES = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000];
+
+/** Maximum k value for BIS benchmarks (too slow beyond this) */
+const BIS_MAX_K = 10_000;
+
+/** Maximum k value for DeltaSort benchmarks (too slow beyond this) */
+const DS_MAX_K = 10_000;
 
 /** Z-score for 95% confidence interval */
 const Z_95 = 1.96;
@@ -39,9 +45,10 @@ const shouldExport = process.argv.includes("--export");
 
 /** Get number of iterations for a given k value */
 function iterationsForK(k: number): number {
-    if (k <= 10) return BASE_ITERATIONS * 10;
-    if (k <= 50) return BASE_ITERATIONS * 5;
+    if (k <= 10) return BASE_ITERATIONS * 5;
+    if (k <= 50) return BASE_ITERATIONS * 3;
     if (k <= 200) return BASE_ITERATIONS * 2;
+    if (k <= 1000) return BASE_ITERATIONS;
     return BASE_ITERATIONS;
 }
 
@@ -209,9 +216,9 @@ interface AlgorithmResult {
 
 interface BenchmarkResults {
     native: AlgorithmResult[];
-    bis: AlgorithmResult[];
+    bis: (AlgorithmResult | null)[];
     esm: AlgorithmResult[];
-    deltasort: AlgorithmResult[];
+    deltasort: (AlgorithmResult | null)[];
 }
 
 interface CrossoverResultsAll {
@@ -449,11 +456,13 @@ function printExecutionTimeTable(results: BenchmarkResults): void {
     );
     for (let i = 0; i < results.native.length; i++) {
         const n = results.native[i]!;
-        const b = results.bis[i]!;
+        const b = results.bis[i];
         const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
+        const d = results.deltasort[i];
+        const bStr = b ? formatWithCi(b.timeUs, b.timeCi, COL_WIDTH) : "-".padStart(COL_WIDTH);
+        const dStr = d ? formatWithCi(d.timeUs, d.timeCi, COL_WIDTH) : "-".padStart(COL_WIDTH);
         console.log(
-            `│ ${n.k.toString().padStart(6)} │ ${formatWithCi(n.timeUs, n.timeCi, COL_WIDTH)} │ ${formatWithCi(b.timeUs, b.timeCi, COL_WIDTH)} │ ${formatWithCi(e.timeUs, e.timeCi, COL_WIDTH)} │ ${formatWithCi(d.timeUs, d.timeCi, COL_WIDTH)} │`,
+            `│ ${n.k.toString().padStart(6)} │ ${formatWithCi(n.timeUs, n.timeCi, COL_WIDTH)} │ ${bStr} │ ${formatWithCi(e.timeUs, e.timeCi, COL_WIDTH)} │ ${dStr} │`,
         );
     }
     console.log(
@@ -492,10 +501,16 @@ function exportExecutionTimeCsv(results: BenchmarkResults, filePath: string): vo
         "k,iters,native,native_sd,native_ci,native_cv,bis,bis_sd,bis_ci,bis_cv,esm,esm_sd,esm_ci,esm_cv,deltasort,deltasort_sd,deltasort_ci,deltasort_cv\n";
     for (let i = 0; i < results.native.length; i++) {
         const n = results.native[i]!;
-        const b = results.bis[i]!;
+        const b = results.bis[i];
         const e = results.esm[i]!;
-        const d = results.deltasort[i]!;
-        csv += `${n.k},${n.iterations},${n.timeUs.toFixed(1)},${n.timeSd.toFixed(1)},${n.timeCi.toFixed(1)},${n.timeCv.toFixed(1)},${b.timeUs.toFixed(1)},${b.timeSd.toFixed(1)},${b.timeCi.toFixed(1)},${b.timeCv.toFixed(1)},${e.timeUs.toFixed(1)},${e.timeSd.toFixed(1)},${e.timeCi.toFixed(1)},${e.timeCv.toFixed(1)},${d.timeUs.toFixed(1)},${d.timeSd.toFixed(1)},${d.timeCi.toFixed(1)},${d.timeCv.toFixed(1)}\n`;
+        const d = results.deltasort[i];
+        const bStr = b
+            ? `${b.timeUs.toFixed(1)},${b.timeSd.toFixed(1)},${b.timeCi.toFixed(1)},${b.timeCv.toFixed(1)}`
+            : ",,,";
+        const dStr = d
+            ? `${d.timeUs.toFixed(1)},${d.timeSd.toFixed(1)},${d.timeCi.toFixed(1)},${d.timeCv.toFixed(1)}`
+            : ",,,";
+        csv += `${n.k},${n.iterations},${n.timeUs.toFixed(1)},${n.timeSd.toFixed(1)},${n.timeCi.toFixed(1)},${n.timeCv.toFixed(1)},${bStr},${e.timeUs.toFixed(1)},${e.timeSd.toFixed(1)},${e.timeCi.toFixed(1)},${e.timeCv.toFixed(1)},${dStr}\n`;
     }
     fs.writeFileSync(filePath, csv);
     console.log(`Exported: ${filePath}`);
@@ -531,13 +546,13 @@ function exportMetadataCsv(results: BenchmarkResults, filePath: string): void {
         if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
     }
     for (const r of results.bis) {
-        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+        if (r && r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
     }
     for (const r of results.esm) {
         if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
     }
     for (const r of results.deltasort) {
-        if (r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
+        if (r && r.timeUs > 0) maxCiPercent = Math.max(maxCiPercent, (r.timeCi / r.timeUs) * 100);
     }
 
     let csv = "key,value\n";
@@ -583,14 +598,22 @@ async function main(): Promise<void> {
         });
         results.native.push({ k, ...native });
 
-        const bis = runBenchmark(baseUsers, k, binaryInsertionSort);
-        results.bis.push({ k, ...bis });
+        if (k <= BIS_MAX_K) {
+            const bis = runBenchmark(baseUsers, k, binaryInsertionSort);
+            results.bis.push({ k, ...bis });
+        } else {
+            results.bis.push(null);
+        }
 
         const esm = runBenchmark(baseUsers, k, extractSortMerge);
         results.esm.push({ k, ...esm });
 
-        const ds = runBenchmark(baseUsers, k, (arr, dirty, cmp) => deltaSort(arr, dirty, cmp));
-        results.deltasort.push({ k, ...ds });
+        if (k <= DS_MAX_K) {
+            const ds = runBenchmark(baseUsers, k, (arr, dirty, cmp) => deltaSort(arr, dirty, cmp));
+            results.deltasort.push({ k, ...ds });
+        } else {
+            results.deltasort.push(null);
+        }
 
         console.log(" done");
     }

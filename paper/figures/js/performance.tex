@@ -25,20 +25,19 @@
     title={\textbf{(a) Execution Time ($n=100$K)}},
     legend to name=jslegend,
     legend style={font=\scriptsize, legend columns=4, column sep=0.3em},
-    clip=false,
 ]
 
-% Crossover vertical lines (drop lines to x-axis)
-\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:28,5) -- (axis cs:28,100000);
-\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:20,5) -- (axis cs:20,100000);
-\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:231,5) -- (axis cs:231,100000);
-\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:49280,5) -- (axis cs:49280,100000);
+% Crossover vertical lines
+\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:48,5) -- (axis cs:48,100000);
+\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:14,5) -- (axis cs:14,100000);
+\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:215,5) -- (axis cs:215,100000);
+\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:48422,5) -- (axis cs:48422,100000);
 
-% Crossover labels (below x-axis)
-\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:38,4.3) {.03\%};
-\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:14,4.3) {.02\%};
-\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:340,4.3) {.2\%};
-\node[font=\tiny, purple!70, anchor=south east] at (axis cs:68000,4.3) {49\%};
+% Crossover labels (inside axis, near bottom)
+\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:48,6) {.05\%};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:14,6) {.01\%};
+\node[font=\tiny, green!60!black, anchor=south] at (axis cs:215,6) {.2\%};
+\node[font=\tiny, purple!70, anchor=south] at (axis cs:48422,6) {48\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
@@ -73,11 +72,11 @@
     ymode=log,
     log basis x=10,
     log basis y=10,
-    xmin=1000, xmax=100000,
+    xmin=1000, xmax=200000,
     ymin=0.01, ymax=100,
     ytick={0.01, 0.1, 1, 10, 100},
     yticklabels={.01\%, .1\%, 1\%, 10\%, 100\%},
-    xtick={1000, 10000, 100000},
+    xtick={1000, 10000, 100000, 200000},
     xticklabels={1K, 10K, \textbf{100K}},
     grid=both,
     grid style={line width=0.1pt, draw=gray!20},
@@ -107,24 +106,23 @@
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/js/crossover-all.csv};
 
 % Markers and labels at n=100K
-\addplot[only marks, mark=*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.028)};
-\node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:100000, 0.028) {.03\%};
+\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.048)};
+\node[font=\tiny, orange!80!black, anchor=north west] at (axis cs:110000, 0.048) {.05\%};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 0.020)};
-\node[font=\tiny, cyan!70!black, anchor=north west] at (axis cs:100000, 0.020) {.02\%};
+\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 0.014)};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 0.231)};
-\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:100000, 0.231) {.2\%};
+\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 0.215)};
+\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 0.215) {.2\%};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=purple!70] coordinates {(100000, 49.280)};
-\node[font=\tiny, purple!70, anchor=south east] at (axis cs:90000, 49.280) {49\%};
+\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 48.422)};
+\node[font=\tiny, purple!70, anchor=south west] at (axis cs:110000, 48.422) {48\%};
 
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
 
 \vspace{0.3em}
-\ref{jslegend}
+\ref*{jslegend}
 \caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover. Note the higher variance and lower crossover thresholds compared to Rust.}
 \label{fig:js-performance}
 \end{figure}

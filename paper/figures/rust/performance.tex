@@ -34,11 +34,11 @@
 \draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:46954,5) -- (axis cs:46954,100000);
 \draw[purple!50, densely dashed, line width=0.8pt] (axis cs:83002,5) -- (axis cs:83002,100000);
 
-% Crossover labels (above and left of lines)
-\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:30,4.3) {.02\%};
-\node[font=\tiny, cyan!70!black, anchor=south east] at (axis cs:1100,4.3) {1\%};
-\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:65000,4.3) {47\%};
-\node[font=\tiny, purple!70, anchor=south east] at (axis cs:400000,4.3) {83\%};
+% Crossover labels (below x-axis)
+\node[font=\tiny, orange!80!black, anchor=south] at (axis cs:22,3.2) {.02\%};
+\node[font=\tiny, cyan!70!black, anchor=south] at (axis cs:1017,3.2) {1\%};
+\node[font=\tiny, green!60!black, anchor=south] at (axis cs:46954,3.2) {47\%};
+\node[font=\tiny, purple!70, anchor=south] at (axis cs:83002,3.2) {83\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
@@ -85,6 +85,7 @@
     tick label style={font=\scriptsize},
     label style={font=\small},
     title={\textbf{(b) Crossover Threshold}},
+    clip=false,
 ]
 
 % Highlight line at n=100K
@@ -107,24 +108,24 @@
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
 
 % Markers and labels at n=100K
-\addplot[only marks, mark=*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.022)};
+\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.022)};
 \node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:110000, 0.022) {.02\%};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 1.007)};
+\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 1.007)};
 \node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:110000, 1.007) {1.0\%};
 
 \addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 44.599)};
-\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:90000, 44.599) {45\%};
+\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 8) {45\%};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=purple!70] coordinates {(100000, 82.270)};
-\node[font=\tiny, purple!70, anchor=south east] at (axis cs:90000, 82.270) {82\%};
+\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 82.270)};
+\node[font=\tiny, purple!70, anchor=south] at (axis cs:100000, 120) {82\%};
 
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
 
 \vspace{0.3em}
-\ref{rustlegend}
+\ref*{rustlegend}
 \caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover. Refer~\appref{sec:appendix-raw-data} for raw data.}
 \label{fig:rust-performance}
 \end{figure}

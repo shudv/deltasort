@@ -40,7 +40,7 @@ use std::time::Instant;
 const N: usize = 100_000;
 
 /// Maximum k value for BIS benchmarks (BIS is O(kn) for moves, too slow for large k)
-const BIS_MAX_K: usize = 2000;
+const BIS_MAX_K: usize = 1000;
 
 /// Base number of iterations per benchmark (scaled up for small k)
 const BASE_ITERATIONS: usize = 100;

@@ -4,7 +4,7 @@
 \label{tab:complexity}
 \begin{tabular}{l c c c c}
 \toprule
-Algorithm & Comparisons (C) & Movement (M) & Space (S) \\
+Algorithm & Comparisons & Movement & Space \\
 \midrule
 FullSort$^{*}$ $(\texttt{sort\_by})$ & $O(n \log n)$ & - & - \\
 BIS & $O(k \log n)$ & $\Theta(nk)$ & $O(1)$ \\
@@ -17,5 +17,5 @@ ESM & $O(k \log k + n)$ & $\Theta(n)$ & $O(k)$ \\
 {\small $^{*}$Not update-aware; hence complexity is a function of only $n$. The exact movement and space complexity are implementation-dependent and not required for the present discussion.}
 
 
-{\small $^{\dagger}$Expected. Worst-case movement is $\Theta(nk)$}
+{\small $^{\dagger}$Expected. Worst-case movement is $\Theta(nk)$.}
 \end{table}

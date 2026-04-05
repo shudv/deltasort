@@ -30,13 +30,13 @@
 
 % Crossover vertical lines (drop lines to x-axis)
 \draw[orange!60, densely dashed, line width=0.8pt] (axis cs:22,5) -- (axis cs:22,100000);
-\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:765,5) -- (axis cs:765,100000);
+\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:1017,5) -- (axis cs:1017,100000);
 \draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:46954,5) -- (axis cs:46954,100000);
 \draw[purple!50, densely dashed, line width=0.8pt] (axis cs:83002,5) -- (axis cs:83002,100000);
 
 % Crossover labels (above and left of lines)
 \node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:30,4.3) {.02\%};
-\node[font=\tiny, cyan!70!black, anchor=south east] at (axis cs:1100,4.3) {.8\%};
+\node[font=\tiny, cyan!70!black, anchor=south east] at (axis cs:1100,4.3) {1\%};
 \node[font=\tiny, green!60!black, anchor=south east] at (axis cs:65000,4.3) {47\%};
 \node[font=\tiny, purple!70, anchor=south east] at (axis cs:400000,4.3) {83\%};
 
@@ -105,6 +105,19 @@
 % DeltaSort crossover
 \addplot[color=green!70!black, mark=none, dashed, line width=1.8pt] 
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
+
+% Markers and labels at n=100K
+\addplot[only marks, mark=*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.022)};
+\node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:110000, 0.022) {.02\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 1.007)};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:110000, 1.007) {1.0\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 44.599)};
+\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:90000, 44.599) {45\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=purple!70] coordinates {(100000, 82.270)};
+\node[font=\tiny, purple!70, anchor=south east] at (axis cs:90000, 82.270) {82\%};
 
 \end{axis}
 \end{tikzpicture}

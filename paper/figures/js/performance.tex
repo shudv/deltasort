@@ -25,7 +25,20 @@
     title={\textbf{(a) Execution Time ($n=100$K)}},
     legend to name=jslegend,
     legend style={font=\scriptsize, legend columns=4, column sep=0.3em},
+    clip=false,
 ]
+
+% Crossover vertical lines (drop lines to x-axis)
+\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:28,5) -- (axis cs:28,100000);
+\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:20,5) -- (axis cs:20,100000);
+\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:231,5) -- (axis cs:231,100000);
+\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:49280,5) -- (axis cs:49280,100000);
+
+% Crossover labels (below x-axis)
+\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:38,4.3) {.03\%};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:14,4.3) {.02\%};
+\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:340,4.3) {.2\%};
+\node[font=\tiny, purple!70, anchor=south east] at (axis cs:68000,4.3) {49\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
@@ -65,7 +78,7 @@
     ytick={0.01, 0.1, 1, 10, 100},
     yticklabels={.01\%, .1\%, 1\%, 10\%, 100\%},
     xtick={1000, 10000, 100000},
-    xticklabels={1K, 10K, 100K},
+    xticklabels={1K, 10K, \textbf{100K}},
     grid=both,
     grid style={line width=0.1pt, draw=gray!20},
     major grid style={line width=0.2pt, draw=gray!40},
@@ -74,9 +87,16 @@
     title={\textbf{(b) Crossover Threshold}},
 ]
 
+% Highlight line at n=100K
+\draw[gray!40, line width=6pt] (axis cs:100000,0.01) -- (axis cs:100000,100);
+
 % BIS crossover
 \addplot[color=orange!80, mark=none, dashed, line width=1.5pt] 
     table[col sep=comma, x=n, y=bis] {\rootdir/figures/js/crossover-all.csv};
+
+% DS vs ESM crossover
+\addplot[color=cyan!70!black, mark=none, dashed, line width=1.5pt] 
+    table[col sep=comma, x=n, y=ds_esm] {\rootdir/figures/js/crossover-all.csv};
 
 % ESM crossover
 \addplot[color=purple!70, mark=none, dashed, line width=1.5pt] 
@@ -86,12 +106,25 @@
 \addplot[color=green!70!black, mark=none, dashed, line width=1.8pt] 
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/js/crossover-all.csv};
 
+% Markers and labels at n=100K
+\addplot[only marks, mark=*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.028)};
+\node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:100000, 0.028) {.03\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 0.020)};
+\node[font=\tiny, cyan!70!black, anchor=north west] at (axis cs:100000, 0.020) {.02\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 0.231)};
+\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:100000, 0.231) {.2\%};
+
+\addplot[only marks, mark=*, mark size=2.5pt, color=purple!70] coordinates {(100000, 49.280)};
+\node[font=\tiny, purple!70, anchor=south east] at (axis cs:90000, 49.280) {49\%};
+
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
 
 \vspace{0.3em}
 \ref{jslegend}
-\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K. Note the high variance compared to Rust benchmarks. (b)~Crossover thresholds. ESM is faster up to $\approx 50\%$, while BIS and DeltaSort thresholds are much lower than in Rust.}
+\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover. Note the higher variance and lower crossover thresholds compared to Rust.}
 \label{fig:js-performance}
 \end{figure}

@@ -57,23 +57,25 @@ function binaryInsertionSort<T>(arr: T[], dirtyIndices: number[], cmp: Comparato
     const n = arr.length;
     const k = dirtyIndices.length;
 
-    // Sort dirty indices descending so removals don't shift unprocessed positions
-    const sorted = dirtyIndices.slice().sort((a, b) => b - a);
+    // Sort dirty indices ascending for single-pass extraction
+    const sorted = dirtyIndices.slice().sort((a, b) => a - b);
 
-    // Phase 1: Remove dirty elements right-to-left, collecting at tail — O(kn)
-    let cleanEnd = n;
-    for (const idx of sorted) {
-        // Shift arr[idx+1..cleanEnd] left by 1, dirty element goes to cleanEnd-1
-        const tmp = arr[idx]!;
-        for (let j = idx; j < cleanEnd - 1; j++) {
-            arr[j] = arr[j + 1]!;
+    // Phase 1: Single O(n) pass — compact clean elements left, dirty to tail
+    let write = 0;
+    let di = 0;
+    for (let read = 0; read < n; read++) {
+        if (di < k && sorted[di] === read) {
+            di++;
+        } else {
+            const tmp = arr[write]!;
+            arr[write] = arr[read]!;
+            arr[read] = tmp;
+            write++;
         }
-        arr[cleanEnd - 1] = tmp;
-        cleanEnd--;
     }
-    // arr[0..n-k] = sorted clean, arr[n-k..n] = dirty
+    // arr[0..n-k] = sorted clean, arr[n-k..n] = dirty (unordered)
 
-    // Phase 2: Binary insert each dirty element — O(kn)
+    // Phase 2: Binary insert each dirty element — O(kn) total moves
     const cleanLen = n - k;
     for (let i = 0; i < k; i++) {
         const sortedLen = cleanLen + i;

@@ -58,7 +58,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
 \begin{enumerate}
   \item We first set $r \gets i - 1$. This marks the right boundary beyond which the $R$ values in \texttt{pendingRight} cannot move, because after Phase~1, updated values are ordered and hence cannot cross each other in either direction.
   \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, r]$, where $r$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, it is guaranteed that the range $[j+1, r]$ contains no violations and hence binary search can always find the right insertion point. This step preserves conditions (3) and (4) of the loop invariant.
-  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves conditions (1) and (2) of the loop invariant.
+  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above, and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$. This is not necessary for correctness, but for performance. This preserves conditions (1) and (2) of the loop invariant.
 \end{enumerate}
 
 \textbf{Case 2: $\texttt{dir} = R$}
@@ -133,11 +133,16 @@ After Phase~1, we have two sorted sequences of $k$ values each:
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
-After Phase~1, we have two sorted sequences of $k$ values each which form an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed is $O(\sqrt{k})$ (see~\lemref{lem:expected-segments} for full proof). With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
+These form an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed is $O(\sqrt{k})$ (see~\lemref{lem:expected-segments} for full proof). With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
 \mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}) \qedhere
 \]
 \end{proof}
+
+\begin{remark}[Tightness of Expected Movement]
+\label{rem:tightness}
+The bound is tight: $\mathbb{E}[\text{total movement}] = \Theta(n\sqrt{k})$. The matching lower bound follows because the symmetric random walk on the gaps $g_j$ (see~\lemref{lem:expected-segments}) has $\Theta(\sqrt{k})$ zero crossings by Feller's classical result~\cite{feller1968}, and each zero crossing corresponds to a direction change that forces $\Omega(n/k)$ expected movement (since the involved element must cross a gap between consecutive dirty indices, which has expected size $n/k$). Summing over $\Theta(\sqrt{k})$ crossings gives $\Omega(n\sqrt{k})$ expected movement. The empirical data in~\appref{sec:appendix-complexity} confirms this: movement normalized by $n\sqrt{k}$ converges to $\approx 0.4$ across four orders of magnitude.
+\end{remark}
 
 \begin{remark}[Worst Case Movement]
 While the expected movement is $\Theta(n\sqrt{k})$, the worst-case movement is $\Theta(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
@@ -149,7 +154,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:expected-segments}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
 O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log (n \sqrt{k})) = O(k \log n) \qedhere
 \]

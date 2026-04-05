@@ -9,9 +9,9 @@ We evaluated the following algorithms:
 \begin{itemize}
   \item \textbf{FullSort}: Rust's \texttt{slice::sort\_by} implementation based on DriftSort~\cite{driftsort}, representing full re-sorting of the array. This serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which FullSort is preferable.
 
-  \item \textbf{BIS} and \textbf{ESM}: Standard baseline algorithms as defined in \secref{sec:introduction}. ESM uses Rust's \texttt{slice::sort\_by} for sorting the updated values.
+  \item \textbf{BIS} and \textbf{ESM}: Standard baseline algorithms as defined in \secref{sec:introduction}. ESM uses Rust's unstable sort for sorting the updated values.
 
-  \item \textbf{DeltaSort}: Standard implementation as described in \secref{sec:algorithm}. Sorts updated values using Rust's \texttt{slice::sort\_by}, then fixes violations using binary search and rotation.
+  \item \textbf{DeltaSort}: Standard implementation as described in \secref{sec:algorithm}. Sorts updated values using Rust's unstable sort, then fixes violations using binary search and rotation.
 \end{itemize}
 
 \subsection{Results}
@@ -36,9 +36,10 @@ These observations also suggest that, much like hybrid blind sorting algorithms 
 
 DeltaSort was also implemented in JavaScript~\cite{deltasort-repo} and benchmarked on V8 against the native \texttt{Array.prototype.sort} to evaluate behavior in a runtime that \emph{does not have a predictable movement cost model}~\cite{v8elementskinds}. The key takeaways are (see~\appref{sec:appendix-js-deltasort} for full benchmarks):
 \begin{enumerate}
-  \item Both DeltaSort and BIS have \textbf{much lower crossover thresholds} than in Rust (BIS $\lesssim 1\%$, DeltaSort $\lesssim 5\%$ for $n \ge 10$K), indicating that the asymptotic improvement seen in native environments \textbf{is attenuated in V8}. The high variance in V8 execution times further confirms the unpredictable cost model.
+  \item DeltaSort has \textbf{lower crossover thresholds} than in Rust ($\lesssim 5\%$ for $n = 10$K), indicating that \textbf{the asymptotic improvement seen in native environments is lost in V8}.
 
   \item DeltaSort is consistently \textbf{faster than BIS by $\sim$2--3$\times$} across all measured $k$ values, even though the two algorithms exhibit asymptotically similar growth in V8. This indicates that DeltaSort's segment-local operations provide a practical speed advantage even in runtimes where its movement complexity advantage does not fully materialize.
 
-  \item ESM is $\sim$1.5$\times$ faster than FullSort for $k$ up to $\approx$50\%, indicating that even in managed runtimes, \textbf{exposing updated indices can unlock better incremental sort performance}.
+  \item ESM is $\sim$1.5$\times$ faster than FullSort for $k$ up to $\approx$50\%, indicating that even in managed runtimes, exposing updated indices can unlock better incremental sort performance.
 \end{enumerate}
+ 

@@ -8,7 +8,7 @@ use crate::data::User;
 /// Not stable: equal-keyed elements may not preserve original index order.
 ///
 /// Precondition: dirty_indices contains distinct valid indices into arr.
-pub fn binary_insertion_sort<F>(arr: &mut Vec<User>, dirty_indices: &mut [usize], cmp: F)
+pub fn binary_insertion_sort<F>(arr: &mut [User], dirty_indices: &mut [usize], cmp: F)
 where
     F: Fn(&User, &User) -> std::cmp::Ordering,
 {
@@ -51,7 +51,7 @@ where
 /// before re-inserting, so insertions proceed in value order.
 /// This enables constraining the search area across iterations.
 /// O(1) value space (in-place sort of tail), Θ(kn) time.
-pub fn bis_presorted<F>(arr: &mut Vec<User>, dirty_indices: &mut [usize], cmp: F)
+pub fn bis_presorted<F>(arr: &mut [User], dirty_indices: &mut [usize], cmp: F)
 where
     F: Fn(&User, &User) -> std::cmp::Ordering,
 {

@@ -15,7 +15,7 @@ use crate::data::User;
 // This is safe because the merge cursor is always >= the clean read cursor.
 
 pub fn esm_backwards_merge(
-    arr: &mut Vec<User>,
+    arr: &mut [User],
     dirty_indices: &mut [usize],
     cmp: fn(&User, &User) -> std::cmp::Ordering,
 ) {
@@ -92,7 +92,7 @@ pub fn esm_backwards_merge(
 // Space: O(k) — same dirty buffer, no output buffer
 
 pub fn esm_binary_search(
-    arr: &mut Vec<User>,
+    arr: &mut [User],
     dirty_indices: &mut [usize],
     cmp: fn(&User, &User) -> std::cmp::Ordering,
 ) {
@@ -172,7 +172,7 @@ pub fn esm_binary_search(
 // Included to empirically validate that in-place merging is not competitive.
 
 pub fn esm_inplace(
-    arr: &mut Vec<User>,
+    arr: &mut [User],
     dirty_indices: &mut [usize],
     cmp: fn(&User, &User) -> std::cmp::Ordering,
 ) {
@@ -187,7 +187,7 @@ pub fn esm_inplace(
 
     // Step 1: Stable partition — move dirty values to arr[n-k..n], clean to arr[0..n-k]
     // Uses recursive block rotation: O(n log k) time, O(log k) stack.
-    partition_dirty_to_end(arr.as_mut_slice(), dirty_indices, 0, k, 0, n);
+    partition_dirty_to_end(arr, dirty_indices, 0, k, 0, n);
 
     // Step 2: Stable sort dirty region — O(k log k) time, O(k) space internally
     // Stability is needed: equal-keyed elements must retain their relative order.
@@ -196,7 +196,7 @@ pub fn esm_inplace(
     arr[n - k..n].sort_by(&cmp);
 
     // Step 3: In-place merge — O(n log k) time, O(log n) stack
-    inplace_merge(arr.as_mut_slice(), 0, n - k, n, cmp);
+    inplace_merge(arr, 0, n - k, n, cmp);
 }
 
 /// Stably partition dirty values to the end of arr[range_start..range_end).
@@ -308,6 +308,8 @@ mod tests {
     use super::*;
     use rand::Rng;
 
+    type SortFn = fn(&mut [User], &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
+
     fn user_cmp(a: &User, b: &User) -> std::cmp::Ordering {
         a.age.cmp(&b.age)
     }
@@ -325,7 +327,7 @@ mod tests {
     }
 
     fn test_variant(
-        sort_fn: fn(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
+        sort_fn: SortFn,
     ) {
         let mut rng = rand::thread_rng();
 

@@ -105,7 +105,7 @@ struct BenchmarkResult {
 /// Measure timing using non-counting comparator (accurate timing)
 fn run_benchmark<F>(base_users: &[User], k: usize, fast: bool, mut sort_fn: F) -> BenchmarkResult
 where
-    F: FnMut(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
+    F: FnMut(&mut [User], &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
@@ -141,7 +141,7 @@ where
 /// Measure mean execution time (µs) — same methodology as run_benchmark.
 fn measure_mean_us<F>(base_users: &[User], k: usize, iters: usize, mut sort_fn: F) -> f64
 where
-    F: FnMut(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
+    F: FnMut(&mut [User], &mut [usize], fn(&User, &User) -> std::cmp::Ordering),
 {
     let mut rng = rand::thread_rng();
     let n = base_users.len();
@@ -199,7 +199,7 @@ fn find_crossover_ds_vs_esm(n: usize, iters: usize) -> usize {
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
         let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
-            delta_sort_by(arr.as_mut_slice(), idx, cmp);
+            delta_sort_by(arr, idx, cmp);
         });
         let b = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
             extract_sort_merge(arr, idx, cmp);
@@ -225,7 +225,7 @@ fn find_crossover_ds(n: usize, iters: usize) -> usize {
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
         let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
-            delta_sort_by(arr.as_mut_slice(), idx, cmp);
+            delta_sort_by(arr, idx, cmp);
         });
         let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| {
             arr.sort_by(cmp);
@@ -493,7 +493,7 @@ fn run_time_benchmark(export: bool, fast: bool) {
         });
 
         let ds = run_benchmark(&base_users, k, fast, |arr, indices, cmp| {
-            delta_sort_by(arr.as_mut_slice(), indices, cmp)
+            delta_sort_by(arr, indices, cmp)
         });
         results.deltasort.push(AlgorithmResult {
             k,
@@ -945,7 +945,7 @@ fn run_esm_comparison() {
         users.sort_by(user_comparator);
     }
 
-    type EsmFn = fn(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
+    type EsmFn = fn(&mut [User], &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
 
     let variants: &[(&str, EsmFn)] = &[
         ("Back+compact O(k)", esm_backwards_merge),
@@ -1026,7 +1026,7 @@ fn run_bis_comparison() {
         users.sort_by(user_comparator);
     }
 
-    type BisFn = fn(&mut Vec<User>, &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
+    type BisFn = fn(&mut [User], &mut [usize], fn(&User, &User) -> std::cmp::Ordering);
 
     let variants: &[(&str, BisFn)] = &[
         ("Current   O(1)", binary_insertion_sort),

@@ -6,7 +6,6 @@
 use deltasort::delta_sort_by;
 use rand::Rng;
 
-
 /// Delta volumes as percentages of array size
 const DELTA_VOLUMES: [usize; 7] = [0, 1, 5, 10, 20, 50, 80];
 

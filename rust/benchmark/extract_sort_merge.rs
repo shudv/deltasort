@@ -7,11 +7,7 @@ use crate::data::User;
 /// 3. Merge backwards from the right end: O(n)
 ///
 /// Takes unsorted dirty indices; sorts them internally.
-pub fn extract_sort_merge<F>(
-    arr: &mut Vec<User>,
-    dirty_indices: &mut [usize],
-    cmp: F,
-)
+pub fn extract_sort_merge<F>(arr: &mut Vec<User>, dirty_indices: &mut [usize], cmp: F)
 where
     F: Fn(&User, &User) -> std::cmp::Ordering,
 {

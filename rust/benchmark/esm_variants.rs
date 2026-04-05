@@ -130,12 +130,12 @@ pub fn esm_binary_search(
     // The gap between ci and wi always equals the number of remaining dirty elements.
     // arr[ci..wi] is "consumed" space — safe to overwrite.
     let mut ci = clean_len; // one past the last unplaced clean element
-    let mut wi = n;         // one past the last write position
+    let mut wi = n; // one past the last write position
 
     for dj in (0..k).rev() {
         // Binary search: find split point in clean[0..ci]
-        let split = arr[..ci]
-            .partition_point(|x| cmp(x, &dirty_buf[dj]) != std::cmp::Ordering::Greater);
+        let split =
+            arr[..ci].partition_point(|x| cmp(x, &dirty_buf[dj]) != std::cmp::Ordering::Greater);
 
         // Shift clean[split..ci] right into arr[wi-num_clean..wi].
         // Source and dest don't overlap (gap = remaining dirty elements between them).
@@ -287,8 +287,7 @@ fn inplace_merge(
         // upper_bound: first position in left half where element > arr[c2]
         let c1 = {
             let s: &[User] = &*arr;
-            s[first..middle]
-                .partition_point(|x| cmp(x, &s[c2]) != std::cmp::Ordering::Greater)
+            s[first..middle].partition_point(|x| cmp(x, &s[c2]) != std::cmp::Ordering::Greater)
         } + first;
         (c1, c2)
     };

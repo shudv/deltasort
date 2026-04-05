@@ -75,7 +75,11 @@ const ANALYSIS_ITERATIONS: usize = 100;
 
 /// Get number of iterations for a given k value
 fn timing_iterations_for_k(k: usize, fast: bool) -> usize {
-    let base = if fast { FAST_BASE_ITERATIONS } else { BASE_ITERATIONS };
+    let base = if fast {
+        FAST_BASE_ITERATIONS
+    } else {
+        BASE_ITERATIONS
+    };
     match k {
         1 => base * 100,
         2..=5 => base * 50,
@@ -159,60 +163,104 @@ where
 
 fn find_crossover_bis(n: usize, iters: usize) -> usize {
     let base_users = generate_sorted_users(n);
-    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+    for _ in 0..5 {
+        let mut u = base_users.clone();
+        u.sort_by(user_comparator);
+    }
 
     let mut lo = 1_usize;
     let mut hi = ((n as f64) * 0.1) as usize;
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
-        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { binary_insertion_sort(arr, idx, cmp); });
-        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
-        if a < b { lo = mid; } else { hi = mid - 1; }
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
+            binary_insertion_sort(arr, idx, cmp);
+        });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| {
+            arr.sort_by(cmp);
+        });
+        if a < b {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
     }
     lo
 }
 
 fn find_crossover_ds_vs_esm(n: usize, iters: usize) -> usize {
     let base_users = generate_sorted_users(n);
-    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+    for _ in 0..5 {
+        let mut u = base_users.clone();
+        u.sort_by(user_comparator);
+    }
 
     let mut lo = 1_usize;
     let mut hi = ((n as f64) * 0.1) as usize;
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
-        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { delta_sort_by(arr.as_mut_slice(), idx, cmp); });
-        let b = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { extract_sort_merge(arr, idx, cmp); });
-        if a < b { lo = mid; } else { hi = mid - 1; }
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
+            delta_sort_by(arr.as_mut_slice(), idx, cmp);
+        });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
+            extract_sort_merge(arr, idx, cmp);
+        });
+        if a < b {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
     }
     lo
 }
 
 fn find_crossover_ds(n: usize, iters: usize) -> usize {
     let base_users = generate_sorted_users(n);
-    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+    for _ in 0..5 {
+        let mut u = base_users.clone();
+        u.sort_by(user_comparator);
+    }
 
     let mut lo = 1_usize;
     let mut hi = ((n as f64) * 0.5) as usize;
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
-        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { delta_sort_by(arr.as_mut_slice(), idx, cmp); });
-        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
-        if a < b { lo = mid; } else { hi = mid - 1; }
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
+            delta_sort_by(arr.as_mut_slice(), idx, cmp);
+        });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| {
+            arr.sort_by(cmp);
+        });
+        if a < b {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
     }
     lo
 }
 
 fn find_crossover_esm(n: usize, iters: usize) -> usize {
     let base_users = generate_sorted_users(n);
-    for _ in 0..5 { let mut u = base_users.clone(); u.sort_by(user_comparator); }
+    for _ in 0..5 {
+        let mut u = base_users.clone();
+        u.sort_by(user_comparator);
+    }
 
     let mut lo = ((n as f64) * 0.6) as usize;
     let mut hi = ((n as f64) * 0.95) as usize;
     while lo < hi {
         let mid = lo + (hi - lo).div_ceil(2);
-        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| { extract_sort_merge(arr, idx, cmp); });
-        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| { arr.sort_by(cmp); });
-        if a < b { lo = mid; } else { hi = mid - 1; }
+        let a = measure_mean_us(&base_users, mid, iters, |arr, idx, cmp| {
+            extract_sort_merge(arr, idx, cmp);
+        });
+        let b = measure_mean_us(&base_users, mid, iters, |arr, _idx, cmp| {
+            arr.sort_by(cmp);
+        });
+        if a < b {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
     }
     lo
 }
@@ -381,7 +429,10 @@ fn format_with_ci(value: f64, ci: f64, total_width: usize) -> String {
 
 fn run_time_benchmark(export: bool, fast: bool) {
     println!();
-    println!("Execution Time Benchmark{}", if fast { " (fast mode)" } else { "" });
+    println!(
+        "Execution Time Benchmark{}",
+        if fast { " (fast mode)" } else { "" }
+    );
     println!("========================");
 
     let base_users = generate_sorted_users(N);
@@ -592,10 +643,17 @@ fn export_metadata_csv(results: &BenchmarkResults, path: &str) {
 
 fn run_crossover_benchmark(export: bool, fast: bool) {
     println!();
-    println!("Crossover Benchmark{}", if fast { " (fast mode)" } else { "" });
+    println!(
+        "Crossover Benchmark{}",
+        if fast { " (fast mode)" } else { "" }
+    );
     println!("===================");
 
-    let iters = if fast { FAST_CROSSOVER_ITERATIONS } else { CROSSOVER_ITERATIONS };
+    let iters = if fast {
+        FAST_CROSSOVER_ITERATIONS
+    } else {
+        CROSSOVER_ITERATIONS
+    };
 
     println!();
     println!("Running crossover analysis...");
@@ -668,7 +726,15 @@ fn export_crossover_all_csv(results: &[CrossoverResultsAll], path: &str) {
     for r in results {
         csv.push_str(&format!(
             "{},{},{:.3},{},{:.3},{},{:.3},{},{:.3}\n",
-            r.n, r.bis_k_c, r.bis_ratio, r.ds_esm_k_c, r.ds_esm_ratio, r.deltasort_k_c, r.deltasort_ratio, r.esm_k_c, r.esm_ratio
+            r.n,
+            r.bis_k_c,
+            r.bis_ratio,
+            r.ds_esm_k_c,
+            r.ds_esm_ratio,
+            r.deltasort_k_c,
+            r.deltasort_ratio,
+            r.esm_k_c,
+            r.esm_ratio
         ));
     }
     fs::write(path, csv).expect("Failed to write crossover-all.csv");
@@ -923,7 +989,15 @@ fn run_esm_comparison() {
             }
 
             let stats = calculate_stats(&times);
-            print!(" {:>10.1} ±{:>4.1}% │", stats.mean, if stats.mean > 0.0 { (stats.ci_95 / stats.mean) * 100.0 } else { 0.0 });
+            print!(
+                " {:>10.1} ±{:>4.1}% │",
+                stats.mean,
+                if stats.mean > 0.0 {
+                    (stats.ci_95 / stats.mean) * 100.0
+                } else {
+                    0.0
+                }
+            );
         }
         println!();
     }
@@ -995,7 +1069,15 @@ fn run_bis_comparison() {
             }
 
             let stats = calculate_stats(&times);
-            print!(" {:>10.1} ±{:>4.1}% │", stats.mean, if stats.mean > 0.0 { (stats.ci_95 / stats.mean) * 100.0 } else { 0.0 });
+            print!(
+                " {:>10.1} ±{:>4.1}% │",
+                stats.mean,
+                if stats.mean > 0.0 {
+                    (stats.ci_95 / stats.mean) * 100.0
+                } else {
+                    0.0
+                }
+            );
         }
         println!();
     }
@@ -1019,7 +1101,12 @@ fn main() {
     let fast = args.iter().any(|a| a == "--fast");
 
     // If no specific flags, run all (excluding variant comparisons which are opt-in)
-    let run_all = !run_time && !run_crossover && !run_comparator && !run_movement && !run_esm_compare && !run_bis_compare;
+    let run_all = !run_time
+        && !run_crossover
+        && !run_comparator
+        && !run_movement
+        && !run_esm_compare
+        && !run_bis_compare;
 
     println!();
     println!("DeltaSort Benchmark");

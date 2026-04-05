@@ -8,11 +8,7 @@ use crate::data::User;
 /// Not stable: equal-keyed elements may not preserve original index order.
 ///
 /// Precondition: dirty_indices contains distinct valid indices into arr.
-pub fn binary_insertion_sort<F>(
-    arr: &mut Vec<User>,
-    dirty_indices: &mut [usize],
-    cmp: F,
-)
+pub fn binary_insertion_sort<F>(arr: &mut Vec<User>, dirty_indices: &mut [usize], cmp: F)
 where
     F: Fn(&User, &User) -> std::cmp::Ordering,
 {
@@ -55,11 +51,7 @@ where
 /// before re-inserting, so insertions proceed in value order.
 /// This enables constraining the search area across iterations.
 /// O(1) value space (in-place sort of tail), Θ(kn) time.
-pub fn bis_presorted<F>(
-    arr: &mut Vec<User>,
-    dirty_indices: &mut [usize],
-    cmp: F,
-)
+pub fn bis_presorted<F>(arr: &mut Vec<User>, dirty_indices: &mut [usize], cmp: F)
 where
     F: Fn(&User, &User) -> std::cmp::Ordering,
 {
@@ -88,8 +80,8 @@ where
     // Phase 1.5: Sort dirty tail in-place using insertion sort — O(k²) time, O(1) space
     for i in 1..k {
         let cur = n - k + i;
-        let pos = arr[n - k..cur]
-            .partition_point(|x| cmp(x, &arr[cur]) == std::cmp::Ordering::Less);
+        let pos =
+            arr[n - k..cur].partition_point(|x| cmp(x, &arr[cur]) == std::cmp::Ordering::Less);
         arr[n - k + pos..=cur].rotate_right(1);
     }
 
@@ -99,8 +91,9 @@ where
     let mut lo = 0;
     for i in 0..k {
         let sorted_len = clean_len + i;
-        let pos = lo + arr[lo..sorted_len]
-            .partition_point(|x| cmp(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
+        let pos = lo
+            + arr[lo..sorted_len]
+                .partition_point(|x| cmp(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
         arr[pos..=sorted_len].rotate_right(1);
         lo = pos;
     }

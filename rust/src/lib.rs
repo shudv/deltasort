@@ -161,9 +161,7 @@ where
         let mut right_bound = arr.len() - 1;
         for rd in (start..k).rev() {
             let idx = dirty[rd];
-            if idx < arr.len() - 1
-                && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater
-            {
+            if idx < arr.len() - 1 && cmp(&arr[idx], &arr[idx + 1]) == std::cmp::Ordering::Greater {
                 right_bound = fix_right(arr, idx, right_bound, &cmp) - 1;
             }
         }

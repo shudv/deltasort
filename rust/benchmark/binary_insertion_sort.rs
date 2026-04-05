@@ -2,9 +2,8 @@ use crate::data::User;
 
 /// In-place binary insertion sort — O(1) auxiliary space, Θ(kn) time.
 ///
-/// 1. Sort dirty indices descending (modifies the input slice).
-/// 2. Remove each dirty element right-to-left via rotation, collecting at tail.
-/// 3. Binary-insert each collected element back.
+/// 1. Sort dirty indices ascending; single O(n) pass to compact clean left, dirty to tail.
+/// 2. Binary-insert each dirty element back into the sorted region.
 ///
 /// Not stable: equal-keyed elements may not preserve original index order.
 ///
@@ -24,22 +23,23 @@ where
     let n = arr.len();
     let k = dirty_indices.len();
 
-    // Sort dirty indices descending so removals don't shift unprocessed positions
-    dirty_indices.sort_unstable_by(|a, b| b.cmp(a));
-    debug_assert!(
-        dirty_indices.windows(2).all(|w| w[0] > w[1]),
-        "dirty indices must be distinct"
-    );
+    // Sort dirty indices ascending for single-pass extraction
+    dirty_indices.sort_unstable();
 
-    // Phase 1: Remove dirty elements right-to-left, collecting at tail — O(kn)
-    let mut clean_end = n;
-    for &idx in dirty_indices.iter() {
-        arr[idx..clean_end].rotate_left(1);
-        clean_end -= 1;
+    // Phase 1: Single O(n) pass — compact clean elements left, dirty elements to tail
+    let mut write = 0;
+    let mut di = 0;
+    for read in 0..n {
+        if di < k && dirty_indices[di] == read {
+            di += 1;
+        } else {
+            arr.swap(write, read);
+            write += 1;
+        }
     }
-    // arr[0..n-k] = sorted clean elements, arr[n-k..n] = dirty elements
+    // arr[0..n-k] = sorted clean elements, arr[n-k..n] = dirty elements (unordered)
 
-    // Phase 2: Binary insert each dirty element — O(kn)
+    // Phase 2: Binary insert each dirty element — O(kn) total moves
     let clean_len = n - k;
     for i in 0..k {
         let sorted_len = clean_len + i;
@@ -53,6 +53,7 @@ where
 ///
 /// Same as binary_insertion_sort but sorts the extracted dirty region
 /// before re-inserting, so insertions proceed in value order.
+/// This enables constraining the search area across iterations.
 /// O(1) value space (in-place sort of tail), Θ(kn) time.
 pub fn bis_presorted<F>(
     arr: &mut Vec<User>,
@@ -69,13 +70,19 @@ where
     let n = arr.len();
     let k = dirty_indices.len();
 
-    dirty_indices.sort_unstable_by(|a, b| b.cmp(a));
+    // Sort dirty indices ascending for single-pass extraction
+    dirty_indices.sort_unstable();
 
-    // Phase 1: Extract dirty to tail — O(kn)
-    let mut clean_end = n;
-    for &idx in dirty_indices.iter() {
-        arr[idx..clean_end].rotate_left(1);
-        clean_end -= 1;
+    // Phase 1: Single O(n) pass — compact clean left, dirty to tail
+    let mut write = 0;
+    let mut di = 0;
+    for read in 0..n {
+        if di < k && dirty_indices[di] == read {
+            di += 1;
+        } else {
+            arr.swap(write, read);
+            write += 1;
+        }
     }
 
     // Phase 1.5: Sort dirty tail in-place using insertion sort — O(k²) time, O(1) space
@@ -86,13 +93,16 @@ where
         arr[n - k + pos..=cur].rotate_right(1);
     }
 
-    // Phase 2: Binary insert each (now in sorted order) — O(kn)
+    // Phase 2: Binary insert each (now in sorted order) — O(kn) total moves
+    // Since dirty tail is sorted, each insertion pos >= previous pos.
     let clean_len = n - k;
+    let mut lo = 0;
     for i in 0..k {
         let sorted_len = clean_len + i;
-        let pos = arr[..sorted_len]
+        let pos = lo + arr[lo..sorted_len]
             .partition_point(|x| cmp(x, &arr[sorted_len]) == std::cmp::Ordering::Less);
         arr[pos..=sorted_len].rotate_right(1);
+        lo = pos;
     }
 }
 

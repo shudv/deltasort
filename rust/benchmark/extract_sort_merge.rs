@@ -46,7 +46,7 @@ where
     }
 
     // Step 2: Sort dirty values
-    dirty_buf.sort_by(&cmp);
+    dirty_buf.sort_unstable_by(&cmp);
 
     // Step 3: Backwards merge — pick larger of clean tail / dirty tail
     let mut ci = (n - k) as isize - 1;

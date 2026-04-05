@@ -110,9 +110,9 @@ where
     );
     let k = dirty.len();
 
-    // Phase 1: Extract dirty values, sort (stable), write back — O(k log k) time, O(k) space
+    // Phase 1: Extract dirty values, sort, write back — O(k log k) time, O(k) space
     let mut values: Vec<T> = dirty.iter().map(|&i| std::mem::take(&mut arr[i])).collect();
-    values.sort_by(&cmp);
+    values.sort_unstable_by(&cmp);
     for (&idx, val) in dirty.iter().zip(values) {
         arr[idx] = val;
     }

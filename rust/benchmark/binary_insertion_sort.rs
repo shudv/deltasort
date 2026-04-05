@@ -6,6 +6,8 @@ use crate::data::User;
 /// 2. Remove each dirty element right-to-left via rotation, collecting at tail.
 /// 3. Binary-insert each collected element back.
 ///
+/// Not stable: equal-keyed elements may not preserve original index order.
+///
 /// Precondition: dirty_indices contains distinct valid indices into arr.
 pub fn binary_insertion_sort<F>(
     arr: &mut Vec<User>,

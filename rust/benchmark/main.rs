@@ -861,7 +861,7 @@ fn export_movement_csv(results: &[AnalysisResult], path: &str) {
 // ============================================================================
 
 fn run_esm_comparison() {
-    use crate::esm_variants::{esm_backwards_merge, esm_original, esm_binary_search};
+    use crate::esm_variants::{esm_backwards_merge, esm_original, esm_binary_search, esm_inplace};
 
     println!();
     println!("ESM Variant Comparison");
@@ -885,6 +885,7 @@ fn run_esm_comparison() {
         ("Back+compact O(k)", esm_backwards_merge),
         ("Original     O(k)", esm_original),
         ("Binary Search O(k)", esm_binary_search),
+        ("In-place     O(k)", esm_inplace),
     ];
 
     println!();

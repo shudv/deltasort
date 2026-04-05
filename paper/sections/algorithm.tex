@@ -3,13 +3,13 @@
 \label{sec:algorithm}
 %==============================================================================
 
-We now present the DeltaSort algorithm. We first give an overview of the two-phase approach, then formally prove its correctness, define the notion of segments, and analyze the expected complexity under a random update model.
+DeltaSort is an insertion-based update-aware sorting algorithm. In following sections, we first give an overview of the algorithm, then formally prove its correctness, and finally analyze its expected complexity under a random update model.
 
 \subsection{Overview}
 
-DeltaSort is a stable\footnote{Strictly speaking, the stability also depends upon the sorting routine used internally to sort updated values. As long as the sorting routine used internally is stable, DeltaSort remains stable as a whole.} update-aware sorting algorithm. It operates in two phases (see~\algoref{alg:deltasort} for pseudocode and~\figref{fig:delta-sort-example} for an example). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
+DeltaSort operates in two phases (see~\algoref{alg:deltasort} for pseudocode and~\figref{fig:delta-sort-example} for an example). The first phase establishes a structure among updated values, and the second phase exploits this structure to efficiently sort the array.
 
-\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them in-place (e.g., via indirect heapsort using the index list as indirection, requiring $O(1)$ auxiliary space), and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, \emph{any remaining order violations must occur only between updated values and their unchanged neighbors}.
+\paragraph{Phase 1: Establish structure} DeltaSort begins by extracting the values at the updated indices, sorting them (e.g., via indirect heapsort using the index list as indirection), and writing them back into the array in increasing index order. This step enforces order among updated positions: if $i < j$ are both updated indices, then $A[i] \le A[j]$ (according to \texttt{cmp}) after Phase~1. The unchanged values are already in order by design. Hence, any remaining order violations must occur only between updated values and their unchanged neighbors.
 
 \paragraph{Phase 2: Fix violations}
 With the above structure in place, DeltaSort fixes the array one updated index at a time left to right. When an updated index is first encountered, we first determine its \emph{direction}:
@@ -20,8 +20,8 @@ With the above structure in place, DeltaSort fixes the array one updated index a
 \label{def:direction}
 During Phase~2, for an index $i \in U$, we define its \emph{direction} based on its local order with its left neighbor:
 \begin{enumerate}
-  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbor and hence \textbf{must} move left: $i > 0 \text{ and } A[i-1] > A[i]$
-  \item \textbf{RIGHT ($R$)}: Value is ordered correctly to its left neighbor or it is the first value and hence \textbf{may} move right: $i = 0 \text{ or } A[i-1] \le A[i]$
+  \item \textbf{LEFT ($L$)}: Value is ordered incorrectly to its left neighbor and hence \emph{must} move left: $i > 0 \text{ and } A[i-1] > A[i]$
+  \item \textbf{RIGHT ($R$)}: Value is ordered correctly to its left neighbor or it is the first value and hence \emph{may} move right: $i = 0 \text{ or } A[i-1] \le A[i]$
 \end{enumerate}
 \end{definition}
 
@@ -50,7 +50,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
-\paragraph{Initialization.} The invariant trivially holds at the start of the first iteration ($i = \texttt{updatedIndices}[0]$).
+\paragraph{Initialization.} The invariant trivially holds before the first iteration ($i = \texttt{updatedIndices}[0]$).
 
 \paragraph{Maintenance.} We will now show that if the invariant holds for $i$, it also holds for the next updated index. Let $\texttt{dir}$ denote the direction of $i$.
 

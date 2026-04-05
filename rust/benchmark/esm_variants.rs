@@ -172,6 +172,149 @@ pub fn esm_binary_search(
 }
 
 // =============================================================================
+// Variant 6: In-place merge ESM — O(k) auxiliary space
+// =============================================================================
+// 1. Stable partition: move dirty values to end, preserve clean order: O(n log k)
+// 2. Stable sort dirty region: O(k log k) — uses O(k) internally (driftsort)
+// 3. In-place merge (merge-without-buffer / SymMerge-style): O(n log k)
+//
+// Total: O(n log k) time, O(k) auxiliary space.
+// The in-place merge eliminates the O(k) value buffer used by standard ESM,
+// but stable sorting (step 2) internally allocates O(k) anyway, so total
+// auxiliary space remains O(k). This variant is strictly slower than standard
+// ESM due to the O(log k) factors in the partition and merge steps.
+// Included to empirically validate that in-place merging is not competitive.
+
+pub fn esm_inplace(
+    arr: &mut Vec<User>,
+    dirty_indices: &mut [usize],
+    cmp: fn(&User, &User) -> std::cmp::Ordering,
+) {
+    if dirty_indices.is_empty() {
+        return;
+    }
+
+    let n = arr.len();
+    let k = dirty_indices.len();
+
+    dirty_indices.sort_unstable();
+
+    // Step 1: Stable partition — move dirty values to arr[n-k..n], clean to arr[0..n-k]
+    // Uses recursive block rotation: O(n log k) time, O(log k) stack.
+    partition_dirty_to_end(arr.as_mut_slice(), dirty_indices, 0, k, 0, n);
+
+    // Step 2: Stable sort dirty region — O(k log k) time, O(k) space internally
+    // Stability is needed: equal-keyed elements must retain their relative order.
+    // Rust's stable sort (driftsort) allocates O(k) internally, so total auxiliary
+    // space is O(k) — same as standard ESM despite the in-place merge.
+    arr[n - k..n].sort_by(|a, b| cmp(a, b));
+
+    // Step 3: In-place merge — O(n log k) time, O(log n) stack
+    inplace_merge(arr.as_mut_slice(), 0, n - k, n, cmp);
+}
+
+/// Stably partition dirty values to the end of arr[range_start..range_end).
+///
+/// After this call:
+///   arr[range_start .. range_start + clean_count] = clean values in original order
+///   arr[range_start + clean_count .. range_end]   = dirty values (order may change)
+///
+/// dirty[d_lo..d_hi] must be the sorted dirty positions within [range_start..range_end).
+/// Uses divide-and-conquer: split dirty indices at midpoint, recurse on left and right
+/// non-overlapping sub-ranges, then rotate the middle section to merge.
+/// Time: O(n log k) — each recursion level does O(n) rotation work, depth O(log k).
+fn partition_dirty_to_end(
+    arr: &mut [User],
+    dirty: &[usize],
+    d_lo: usize,
+    d_hi: usize,
+    range_start: usize,
+    range_end: usize,
+) {
+    let dc = d_hi - d_lo;
+    if dc == 0 || dc == range_end - range_start {
+        return;
+    }
+    if dc == 1 {
+        let pos = dirty[d_lo];
+        if pos + 1 < range_end {
+            arr[pos..range_end].rotate_left(1);
+        }
+        return;
+    }
+
+    let d_mid = d_lo + dc / 2;
+    let split = dirty[d_mid];
+
+    // Recurse on non-overlapping sub-ranges
+    partition_dirty_to_end(arr, dirty, d_lo, d_mid, range_start, split);
+    partition_dirty_to_end(arr, dirty, d_mid, d_hi, split, range_end);
+
+    // After recursion: [left_clean | left_dirty | right_clean | right_dirty]
+    // Rotate middle [left_dirty | right_clean] → [right_clean | left_dirty]
+    let left_dirty = d_mid - d_lo;
+    let right_dirty = d_hi - d_mid;
+    let right_clean = (range_end - split) - right_dirty;
+
+    if left_dirty > 0 && right_clean > 0 {
+        let left_clean = (split - range_start) - left_dirty;
+        let mid_start = range_start + left_clean;
+        let mid_end = mid_start + left_dirty + right_clean;
+        arr[mid_start..mid_end].rotate_left(left_dirty);
+    }
+}
+
+/// In-place merge of arr[first..middle] and arr[middle..last].
+///
+/// Uses the merge-without-buffer algorithm (as in GCC libstdc++ / Go sort):
+/// pick median of larger half, binary search in smaller half, rotate, recurse.
+/// Time: O(n log(min(m, n))), Stack: O(log(m+n)).
+fn inplace_merge(
+    arr: &mut [User],
+    first: usize,
+    middle: usize,
+    last: usize,
+    cmp: fn(&User, &User) -> std::cmp::Ordering,
+) {
+    let len1 = middle - first;
+    let len2 = last - middle;
+    if len1 == 0 || len2 == 0 {
+        return;
+    }
+    if len1 + len2 == 2 {
+        if cmp(&arr[first], &arr[middle]) == std::cmp::Ordering::Greater {
+            arr.swap(first, middle);
+        }
+        return;
+    }
+
+    let (cut1, cut2) = if len1 >= len2 {
+        let c1 = first + len1 / 2;
+        // lower_bound: first position in right half where element >= arr[c1]
+        let c2 = {
+            let s: &[User] = &*arr;
+            s[middle..last].partition_point(|x| cmp(x, &s[c1]) == std::cmp::Ordering::Less)
+        } + middle;
+        (c1, c2)
+    } else {
+        let c2 = middle + len2 / 2;
+        // upper_bound: first position in left half where element > arr[c2]
+        let c1 = {
+            let s: &[User] = &*arr;
+            s[first..middle]
+                .partition_point(|x| cmp(x, &s[c2]) != std::cmp::Ordering::Greater)
+        } + first;
+        (c1, c2)
+    };
+
+    arr[cut1..cut2].rotate_left(middle - cut1);
+    let new_mid = cut1 + (cut2 - middle);
+
+    inplace_merge(arr, first, cut1, new_mid, cmp);
+    inplace_merge(arr, new_mid, cut2, last, cmp);
+}
+
+// =============================================================================
 // Tests
 // =============================================================================
 
@@ -260,5 +403,10 @@ mod tests {
     #[test]
     fn test_binary_search() {
         test_variant(esm_binary_search);
+    }
+
+    #[test]
+    fn test_inplace() {
+        test_variant(esm_inplace);
     }
 }

@@ -326,9 +326,7 @@ mod tests {
         arr.windows(2).all(|w| w[0].age <= w[1].age)
     }
 
-    fn test_variant(
-        sort_fn: SortFn,
-    ) {
+    fn test_variant(sort_fn: SortFn) {
         let mut rng = rand::thread_rng();
 
         // Empty

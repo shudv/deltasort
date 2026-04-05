@@ -27,18 +27,6 @@
     legend style={font=\scriptsize, legend columns=4, column sep=0.3em},
 ]
 
-% Crossover vertical lines
-\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:48,5) -- (axis cs:48,100000);
-\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:14,5) -- (axis cs:14,100000);
-\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:215,5) -- (axis cs:215,100000);
-\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:48422,5) -- (axis cs:48422,100000);
-
-% Crossover labels (inside axis, near bottom)
-\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:48,6) {.05\%};
-\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:14,6) {.01\%};
-\node[font=\tiny, green!60!black, anchor=south] at (axis cs:215,6) {.2\%};
-\node[font=\tiny, purple!70, anchor=south] at (axis cs:48422,6) {48\%};
-
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
     table[col sep=comma, x=k, y=native] {\rootdir/figures/js/execution-time.csv};
@@ -123,6 +111,6 @@
 
 \vspace{0.3em}
 \ref*{jslegend}
-\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover. Note the higher variance and lower crossover thresholds compared to Rust.}
+\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover.}
 \label{fig:js-performance}
 \end{figure}

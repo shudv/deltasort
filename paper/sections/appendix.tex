@@ -64,12 +64,7 @@ The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to
 
 \figref{fig:js-performance} shows execution time and crossover threshold data for JavaScript/V8. Several observations emerge:
 
-\begin{enumerate}
-  \item Both BIS and DeltaSort have rapidly declining crossover thresholds as $n$ increases. For $n \ge 10$K, BIS's crossover drops below $1\%$ and DeltaSort's drops below $5\%$. This indicates that \emph{V8's memory movement cost model does not favor DeltaSort}.
-  \item DeltaSort is consistently \emph{faster than BIS} across all measured $k$ values, typically by $\sim$2--3$\times$. However, the two algorithms exhibit asymptotically similar growth in V8, indicating that DeltaSort's $O(n\sqrt{k})$ movement advantage does not fully materialize in this runtime.
-\end{enumerate}
-
-The key takeaway is that \emph{DeltaSort's full complexity advantage relies on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8. Nonetheless, DeltaSort retains a practical speed advantage over BIS. Hence in V8, a valid hybrid strategy can be: use DeltaSort for $k \ll n$, ESM for $k \lesssim 50\%$, \texttt{Array.prototype.sort} for $k \gtrsim 50\%$.
+Both BIS and DeltaSort perform similarly and have rapidly declining crossover thresholds as $n$ increases. This indicates that \emph{V8's memory movement cost model does not provide any asymptotic advantage for DeltaSort}. Hence in V8, a valid hybrid strategy can be: use BIS/DeltaSort for $k \ll n$, ESM for $k \lesssim 50\%$, \texttt{Array.prototype.sort} for $k \gtrsim 50\%$.
 
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}

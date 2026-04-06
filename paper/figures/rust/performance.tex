@@ -30,15 +30,15 @@
 
 % Crossover vertical lines (drop lines to x-axis)
 \draw[orange!60, densely dashed, line width=0.8pt] (axis cs:22,5) -- (axis cs:22,100000);
-\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:1017,5) -- (axis cs:1017,100000);
-\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:46954,5) -- (axis cs:46954,100000);
-\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:83002,5) -- (axis cs:83002,100000);
+\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:1007,5) -- (axis cs:1007,100000);
+\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:44599,5) -- (axis cs:44599,100000);
+\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:82270,5) -- (axis cs:82270,100000);
 
 % Crossover labels (horizontal, same height, outside axis for rightmost two)
 \node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:22,6) {.02\%};
-\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:1017,6) {1\%};
-\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:46954,6) {47\%};
-\node[font=\tiny, purple!70, anchor=south west] at (axis cs:83002,6) {83\%};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:1007,6) {1\%};
+\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:44599,6) {45\%};
+\node[font=\tiny, purple!70, anchor=south west] at (axis cs:82270,6) {82\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
@@ -126,6 +126,6 @@
 
 \vspace{0.3em}
 \ref*{rustlegend}
-\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to~(a). Refer~\appref{sec:appendix-raw-data} for raw data.}
+\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to~(a). See~\appref{sec:appendix-raw-data} for raw data.}
 \label{fig:rust-performance}
 \end{figure}

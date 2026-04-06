@@ -85,7 +85,7 @@ fn timing_iterations_for_k(k: usize, fast: bool) -> usize {
         2..=5 => base * 50,
         6..=10 => base * 10,
         11..=50 => base * 5,
-        51..=1000 => base * 2,
+        51..=1000 => base * 3,
         _ => base,
     }
 }

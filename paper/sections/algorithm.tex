@@ -3,7 +3,7 @@
 \label{sec:algorithm}
 %==============================================================================
 
-DeltaSort is an insertion-based update-aware sorting algorithm. In the following sections, we first give an overview of the algorithm, then formally prove its correctness, and finally analyze its expected complexity under a random update model.
+DeltaSort is an insertion-based update-aware sorting algorithm. Below, we first give an overview of the algorithm, then formally prove its correctness, and finally analyze its expected complexity under a random update model.
 
 \subsection{Overview}
 
@@ -42,11 +42,11 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
   \item \texttt{pendingRight}: Stack of pending $R$ indices, empty at the start.
 \end{itemize}
 
-\paragraph{Loop invariant.} At the start of each iteration of the loop at line~10, the following conditions hold for index $p$:
+\paragraph{Loop invariant.} At the start of each iteration of the loop at line~10, the following conditions hold for the current index $i$:
 \begin{enumerate}
   \item The subarray $A[0..\ell-1]$ is sorted.
-  \item There are no $L$ violations in the range $[\ell, {updatedIndices}[p]-1]$.
-  \item The stack contains pending $R$ indices within the range $[\ell, \texttt{updatedIndices}[p]-1]$.
+  \item There are no $L$ violations in the range $[\ell, i-1]$.
+  \item The stack contains pending $R$ indices within the range $[\ell, i-1]$.
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
@@ -64,7 +64,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
 \textbf{Case 2: $\texttt{dir} = R$}
 \begin{enumerate}
   \item If \texttt{pendingRight} is empty, this is the first $R$ in a new segment, so we set $\ell \gets i$. This preserves conditions (1) and (2) of the loop invariant.
-  \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves condition (3) and (4) of the loop invariant.
+  \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves conditions (3) and (4) of the loop invariant.
 \end{enumerate}
 
 \paragraph{Termination.} The loop processes all values of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as $L$. Substituting $i = n$ in the invariant conditions, we have:

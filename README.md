@@ -13,7 +13,7 @@ An incremental soting algorithm for arrays. When you know _which_ values changed
 
 ```bash
 cd paper
-make          # Builds both article (paper/main.pdf) and SEA/LIPIcs version (paper/sea/main.pdf)
+make          # Builds both article (paper/article.pdf) and SEA/LIPIcs version (paper/sea.pdf)
 make clean    # Remove build artifacts
 ```
 

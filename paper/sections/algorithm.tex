@@ -33,7 +33,7 @@ A few important things to note about this definition:
 
 \input{\figdir/delta-sort-example}
 
-Phase~2 (lines~9--29) processes updated indices from left to right while maintaining a growing sorted prefix. We describe Phase~2 by first establishing a loop invariant and then prove its correctness by showing that the loop invariant holds during initialization and maintenance, and that the array is fully sorted when it terminates.
+Phase~2 (lines~9--29) processes updated indices from left to right while maintaining a growing sorted prefix. We describe Phase~2 by first establishing a loop invariant and then proving its correctness by showing that the loop invariant holds at initialization, is preserved during maintenance, and that the array is fully sorted at termination.
 
 \paragraph{State.} We utilize the following state information during Phase~2:
 \begin{itemize}
@@ -58,7 +58,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
 \begin{enumerate}
   \item We first set $r \gets i - 1$. This marks the right boundary beyond which the $R$ values in \texttt{pendingRight} cannot move, because after Phase~1, updated values are ordered and hence cannot cross each other in either direction.
   \item We then flush all pending $R$ indices $j$ in LIFO order. Each $R$ index $j$ is fixed by binary insertion within the range $[j+1, r]$, where $r$ is advanced leftward after each fix to ensure that we search within a minimal range for maximum efficiency. By construction, the range $[j+1, r]$ contains no violations, so binary search finds the correct insertion point. This step preserves conditions (3) and (4) of the loop invariant.
-  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above, and by invariant condition (3), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$ (not needed for correctness, but reduces the search range). This preserves conditions (1) and (2) of the loop invariant.
+  \item After all $R$s are fixed, we fix the current $L$ index $i$ by binary insertion within $[\ell, i-1]$. This range also contains no violations because all $R$ violations are already fixed in the step above, and by invariant condition (2), this range contained no $L$ violations to begin with. Finally, we set $\ell \gets$ (insertion point of $i$) $+ 1$ (not needed for correctness, but reduces the search range). This preserves conditions (1) and (2) of the loop invariant.
 \end{enumerate}
 
 \textbf{Case 2: $\texttt{dir} = R$}
@@ -71,7 +71,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
 \begin{itemize}
   \item Condition (1) implies that $A[0..\ell-1]$ is sorted and contains its final values.
   \item Condition (2) implies there are no $L$ violations in the range $[\ell, n-1]$.
-  \item Condition (3) and (4) together imply that there are no $R$ violations in the range $[\ell, n-1]$.
+  \item Conditions (3) and (4) together imply that there are no $R$ violations in the range $[\ell, n-1]$.
   \item Hence we can conclude that the array $A[0..n-1]$ is fully sorted.
 \end{itemize}
 

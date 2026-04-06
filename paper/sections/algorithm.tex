@@ -75,7 +75,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
   \item Hence we can conclude that the array $A[0..n-1]$ is fully sorted.
 \end{itemize}
 
-Figure~\ref{fig:delta-sort-example} illustrates this sequence of operations for a sample array.
+\figref{fig:delta-sort-example} illustrates this sequence of operations for a sample array.
 
 It is important to note that even though we are doing repeated binary insertions for fixing violations, the overall data movement is reduced as compared to naive independent binary insertions because the binary search range is smaller. To formalize this we need to understand the structure that emerges from Phase~1. If we picture the updated indices arranged in a sequence of $L$ and $R$ labels, based on their direction when first encountered during Phase~2, we can partition them into \emph{segments}.
 
@@ -95,7 +95,6 @@ A \emph{segment} is a subarray of $A$ spanning indices $[i, j]$, where $0 \le i 
 More intuitively, a segment is a maximal contiguous region of the array in which all $R$-direction updates precede all $L$-direction updates. The first two conditions define valid segment boundaries, the third enforces the $R^\ast L^\ast$ structure within a segment, and the final condition ensures that segments are maximal and non-overlapping. \figref{fig:segment-structure} illustrates this structure.
 
 \paragraph{Key Insight: Segments can be fixed locally and independently.}
-\label{sec:insight}
 
 Unlike naive BIS, where each insertion can be at any point in the array, in DeltaSort, \emph{an updated value in a segment cannot cross its segment boundary}. We formally prove this property next.
 
@@ -109,7 +108,7 @@ Let $S$ be a segment with $R$-indices $r_0,\ldots,r_{r-1}$ followed by $L$-indic
 \end{proof}
 
 \begin{remark}
-  Note that Lemma~\ref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens opportunities for \textbf{parallelization}, where segments could be fixed concurrently. We leave this investigation to future work.
+  Note that \lemref{lem:confinement} also implies \emph{segment independence}. Because no value exits its segment, segment lengths do not change. As a result, movement in a segment does not interfere with movement in another segment, which implies segments can be fixed independently in any order. This opens opportunities for \textbf{parallelization}, where segments could be fixed concurrently. We leave this investigation to future work.
 \end{remark}
 
 \subsection{Complexity Analysis}

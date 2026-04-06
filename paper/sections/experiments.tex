@@ -7,7 +7,7 @@ All benchmarks are run on Rust implementations of each algorithm on randomly gen
 
 We evaluated the following algorithms:
 \begin{itemize}
-  \item \textbf{FullSort}: Rust's \texttt{slice::sort\_by} implementation based on DriftSort~\cite{driftsort}, representing full re-sorting of the array. This serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which FullSort is preferable.
+  \item \textbf{FullSort}: Rust's \texttt{slice::sort\_by} implementation based on DriftSort~\cite{driftsort}, representing full re-sorting of the array. This serves as a critical baseline to identify the crossover threshold $k_c$ for each update-aware algorithm beyond which FullSort is preferable. We deliberately choose the adaptive stable sort over \texttt{sort\_unstable\_by} because DriftSort detects existing sorted runs, making it a \emph{stronger} baseline for nearly-sorted inputs.
 
   \item \textbf{BIS} and \textbf{ESM}: Standard baseline algorithms as defined in \secref{sec:introduction}. ESM uses Rust's unstable sort for sorting the updated values.
 

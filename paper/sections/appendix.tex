@@ -1,73 +1,16 @@
 \appendix
 
-\section{DeltaSort Worst Case Movement}
-\label{sec:appendix-worst-case}
-DeltaSort can exhibit worst-case movement of $\Theta(nk)$ under clustered monotonic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $\Theta(nk)$.
-
-\input{\figdir/worst-case}
-
-\section{Full proof for expected number of segments}
-\label{sec:appendix-movement-proof}
-\begin{lemma}
-\label{lem:expected-segments}
-  In Phase~1 of DeltaSort, the expected number of segments created is $O(\sqrt{k})$.
-\end{lemma}
-\begin{proof}
-After Phase~1, we have two sorted sequences of $k$ values each:
-\begin{itemize}
-  \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
-  \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
-\end{itemize}
-Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
-
-Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ values spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyze both sequences as order statistics of uniform samples from the same range.
-
-Define the \emph{gap} at rank $j$ as:
-\[
-g_j = t_j - i_j
-\]
-This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
-\begin{itemize}
-  \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
-  \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
-\end{itemize}
-
-The gap evolves as we move through the ranks. Let $\Delta i_j = i_{j+1} - i_j$ and $\Delta t_j = t_{j+1} - t_j$ denote the spacings between consecutive order statistics. The change in gap is:
-\[
-g_{j+1} - g_j = \Delta t_j - \Delta i_j
-\]
-Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
-
-By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings:
-\[
-\mathbb{E}[\text{zero crossings}] = \Theta(\sqrt{k})
-\]
-Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is:
-\[
-\mathbb{E}[\text{segments}] = 1 + \mathbb{E}[L \to R \text{ transitions}] = O(\sqrt{k}) \qedhere
-\]
-\end{proof}
-
-\section{Empirical Validation of Complexity Bounds}
-\label{sec:appendix-complexity}
-
-\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
-
-The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately~$0.4$ across four orders of magnitude of~$n$, and comparisons normalized by $k\log n$ converge to approximately~$2$. The overlap of curves for different~$n$ validates that the asymptotic analysis correctly captures the algorithm's behavior.
-
-\input{\figdir/complexity-analysis}
-
 \section{JavaScript/V8 Benchmarks}
 \label{sec:appendix-js-deltasort}
 
 \input{\figdir/js/performance}
 
-Both BIS and DeltaSort perform similarly and have rapidly declining crossover thresholds as $n$ increases. This indicates that \emph{V8's memory movement cost model does not provide any asymptotic advantage for DeltaSort}. Hence in V8, a valid hybrid strategy can be: use BIS/DeltaSort for $k \ll n$, ESM for $k \lesssim 50\%$, \texttt{Array.prototype.sort} for $k \gtrsim 50\%$.
+Both BIS and DeltaSort perform similarly and have rapidly declining crossover thresholds as $n$ increases. This indicates that \emph{V8's memory movement cost model does not provide any asymptotic advantage for DeltaSort}. Hence, in V8, a valid hybrid strategy can be: use BIS/DeltaSort for $k \ll n$, ESM for $k \lesssim 50\%$, \texttt{Array.prototype.sort} for $k \gtrsim 50\%$.
 
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}
 
-Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$.
+\tblref{tab:execution-time-Rust} presents the raw execution time measurements for Rust benchmarks. Each row shows the mean execution time and 95\% confidence interval as a percentage for a given value of $k$.
 
 \def\csvdir{rust}
 \def\csvpath{rust/execution-time.csv}

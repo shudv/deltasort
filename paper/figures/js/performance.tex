@@ -94,16 +94,16 @@
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/js/crossover-all.csv};
 
 % Markers and labels at n=100K
-\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.048)};
-\node[font=\tiny, orange!80!black, anchor=north west] at (axis cs:110000, 0.048) {.05\%};
+\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.07)};
+\node[font=\tiny, orange!80!black, anchor=north west] at (axis cs:95000, 0.048) {.07\%};
 
-\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 0.014)};
+\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 0.016)};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 0.215)};
-\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 0.215) {.2\%};
+\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 0.211)};
+\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 0.211) {.2\%};
 
-\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 48.422)};
-\node[font=\tiny, purple!70, anchor=south west] at (axis cs:110000, 48.422) {48\%};
+\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 47.003)};
+\node[font=\tiny, purple!70, anchor=south west] at (axis cs:110000, 47.003) {47\%};
 
 \end{axis}
 \end{tikzpicture}
@@ -111,6 +111,6 @@
 
 \vspace{0.3em}
 \ref*{jslegend}
-\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points where each algorithm loses to its competitor (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to (a). The dashed cyan line shows the DeltaSort--ESM crossover.}
+\caption{JavaScript/V8 benchmark results. (a)~Execution time for $n=100$K on log--log scale. (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to~(a). Dashed lines in~(b) show the crossover trends for each algorithm (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan).}
 \label{fig:js-performance}
 \end{figure}

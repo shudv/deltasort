@@ -29,16 +29,16 @@
 ]
 
 % Crossover vertical lines (drop lines to x-axis)
-\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:22,5) -- (axis cs:22,100000);
-\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:1017,5) -- (axis cs:1017,100000);
-\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:46954,5) -- (axis cs:46954,100000);
-\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:83002,5) -- (axis cs:83002,100000);
+\draw[orange!60, densely dashed, line width=0.8pt] (axis cs:56,5) -- (axis cs:56,100000);
+\draw[cyan!60!black, densely dashed, line width=0.8pt] (axis cs:1188,5) -- (axis cs:1188,100000);
+\draw[green!50!black, densely dashed, line width=0.8pt] (axis cs:43637,5) -- (axis cs:43637,100000);
+\draw[purple!50, densely dashed, line width=0.8pt] (axis cs:87700,5) -- (axis cs:87700,100000);
 
 % Crossover labels (horizontal, same height, outside axis for rightmost two)
-\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:22,6) {.02\%};
-\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:1017,6) {1\%};
-\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:46954,6) {47\%};
-\node[font=\tiny, purple!70, anchor=south west] at (axis cs:83002,6) {83\%};
+\node[font=\tiny, orange!80!black, anchor=south east] at (axis cs:56,6) {.06\%};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:1188,6) {1.2\%};
+\node[font=\tiny, green!60!black, anchor=south east] at (axis cs:43637,6) {44\%};
+\node[font=\tiny, purple!70, anchor=south west] at (axis cs:87700,6) {88\%};
 
 % FullSort
 \addplot[color=gray!70, mark=square*, thick, mark size=1.5pt] 
@@ -108,17 +108,17 @@
     table[col sep=comma, x=n, y=deltasort] {\rootdir/figures/rust/crossover-all.csv};
 
 % Markers and labels at n=100K
-\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.022)};
-\node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:110000, 0.022) {.02\%};
+\addplot[only marks, mark=triangle*, mark size=2.5pt, color=orange!80] coordinates {(100000, 0.056)};
+\node[font=\tiny, orange!80!black, anchor=south west] at (axis cs:110000, 0.056) {.06\%};
 
-\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 1.007)};
-\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:110000, 1.007) {1.0\%};
+\addplot[only marks, mark=star, mark size=2.5pt, color=cyan!70!black] coordinates {(100000, 1.188)};
+\node[font=\tiny, cyan!70!black, anchor=south west] at (axis cs:110000, 1.188) {1.2\%};
 
-\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 44.599)};
-\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 8) {45\%};
+\addplot[only marks, mark=*, mark size=2.5pt, color=green!70!black] coordinates {(100000, 43.637)};
+\node[font=\tiny, green!60!black, anchor=south west] at (axis cs:110000, 8) {44\%};
 
-\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 82.270)};
-\node[font=\tiny, purple!70, anchor=south] at (axis cs:100000, 120) {82\%};
+\addplot[only marks, mark=diamond*, mark size=2.5pt, color=purple!70] coordinates {(100000, 87.700)};
+\node[font=\tiny, purple!70, anchor=south] at (axis cs:100000, 120) {88\%};
 
 \end{axis}
 \end{tikzpicture}
@@ -126,6 +126,6 @@
 
 \vspace{0.3em}
 \ref*{rustlegend}
-\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log-log scale. Dashed lines mark crossover points (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to~(a). Refer~\appref{sec:appendix-raw-data} for raw data.}
+\caption{Rust benchmark results. (a)~Execution time for $n=100$K on log--log scale. Dashed lines mark crossover points (BIS, DeltaSort, ESM vs.\ FullSort; DeltaSort vs.\ ESM in cyan). (b)~Crossover threshold ($k_c/n$) across scales; the shaded line at $n=100$K corresponds to~(a). See~\appref{sec:appendix-raw-data} for raw data.}
 \label{fig:rust-performance}
 \end{figure}

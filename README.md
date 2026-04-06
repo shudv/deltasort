@@ -9,6 +9,16 @@ An incremental soting algorithm for arrays. When you know _which_ values changed
 
 ## Quick Start
 
+## Building the paper
+
+```bash
+cd paper
+make          # Builds both article (paper/main.pdf) and SEA/LIPIcs version (paper/sea/main.pdf)
+make clean    # Remove build artifacts
+```
+
+> Requires a TeX Live installation with `pdflatex` and `bibtex`.
+
 ### Rust
 
 ```bash
@@ -30,20 +40,20 @@ pnpm benchmark:export
 
 ## Benchmark (n = 100K, Rust)
 
-| k             | FullSort (µs) | BIS (µs)        | **DeltaSort** (µs)    | ESM (µs)           |
-| ------------- | ------------- | --------------- | --------------------- | ------------------ |
-| 1 (0.001%)    | 1215.0 ±0.3%  | 113.4 ±1.5% 🪶  | **15.7 ±4.3%** ⚡     | 797.8 ±0.4%        |
-| 10 (0.01%)    | 2012.6 ±0.5%  | 1127.8 ±1.1% 🪶 | **98.2 ±3.0%** ⚡     | 1006.8 ±0.6%       |
-| 100 (0.1%)    | 4559.8 ±0.5%  | 🐢              | **395.5 ±4.4%** ⚡🪶  | 1195.7 ±0.5%       |
-| 1000 (1%)     | 12065.1 ±0.4% | 🐢              | **1375.7 ±5.9%** ⚡🪶 | 1426.2 ±1.0%       |
-| 10000 (10%)   | 12577.8 ±0.2% | 🐢              | **6053.9 ±2.7%** 🪶   | 3023.4 ±0.9% ⚡    |
-| 20000 (20%)   | 13507.6 ±0.3% | 🐢              | **10024.5 ±2.0%** 🪶  | 4801.4 ±0.4% ⚡    |
-| 50000 (50%)   | 15421.2 ±0.6% | 🐢              | 🐢                    | 10516.2 ±0.2% ⚡🪶 |
-| 100000 (100%) | 16711.4 ±0.2% | 🐢              | 🐢                    | 🐢                 |
+| k             | FullSort (µs) | BIS (µs)       | **DeltaSort** (µs) | ESM (µs)        |
+| ------------- | ------------- | -------------- | ------------------ | --------------- |
+| 1 (0.001%)    | 931.2 ±0.4%   | 242.7 ±0.3% 🪶 | **12.2 ±3.3%** ⚡  | 345.3 ±0.6%     |
+| 10 (0.01%)    | 1574.1 ±0.6%  | 684.2 ±0.8% 🪶 | **74.8 ±3.2%** ⚡  | 566.4 ±0.4%     |
+| 100 (0.1%)    | 3527.8 ±0.3%  | 🐢             | **277.3 ±3.8%** ⚡ | 702.2 ±0.1%     |
+| 1000 (1%)     | 9181.7 ±0.1%  | 🐢             | **818.9 ±3.8%** ⚡ | 903.1 ±0.2%     |
+| 10000 (10%)   | 9401.7 ±0.2%  | 🐢             | 3617.7 ±3.5%       | 2126.8 ±0.2% ⚡ |
+| 20000 (20%)   | 10187.1 ±0.3% | 🐢             | 5939.7 ±2.5%       | 3498.4 ±0.3% ⚡ |
+| 50000 (50%)   | 11619.3 ±0.4% | 🐢             | 🐢                 | 7777.3 ±1.0% ⚡ |
+| 100000 (100%) | 12567.5 ±0.5% | 🐢             | 🐢                 | 🐢              |
 
-⚡ = Fastest &nbsp;&nbsp; 🪶 = Uses least memory &nbsp;&nbsp; 🐢 = too slow, FullSort is faster
+⚡ = Fastest &nbsp;&nbsp; 🪶 = Least memory (O(1) auxiliary) &nbsp;&nbsp; 🐢 = too slow, FullSort is faster
 
-_Rust on Apple M-series. Results are environment-specific — JavaScript on V8 has a [much lower crossover threshold](paper/figures/js)._
+_Rust on Apple M3 Pro. Results are environment-specific — JavaScript on V8 has a [much lower crossover threshold](paper/figures/js)._
 
 ## How It Works
 

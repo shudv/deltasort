@@ -9,4 +9,5 @@ out/**
 *.fdb_latexmk
 *.fls
 *.synctex*
-main.pdf
+article.pdf
+sea.pdf

@@ -14,8 +14,8 @@
 \usetikzlibrary{positioning,arrows.meta,patterns,calc,decorations.pathreplacing,pgfplots.fillbetween}
 
 % Path to root directory
-\newcommand{\rootdir}{..}
-\newcommand{\figdir}{../figures}
+\newcommand{\rootdir}{.}
+\newcommand{\figdir}{figures}
 
 % Cross-reference macros (SEA uses cleveref, override for compatibility with shared sections)
 \newcommand{\figref}[1]{\cref{#1}}
@@ -44,7 +44,8 @@
 \keywords{Incremental sorting, Sorting algorithms, Array maintenance}
 
 %% Supplementary material
-\supplementdetails{Software}{https://github.com/shudv/deltasort}
+\supplement{}
+\supplementdetails[subcategory={Source Code}, cite={}, swhid={}]{Software}{https://github.com/shudv/deltasort}
 
 \nolinenumbers
 
@@ -64,16 +65,16 @@
 
 \maketitle
 \begin{abstract}
-\input{../sections/abstract}
+\input{sections/abstract}
 \end{abstract}
 
-\input{../sections/introduction}
-\input{../sections/related}
-\input{../sections/model}
-\input{../sections/algorithm}
-\input{../sections/experiments}
-\input{../sections/conclusion}
-\input{../sections/future}
-\bibliography{../refs}
-\input{../sections/appendix}
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/model}
+\input{sections/algorithm}
+\input{sections/experiments}
+\input{sections/conclusion}
+\input{sections/future}
+\bibliography{refs}
+\input{sections/appendix}
 \end{document}

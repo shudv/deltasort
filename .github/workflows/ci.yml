@@ -12,8 +12,33 @@ permissions:
     pull-requests: write
 
 jobs:
+    changes:
+        name: Detect changes
+        runs-on: ubuntu-latest
+        outputs:
+            js: ${{ steps.filter.outputs.js }}
+            rust: ${{ steps.filter.outputs.rust }}
+            paper: ${{ steps.filter.outputs.paper }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Path filter
+              uses: dorny/paths-filter@v3
+              id: filter
+              with:
+                  filters: |
+                      js:
+                        - 'js/**'
+                      rust:
+                        - 'rust/**'
+                      paper:
+                        - 'paper/**'
+
     js:
         name: JavaScript
+        needs: changes
+        if: needs.changes.outputs.js == 'true'
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -55,6 +80,8 @@ jobs:
 
     rust:
         name: Rust
+        needs: changes
+        if: needs.changes.outputs.rust == 'true'
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -75,3 +102,25 @@ jobs:
 
             - name: Run tests
               run: cargo test
+
+    paper:
+        name: Paper (LaTeX)
+        needs: changes
+        if: needs.changes.outputs.paper == 'true'
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Build article
+              uses: xu-cheng/latex-action@v3
+              with:
+                  working_directory: paper
+                  root_file: article.tex
+
+            - name: Build SEA (LIPIcs)
+              uses: xu-cheng/latex-action@v3
+              with:
+                  working_directory: paper
+                  root_file: sea.tex

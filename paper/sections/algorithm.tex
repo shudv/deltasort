@@ -141,7 +141,7 @@ Define the \emph{gap} at rank $j$ as:
 \[
 g_j = t_j - i_j
 \]
-This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
+This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By~\defref{def:direction}:
 \begin{itemize}
   \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
   \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
@@ -153,9 +153,9 @@ g_{j+1} - g_j = \Delta t_j - \Delta i_j
 \]
 Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
 
-By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings $\Theta(\sqrt{k})$. Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is $O(\sqrt{k})$.
+By~\defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings $\Theta(\sqrt{k})$. Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is $O(\sqrt{k})$.
 
-With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
+With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By~\lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
 \mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}) \qedhere
 \]
@@ -173,7 +173,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. As shown in the proof of \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. As shown in the proof of~\lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
 O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log (n \sqrt{k})) = O(k \log n) \qedhere
 \]
@@ -185,7 +185,7 @@ DeltaSort runs in $O(n\sqrt{k})$ expected time.
 \end{theorem}
 
 \begin{proof}
-By \lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By \lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also contributes $O(k \log k)$ movement for sorting $k$ values. Since $k \log n = o(n\sqrt{k})$ for $k = o(n)$, the total is $O(n\sqrt{k})$.
+By~\lemref{lem:movement-bound}, the expected total data movement is $O(n\sqrt{k})$. By~\lemref{lem:comparison-count}, the total number of comparisons is $O(k \log n)$. Phase~1 also contributes $O(k \log k)$ movement for sorting $k$ values. Since $k \log n = o(n\sqrt{k})$ for $k = o(n)$, the total is $O(n\sqrt{k})$.
 \end{proof}
 
 \begin{theorem}[Space Complexity]

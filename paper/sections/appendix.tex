@@ -2,7 +2,7 @@
 
 \section{DeltaSort Worst Case Movement}
 \label{sec:appendix-worst-case}
-DeltaSort can exhibit worst-case movement of $O(nk)$ under clustered monotonic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $O(nk)$.
+DeltaSort can exhibit worst-case movement of $\Theta(nk)$ under clustered monotonic updates as shown in \figref{fig:worst-case}. In this case, all left-moving values must be shifted to the start of the array, and all right-moving values to the end of the array, resulting in maximal data movement of $\Theta(nk)$.
 
 \input{\figdir/worst-case}
 
@@ -53,7 +53,7 @@ Since $L \to R$ transitions account for roughly half of all zero crossings, the 
 
 \figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log n$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
 
-The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately $0.4$ across four orders of magnitude of $n$, and comparisons normalized by $k\log n$ converge to approximately $2$. The overlap of lines for different $n$ values validates that the asymptotic analysis correctly captures the algorithm's behavior.
+The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately~$0.4$ across four orders of magnitude of~$n$, and comparisons normalized by $k\log n$ converge to approximately~$2$. The overlap of curves for different~$n$ validates that the asymptotic analysis correctly captures the algorithm's behavior.
 
 \input{\figdir/complexity-analysis}
 
@@ -62,14 +62,7 @@ The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to
 
 \input{\figdir/js/performance}
 
-\figref{fig:js-performance} shows execution time and crossover threshold data for JavaScript/V8. Several observations emerge:
-
-\begin{enumerate}
-  \item DeltaSort and BIS show almost identical performance profiles. This indicates that \emph{the underlying memory movement cost in V8 is not proportional to the number of moved values}. As a result, DeltaSort's core optimization---reducing physical data movement through segmentation---does not translate into wall-clock improvements. This could be because V8 has different kinds of array representations~\cite{v8elementskinds} that do not guarantee contiguous layouts. More study is needed to understand the exact root cause.
-  \item ESM is $\sim 40\%$ faster than FullSort (\texttt{Array.prototype.sort}) for $k$ up to $\approx 50\%$. This indicates that \emph{even in managed runtimes, we can leverage information of updated indices to unlock better performance}.
-\end{enumerate}
-
-The key takeaway is that \emph{DeltaSort's performance benefits rely on a predictable movement cost model}, which holds in low-level, unmanaged environments (e.g., Rust) but not in V8. Hence in V8, a valid hybrid strategy can be: use BIS for $k \ll n$, ESM for $k \lesssim 40\%$, \texttt{Array.prototype.sort} for $k \gtrsim 40\%$.
+Both BIS and DeltaSort perform similarly and have rapidly declining crossover thresholds as $n$ increases. This indicates that \emph{V8's memory movement cost model does not provide any asymptotic advantage for DeltaSort}. Hence in V8, a valid hybrid strategy can be: use BIS/DeltaSort for $k \ll n$, ESM for $k \lesssim 50\%$, \texttt{Array.prototype.sort} for $k \gtrsim 50\%$.
 
 \section{Raw Benchmark Data}
 \label{sec:appendix-raw-data}
@@ -80,3 +73,4 @@ Table~\ref{tab:execution-time-Rust} presents the raw execution time measurements
 \def\csvpath{rust/execution-time.csv}
 \def\csvlabel{Rust}
 \input{\figdir/execution-time-table}
+

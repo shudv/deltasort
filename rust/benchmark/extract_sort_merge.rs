@@ -1,64 +1,78 @@
 use crate::data::User;
-use std::collections::HashSet;
 
-pub fn extract_sort_merge(
-    arr: &mut Vec<User>,
-    dirty_indices: &HashSet<usize>,
-    user_comparator: fn(&User, &User) -> std::cmp::Ordering,
-) {
+/// Extract-Sort-Merge using O(k) auxiliary space.
+///
+/// 1. Sort dirty indices, extract dirty values to a buffer, compact clean left: O(n)
+/// 2. Sort dirty buffer: O(k log k)
+/// 3. Merge backwards from the right end: O(n)
+///
+/// Takes unsorted dirty indices; sorts them internally.
+pub fn extract_sort_merge<F>(arr: &mut [User], dirty_indices: &mut [usize], cmp: F)
+where
+    F: Fn(&User, &User) -> std::cmp::Ordering,
+{
     if dirty_indices.is_empty() {
         return;
     }
 
     let n = arr.len();
+
+    // Sort dirty indices for linear scanning — O(k log k)
+    dirty_indices.sort_unstable();
+    debug_assert!(
+        dirty_indices.windows(2).all(|w| w[0] < w[1]),
+        "dirty indices must be distinct"
+    );
     let k = dirty_indices.len();
 
-    // Sort indices ascending for single-pass extraction
-    let mut sorted_indices: Vec<usize> = dirty_indices.iter().copied().collect();
-    sorted_indices.sort_unstable();
-
-    // Single O(n) pass with index comparison (no HashSet lookups)
-    let mut clean_values: Vec<User> = Vec::with_capacity(n - k);
-    let mut dirty_values: Vec<User> = Vec::with_capacity(k);
-    let mut dirty_ptr = 0;
-
-    for (i, val) in arr.drain(..).enumerate() {
-        if dirty_ptr < k && sorted_indices[dirty_ptr] == i {
-            dirty_values.push(val);
-            dirty_ptr += 1;
+    // Step 1: Extract dirty to buffer, compact clean to the left — single O(n) pass
+    let mut dirty_buf: Vec<User> = Vec::with_capacity(k);
+    let mut write = 0;
+    let mut di = 0; // index into dirty_indices
+    for read in 0..n {
+        if di < k && dirty_indices[di] == read {
+            dirty_buf.push(std::mem::take(&mut arr[read]));
+            di += 1;
         } else {
-            clean_values.push(val);
+            if write != read {
+                arr.swap(write, read);
+            }
+            write += 1;
         }
     }
 
-    // Sort dirty values - O(k log k)
-    dirty_values.sort_by(user_comparator);
+    // Step 2: Sort dirty values
+    dirty_buf.sort_unstable_by(&cmp);
 
-    // Merge - O(n)
-    let mut result: Vec<User> = Vec::with_capacity(n);
-    let clean_len = clean_values.len();
-    let dirty_len = dirty_values.len();
-    let mut i = 0;
-    let mut j = 0;
+    // Step 3: Backwards merge — pick larger of clean tail / dirty tail
+    let mut ci = (n - k) as isize - 1;
+    let mut di = k as isize - 1;
+    let mut wi = n - 1;
 
-    while i < clean_len && j < dirty_len {
-        if user_comparator(&clean_values[i], &dirty_values[j]) != std::cmp::Ordering::Greater {
-            result.push(std::mem::take(&mut clean_values[i]));
-            i += 1;
+    loop {
+        let take_clean = if ci >= 0 && di >= 0 {
+            cmp(&arr[ci as usize], &dirty_buf[di as usize]) != std::cmp::Ordering::Less
         } else {
-            result.push(std::mem::take(&mut dirty_values[j]));
-            j += 1;
+            ci >= 0
+        };
+
+        if take_clean {
+            if wi != ci as usize {
+                arr.swap(wi, ci as usize);
+            }
+            ci -= 1;
+        } else if di >= 0 {
+            arr[wi] = std::mem::take(&mut dirty_buf[di as usize]);
+            di -= 1;
+        } else {
+            break;
         }
-    }
 
-    for item in clean_values.drain(i..) {
-        result.push(item);
+        if wi == 0 {
+            break;
+        }
+        wi -= 1;
     }
-    for item in dirty_values.drain(j..) {
-        result.push(item);
-    }
-
-    *arr = result;
 }
 
 #[cfg(test)]
@@ -85,8 +99,8 @@ mod tests {
     #[test]
     fn test_empty_dirty_indices() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
-        let dirty: HashSet<usize> = HashSet::new();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -94,8 +108,8 @@ mod tests {
     fn test_single_dirty_index_move_left() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[5] = make_user(2); // 5 -> 2, should move left
-        let dirty: HashSet<usize> = [5].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![5];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -103,8 +117,8 @@ mod tests {
     fn test_single_dirty_index_move_right() {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(8); // 2 -> 8, should move right
-        let dirty: HashSet<usize> = [2].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![2];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -114,8 +128,8 @@ mod tests {
         arr[1] = make_user(9);
         arr[3] = make_user(0);
         arr[7] = make_user(5);
-        let dirty: HashSet<usize> = [1, 3, 7].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![1, 3, 7];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -128,8 +142,8 @@ mod tests {
             make_user(1),
             make_user(5),
         ];
-        let dirty: HashSet<usize> = (0..5).collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = (0..5).collect();
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -138,8 +152,8 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[4] = make_user(8);
         arr[5] = make_user(2);
-        let dirty: HashSet<usize> = [4, 5].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![4, 5];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -148,8 +162,8 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[0] = make_user(5);
         arr[9] = make_user(3);
-        let dirty: HashSet<usize> = [0, 9].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![0, 9];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
     }
 
@@ -158,9 +172,18 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(5);
         arr[7] = make_user(5);
-        let dirty: HashSet<usize> = [2, 7].into_iter().collect();
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        let mut dirty: Vec<usize> = vec![2, 7];
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
         assert!(is_sorted(&arr));
+    }
+
+    fn sample_distinct(rng: &mut impl rand::Rng, n: usize, k: usize) -> Vec<usize> {
+        let mut pool: Vec<usize> = (0..n).collect();
+        for i in 0..k {
+            let j = rng.gen_range(i..n);
+            pool.swap(i, j);
+        }
+        pool[..k].to_vec()
     }
 
     #[test]
@@ -170,13 +193,11 @@ mod tests {
             let n = 20;
             let k = rng.gen_range(1..=n);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            for _ in 0..k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            extract_sort_merge(&mut arr, &dirty, user_cmp);
+            extract_sort_merge(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr), "Failed with dirty indices: {:?}", dirty);
         }
     }
@@ -188,32 +209,27 @@ mod tests {
             let n = 1000;
             let k = rng.gen_range(1..=100);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            for _ in 0..k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            extract_sort_merge(&mut arr, &dirty, user_cmp);
+            extract_sort_merge(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr));
         }
     }
 
     #[test]
     fn test_randomized_large_k() {
-        // ESM should handle large k well (its strength)
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let n = 500;
-            let k = rng.gen_range(n / 2..n); // 50-100% dirty
+            let k = rng.gen_range(n / 2..n);
             let mut arr: Vec<User> = (0..n as u32).map(make_user).collect();
-            let mut dirty: HashSet<usize> = HashSet::new();
-            for _ in 0..k {
-                let idx = rng.gen_range(0..n);
+            let mut dirty = sample_distinct(&mut rng, n, k);
+            for &idx in &dirty {
                 arr[idx] = make_user(rng.gen_range(0..n as u32 * 2));
-                dirty.insert(idx);
             }
-            extract_sort_merge(&mut arr, &dirty, user_cmp);
+            extract_sort_merge(&mut arr, &mut dirty, user_cmp);
             assert!(is_sorted(&arr));
         }
     }
@@ -223,12 +239,12 @@ mod tests {
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[2] = make_user(15);
         arr[5] = make_user(20);
-        let dirty: HashSet<usize> = [2, 5].into_iter().collect();
+        let mut dirty: Vec<usize> = vec![2, 5];
 
         let mut expected_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         expected_ages.sort();
 
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
 
         let actual_ages: Vec<u32> = arr.iter().map(|u| u.age).collect();
         assert_eq!(actual_ages, expected_ages);
@@ -239,9 +255,9 @@ mod tests {
         // Verify clean values maintain their relative order
         let mut arr: Vec<User> = (0..10).map(make_user).collect();
         arr[3] = make_user(100); // Only index 3 is dirty
-        let dirty: HashSet<usize> = [3].into_iter().collect();
+        let mut dirty: Vec<usize> = vec![3];
 
-        extract_sort_merge(&mut arr, &dirty, user_cmp);
+        extract_sort_merge(&mut arr, &mut dirty, user_cmp);
 
         // Clean values should still be in their original sorted order
         assert!(is_sorted(&arr));

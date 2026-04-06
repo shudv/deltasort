@@ -35,14 +35,14 @@ A few important things to note about this definition:
 
 Phase~2 (lines~9--29) processes updated indices from left to right while maintaining a growing sorted prefix. We describe Phase~2 by first establishing a loop invariant and then proving its correctness by showing that the loop invariant holds at initialization, is preserved during maintenance, and that the array is fully sorted at termination.
 
-\paragraph{State.} We utilize the following state information during Phase~2:
+\paragraph{State} We utilize the following state information during Phase~2:
 \begin{itemize}
   \item \texttt{updatedIndices}: Sorted list of updated indices with a sentinel $n$ appended at the end.
   \item $\ell$: The boundary of the sorted prefix, $0$ at the start.
   \item \texttt{pendingRight}: Stack of pending $R$ indices, empty at the start.
 \end{itemize}
 
-\paragraph{Loop invariant.} At the start of each iteration of the loop at line~10, the following conditions hold for the current index $i$:
+\paragraph{Loop invariant} At the start of each iteration of the loop at line~10, the following conditions hold for the current index $i$:
 \begin{enumerate}
   \item The subarray $A[0..\ell-1]$ is sorted.
   \item There are no $L$ violations in the range $[\ell, i-1]$.
@@ -50,9 +50,9 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
   \item If the previous updated index had $L$ direction, then \texttt{pendingRight} is empty.
 \end{enumerate}
 
-\paragraph{Initialization.} The invariant trivially holds before the first iteration ($i = \texttt{updatedIndices}[0]$).
+\paragraph{Initialization} The invariant trivially holds before the first iteration ($i = \texttt{updatedIndices}[0]$).
 
-\paragraph{Maintenance.} We will now show that if the invariant holds for $i$, it also holds for the next updated index. Let $\texttt{dir}$ denote the direction of $i$.
+\paragraph{Maintenance} We will now show that if the invariant holds for $i$, it also holds for the next updated index. Let $\texttt{dir}$ denote the direction of $i$.
 
 \textbf{Case 1: $\texttt{dir} = L$}
 \begin{enumerate}
@@ -67,7 +67,7 @@ Phase~2 (lines~9--29) processes updated indices from left to right while maintai
   \item We then push $i$ onto \texttt{pendingRight} for deferred fixing. This preserves conditions (3) and (4) of the loop invariant.
 \end{enumerate}
 
-\paragraph{Termination.} The loop processes all values of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as $L$. Substituting $i = n$ in the invariant conditions, we have:
+\paragraph{Termination} The loop processes all values of \texttt{updatedIndices}, including the sentinel index $n$, which is treated as $L$. Substituting $i = n$ in the invariant conditions, we have:
 \begin{itemize}
   \item Condition (1) implies that $A[0..\ell-1]$ is sorted and contains its final values.
   \item Condition (2) implies there are no $L$ violations in the range $[\ell, n-1]$.
@@ -133,15 +133,39 @@ After Phase~1, we have two sorted sequences of $k$ values each:
   \item \textbf{Indices:} The $k$ updated positions $i_0 < i_1 < \cdots < i_{k-1}$, sorted.
   \item \textbf{Values:} The $k$ updated values $v_0 \le v_1 \le \cdots \le v_{k-1}$, sorted.
 \end{itemize}
-These form an \emph{order statistic} of $k$ uniform samples. Using a result from order statistic theory~\cite{feller1968}, we can prove that the number of segments formed is $O(\sqrt{k})$ (see~\lemref{lem:expected-segments} for full proof). With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
+Phase~1 pairs these by rank: the $j$-th smallest value $v_j$ is placed at the $j$-th smallest index $i_j$. Since both indices and values are drawn uniformly at random, each sorted sequence forms an \emph{order statistic} of $k$ uniform samples.
+
+Although values may be drawn from a different range than indices, what matters for determining direction is the value's \emph{target position}---where it belongs in the final sorted array. For a value $v_j$ in a sorted array of $n$ values spanning range $[0, M)$, its target position is approximately $t_j = v_j \cdot n / M$. Since $v_j$ is uniform over $[0, M)$, the target position $t_j$ is uniform over $[0, n)$---the same range as the indices. Thus, we can analyze both sequences as order statistics of uniform samples from the same range.
+
+Define the \emph{gap} at rank $j$ as:
+\[
+g_j = t_j - i_j
+\]
+This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By \defref{def:direction}:
+\begin{itemize}
+  \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
+  \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
+\end{itemize}
+
+The gap evolves as we move through the ranks. Let $\Delta i_j = i_{j+1} - i_j$ and $\Delta t_j = t_{j+1} - t_j$ denote the spacings between consecutive order statistics. The change in gap is:
+\[
+g_{j+1} - g_j = \Delta t_j - \Delta i_j
+\]
+Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
+
+By \defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings $\Theta(\sqrt{k})$. Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is $O(\sqrt{k})$.
+
+With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By \lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
 \[
 \mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}) \qedhere
 \]
 \end{proof}
 
 \begin{remark}[Worst Case Movement]
-While the expected movement is $O(n\sqrt{k})$, the worst-case movement is $O(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\appref{sec:appendix-worst-case} for an illustration). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
+While the expected movement is $O(n\sqrt{k})$, the worst-case movement is $O(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\figref{fig:worst-case}). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
 \end{remark}
+
+\input{\figdir/worst-case}
 
 \begin{lemma}[Comparison Count]
 \label{lem:comparison-count}
@@ -149,7 +173,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By \lemref{lem:expected-segments}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. As shown in the proof of \lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
 O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log (n \sqrt{k})) = O(k \log n) \qedhere
 \]
@@ -172,3 +196,12 @@ DeltaSort uses $O(k)$ auxiliary space.
 \begin{proof}
 Phase~1 sorts $k$ values using $O(k)$ space. Phase~2 maintains a pending stack of at most $k$ indices. Therefore, the total auxiliary space is $O(k)$.
 \end{proof}
+
+\subsection{Empirical Validation}
+\label{sec:empirical-validation}
+
+\figref{fig:complexity-analysis} presents empirical validation of DeltaSort's complexity bounds across multiple scales of $n$ and $k$. For movement complexity, we normalize the measured movement by $n\sqrt{k}$; for comparison complexity, we normalize by $k\log(n\sqrt{k})$. If the theoretical bounds are tight, these normalized values should be approximately constant across all scales.
+
+The results confirm both bounds: movement normalized by $n\sqrt{k}$ converges to approximately~$0.4$ across four orders of magnitude of~$n$, and comparisons normalized by $k\log(n\sqrt{k})$ converge to approximately~$1.4$. The overlap of curves for different~$n$ validates that the asymptotic analysis correctly captures the algorithm's behavior.
+
+\input{\figdir/complexity-analysis}

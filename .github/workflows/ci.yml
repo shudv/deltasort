@@ -75,3 +75,23 @@ jobs:
 
             - name: Run tests
               run: cargo test
+
+    paper:
+        name: Paper (LaTeX)
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Build article
+              uses: xu-cheng/latex-action@v3
+              with:
+                  working_directory: paper
+                  root_file: article.tex
+
+            - name: Build SEA (LIPIcs)
+              uses: xu-cheng/latex-action@v3
+              with:
+                  working_directory: paper
+                  root_file: sea.tex

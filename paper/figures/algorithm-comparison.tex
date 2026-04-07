@@ -31,8 +31,8 @@
 \foreach \i in {0,...,7} {
     \node[font=\tiny, gray] at (\xI + \i*\cellw, \rowB + 0.35) {\i};
 }
-% Input: 0 9 2 4 5 4 3 8 (centered vertically between the 3 algo rows)
-\foreach \i/\v/\up in {0/0/0, 1/9/1, 2/2/0, 3/4/0, 4/5/0, 5/4/1, 6/3/1, 7/8/0} {
+% Input: 0 4 2 4 5 9 3 8 (centered vertically between the 3 algo rows)
+\foreach \i/\v/\up in {0/0/0, 1/4/1, 2/2/0, 3/4/0, 4/5/0, 5/9/1, 6/3/1, 7/8/0} {
     \ifnum\up=1
         \node[cellup] (I\i) at (\xI + \i*\cellw, \rowB) {\v};
     \else
@@ -49,7 +49,7 @@
 % --- BIS: 0 + 4 + 6 = 10 moves ---
 % Label placed beside horizontal arm
 % After moving dirty values to end: 0 2 4 5 8 9 4 3
-\foreach \i/\v/\up in {0/0/0, 1/2/0, 2/4/0, 3/5/0, 4/8/0, 5/9/1, 6/4/1, 7/3/1} {
+\foreach \i/\v/\up in {0/0/0, 1/2/0, 2/4/0, 3/5/0, 4/8/0, 5/4/1, 6/9/1, 7/3/1} {
     \ifnum\up=1
         \node[cellup] (bisM\i) at (\xM + \i*\cellw, \rowA) {\v};
     \else
@@ -140,10 +140,10 @@
 \draw[arrow] (\xM + \arrayw - 0.1, \rowA) -- (8.8, \rowA) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
 \node[black, anchor=west] at (7.8, \rowA + 0.25) {\scriptsize\bfseries 18, 0};
 \draw[arrow] (\xM + \arrayw - 0.1, \rowB) -- (\xO - \arrowgap, \rowB);
-\node[black, anchor=west] at (7.8, \rowB + 0.25) {\scriptsize\bfseries 15, 3};
+\node[black, anchor=west] at (7.8, \rowB + 0.25) {\scriptsize\bfseries 16, 3};
 \draw[arrow] (\xM + \arrayw - 0.1, \rowC) -- (8.8, \rowC) -- (8.8, \rowB) -- (\xO - \arrowgap, \rowB);
 \node[black, anchor=west] at (7.8, \rowC + 0.25) {\scriptsize\bfseries 15, 3};
 \end{tikzpicture}
-\caption{Movement and space comparison for sorting $3$ updated values (yellow). In this example, ESM and DeltaSort sort updated values using insertion sort to simplify movement analysis. BIS first uses $8$ moves to shift updated values to the end (since insertion requires a fully sorted prefix), then $0+4+6$ moves to insert each updated value into the sorted prefix. ESM uses $3+3$ moves to extract and sort the updated values, $4$ moves for compaction and then $5$ moves for backward merge. DeltaSort uses $3+3+3$ moves to collect, sort, and write the updated values back to the array, then just $2+2+2$ moves to place each value correctly within its \emph{segment} (see~\defref{def:segment}), \emph{without having to form a fully sorted prefix upfront} like BIS.}
+\caption{Movement and space comparison for sorting $3$ updated values (yellow). In this example, ESM and DeltaSort sort updated values using insertion sort to simplify movement analysis. BIS first uses $8$ moves to shift updated values to the end (since insertion requires a fully sorted prefix), then $0+4+6$ moves to insert each updated value into the sorted prefix. ESM uses $3+3$ moves to extract and sort the updated values, $4$ moves for compacting the original array and then $6$ moves for backward merge. DeltaSort uses $3+3+3$ moves to collect, sort, and write the updated values back to the array, then just $2+2+2$ moves to place each value correctly within its \emph{segment} (see~\defref{def:segment}), \emph{without having to form a fully sorted prefix upfront} like BIS.}
 \label{fig:algorithm-comparison}
 \end{figure}

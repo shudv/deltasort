@@ -15,9 +15,120 @@ path = "src/lib.rs"
 
 [dependencies]
 rand = "0.8"
+rand_distr = "0.4"
 
 [dev-dependencies]
 
 [[bin]]
 name = "benchmark"
 path = "benchmark/main.rs"
+
+[[bin]]
+name = "btree-crossover"
+path = "benchmark/btree_crossover.rs"
+
+[[bin]]
+name = "hpc-particle"
+path = "benchmark/hpc_particle.rs"
+
+[[bin]]
+name = "midi-edit"
+path = "benchmark/midi_edit.rs"
+
+[[bin]]
+name = "leafbtree-bench"
+path = "benchmark/leafbtree_vs_btreemap.rs"
+
+[[bin]]
+name = "expensive-compare"
+path = "benchmark/expensive_compare.rs"
+
+[[bin]]
+name = "realistic-workload"
+path = "benchmark/realistic_workload.rs"
+
+[[bin]]
+name = "leafbtree-expensive"
+path = "benchmark/leafbtree_expensive.rs"
+
+[[bin]]
+name = "esm-vs-delta"
+path = "benchmark/esm_vs_delta.rs"
+
+[[bin]]
+name = "esm-vs-delta-hi"
+path = "benchmark/esm_vs_delta_hi.rs"
+
+[[bin]]
+name = "mixed-workload"
+path = "benchmark/mixed_workload.rs"
+
+[[bin]]
+name = "sap-workload"
+path = "benchmark/sap_workload.rs"
+
+[[bin]]
+name = "sap-validated"
+path = "benchmark/sap_validated.rs"
+
+[[bin]]
+name = "sap-e2e"
+path = "benchmark/sap_e2e.rs"
+
+[[bin]]
+name = "depth-sort"
+path = "benchmark/depth_sort.rs"
+
+[[bin]]
+name = "tracking"
+path = "benchmark/tracking.rs"
+
+[[bin]]
+name = "hft-basket"
+path = "benchmark/hft_basket.rs"
+
+[[bin]]
+name = "index-maint"
+path = "benchmark/index_maintenance.rs"
+
+[[bin]]
+name = "des-events"
+path = "benchmark/des_events.rs"
+
+[[bin]]
+name = "audio-voices"
+path = "benchmark/audio_voices.rs"
+
+[[bin]]
+name = "search-frontier"
+path = "benchmark/search_frontier.rs"
+
+[[bin]]
+name = "lob"
+path = "benchmark/lob.rs"
+
+[[bin]]
+name = "nw-qos"
+path = "benchmark/nw_qos.rs"
+
+[[bin]]
+name = "mht"
+path = "benchmark/mht.rs"
+
+[[bin]]
+name = "validated"
+path = "benchmark/validated.rs"
+
+[[bin]]
+name = "adversarial"
+path = "benchmark/adversarial.rs"
+
+[[bin]]
+name = "juce-midi"
+path = "benchmark/juce_midi.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false

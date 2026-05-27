@@ -1,0 +1,46 @@
+\section{Introduction}
+\label{sec:intro}
+
+A common pattern across production systems is a \emph{maintained sorted view}:
+a collection of elements that is queried in sorted order (top-$k$, range scan,
+or full ordered traversal) and updated in batches between queries. Limit order
+books, polyphonic voice managers, packet schedulers, sprite renderers, and
+radar trackers all share this shape.
+
+The textbook choices are a self-balancing tree or a flat array re-sorted on
+demand. \DeltaSort~\cite{deltasort} occupies a third point: it exploits the
+observation that, in many of these systems, the set of \emph{updated indices is
+already known} (the dirty list comes from the application layer for free), and
+uses that information to re-sort the array in $O(n + k \log n)$ comparisons and
+$O(n\sqrt{k})$ moves. For small $k$ relative to $n$, this beats both a full
+sort and Extract--Sort--Merge (\ESM), the standard incremental-sort baseline.
+
+A natural follow-up question is whether real systems actually live in the
+small-$k$ regime, and if so, by how much. This paper answers that question
+empirically.
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item We port eight workloads spanning finance, audio, networking, defense,
+        graphics, simulation, and pathfinding into a uniform Rust microbenchmark
+        harness with rigorous statistics (500 samples, $p50/p95/p99$ with 95\%
+        confidence intervals, two dirty-index distributions, verified
+        correctness on every cell).
+  \item We report that \DeltaSort wins 88\% of $(n,k)$ cells against \ESM,
+        with peak speedups of 346$\times$ (game depth-sort) and 123$\times$
+        (radar tracking) at workload-representative parameters. The 17 losses
+        cluster at $k/n \geq 5\%$, matching the theoretical crossover.
+  \item We validate the result in a real C++ codebase by porting \DeltaSort
+        to a header-only template (fuzz-tested) and integrating with JUCE's
+        \texttt{MidiMessageSequence}. \DeltaSort beats JUCE's stock
+        \texttt{sort()} on all 40 measured cells, by up to
+        \textbf{2624$\times$} for typical DAW edit operations.
+  \item We identify one decisive negative: A$^*$ / Dijkstra / discrete-event
+        simulation, where a binary heap with explicit position map beats
+        \DeltaSort by 4--600$\times$. This bounds \DeltaSort's applicability
+        domain and corrects a likely first instinct from the algorithm's
+        complexity bound.
+  \item We disclose a non-trivial tail-latency phenomenon: \DeltaSort's $p99/p50$
+        ratio can reach 92$\times$ at specific $(n,k)$ configurations. Real-time
+        systems must measure tails, not means, before adopting.
+\end{itemize}

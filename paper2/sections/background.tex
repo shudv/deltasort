@@ -1,0 +1,54 @@
+\section{Background and Methodology}
+\label{sec:bg}
+
+\subsection{The update-aware sorting model}
+
+Given a sorted array $A$ of length $n$ and a set of $k$ dirty indices
+$D \subseteq \{0,\dots,n-1\}$ whose elements have been overwritten, the
+problem is to restore $A$ to sorted order. Three baselines exist:
+
+\begin{itemize}
+  \item \textbf{Full sort.} Discard the ordering and call
+        \texttt{sort\_unstable}. Cost $\Theta(n \log n)$. Always correct,
+        always wasteful for small $k$.
+  \item \textbf{\ESM} (Extract--Sort--Merge). Extract the $k$ dirty elements,
+        sort them in $O(k \log k)$, merge with the remaining $n-k$ already-sorted
+        elements in $O(n)$. The standard incremental baseline.
+  \item \textbf{\DeltaSort}. $O(n + k \log n)$ comparisons and $O(n\sqrt{k})$
+        data moves; faster than \ESM for $k/n \lesssim 5\%$, with the exact
+        boundary depending on comparator cost~\cite{deltasort}.
+\end{itemize}
+
+\subsection{Experimental harness}
+
+All measurements use a Rust harness (\texttt{rust/benchmark/common.rs})
+designed to eliminate the standard microbenchmark pitfalls:
+
+\begin{itemize}
+  \item \textbf{500 samples + 100 warmup} per
+        (benchmark, distribution, $n$, $k$, strategy) cell.
+  \item \texttt{std::hint::black\_box} on every input and output to
+        prevent dead-code elimination.
+  \item Setup (array clone, dirty-list construction) runs \emph{outside}
+        the timed window; only the operation under test is measured.
+  \item Correctness verification on samples $0$, $n/2$, $n-1$ of every cell:
+        the output is asserted equal to a reference full-sort. This caught a
+        latent \texttt{Ord}/\texttt{PartialOrd} contract violation in two of
+        our application structs that was silent in earlier single-run
+        experiments.
+  \item Two dirty-index distributions are tested per cell: \emph{uniform}
+        (dirty indices spread over $[0,n)$) and \emph{clustered} (80\% of
+        dirty indices in a contiguous band, modeling top-of-book hotness,
+        recently-played notes, near-target tracks, etc.).
+  \item Statistics reported per cell: $p50$, $p95$, $p99$, mean, standard
+        deviation, 95\% CI for mean, min, max.
+  \item All baselines (\ESM and a position-mapped binary heap, \PosHeap)
+        come from a single shared module to eliminate
+        per-benchmark implementation drift.
+\end{itemize}
+
+Measurements were taken on an Apple M3 Pro (12 cores, macOS 26.5), with the
+release profile (\texttt{opt-level=3, lto=thin, codegen-units=1}). The full
+benchmark suite produces a 453-row CSV from which all figures and tables in
+this paper are derived; both the harness and the data are part of the
+artifact.

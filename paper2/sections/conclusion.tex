@@ -1,0 +1,22 @@
+\section{Conclusion}
+\label{sec:concl}
+
+\DeltaSort's update-aware sort is not just a theoretical curiosity. We
+identified seven production-relevant workloads --- spanning finance, audio,
+networking, defense, graphics, simulation, and sensor fusion --- where it
+delivers between 30$\times$ and 346$\times$ speedup over the standard
+incremental baseline in microbenchmarks, with consistent wins across both
+uniform and clustered dirty distributions. We then ported the algorithm
+to C++ and integrated it with the JUCE audio framework, observing
+wins between 7$\times$ and 2624$\times$ over JUCE's stock sort on real
+\texttt{MidiMessageSequence} operations --- a result that generalizes to
+any C++ codebase using \texttt{std::stable\_sort} on a mostly-sorted
+\texttt{std::vector}. The 12\% of microbenchmark cells where it loses
+are all at $k/n \geq 5\%$, exactly on the theoretical boundary. We also
+delimited the algorithm's scope: priority-queue workloads, where only the
+extremum is consumed, remain the domain of a heap with a position map,
+which beats \DeltaSort by up to 600$\times$.
+
+The complete artifact --- Rust harness, validated CSV, header-only C++
+port, JUCE-linked benchmark, and figure-generation scripts --- is
+available at the project repository.

@@ -1,0 +1,44 @@
+\section{Discussion and Limitations}
+\label{sec:disc}
+
+\paragraph{Tail latency.}
+For most cells the $p99/p50$ ratio is below $5\times$, comfortable for
+real-time use. Three cells, however, exhibit substantially higher tails:
+A$^*$ ($n{=}10{,}000$, $k{=}5$) at $10.7\times$, tracking
+($n{=}50{,}000$, $k{=}5$, clustered) at $12.6\times$, and tracking
+($n{=}10{,}000$, $k{=}50$, uniform) at $\mathbf{92\times}$ (median
+$9.5~\mu$s, $p99$ $879~\mu$s). A real-time system must validate
+$p99$ on its workload before relying on \DeltaSort. The most likely
+cause is comparator branch-prediction interaction with cascading insertion
+shifts, but a careful isolation experiment (CPU pinning, frequency lock,
+P-cores only) is required to confirm.
+
+\paragraph{When to use \DeltaSort.}
+The empirical evidence and theory both agree on the operating box:
+\begin{enumerate}
+  \item The consumer needs the full sorted order, not just the extremum.
+  \item Update batches satisfy $k/n \lesssim 5\%$
+        (extending to ${\sim}10\%$ when the comparator is expensive).
+  \item Dirty indices are known --- either provided by the application
+        layer, or cheaply derivable from a write log.
+  \item Maintaining a tree's per-node overhead is undesirable (because
+        $n$ is small enough that an array fits in cache, or because
+        downstream consumers also benefit from contiguous storage).
+\end{enumerate}
+All seven of our positive workloads tick all four boxes.
+
+\paragraph{Threats to validity.}
+(a)~All measurements are single-machine (Apple M3 Pro); we have not
+characterized x86 cache and branch behavior. (b)~Synthetic inputs use
+seeded RNGs; production traces may exhibit different update locality.
+(c)~The harness measures the sort operation in isolation; embedding cost
+(re-establishing application-layer pointers into the sorted array) is
+application-dependent and not modeled.
+
+\paragraph{Methodology note.}
+The verification clause in our harness asserts the strategy's output against
+a reference full-sort on every measured cell. This caught a real
+\texttt{Ord}/\texttt{PartialOrd} contract violation in two of our application
+structs (the lexicographic derive disagreed with the manually-implemented
+\texttt{Ord}) that was silent in earlier single-run experiments. We
+recommend this practice for any sorting benchmark.

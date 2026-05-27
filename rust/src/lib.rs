@@ -20,6 +20,8 @@
 //! assert_eq!(arr, vec![1, 2, 5, 8, 9]);
 //! ```
 
+pub mod leaf_btree;
+
 /// Directions for updated indices
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Direction {

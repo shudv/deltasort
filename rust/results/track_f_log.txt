@@ -1,0 +1,38 @@
+[sanity] range_from matches BTreeMap range for 100 random starts.
+Generating 1000000 initial URL keys...
+Initial set ready: 1000000 keys
+
+ scan_len               structure    leaf_cap    buf_cap      total_ms         ns/op
+       10           std::BTreeMap           0          0        78.710           787
+       10            LeafBTree-DS         256          4       172.724          1727  (0.46x vs BT)
+       10            LeafBTree-FS         256          4       176.714          1767  (0.45x vs BT)
+       10            LeafBTree-DS        1024         16       415.954          4160  (0.19x vs BT)
+       10            LeafBTree-FS        1024         16       368.065          3681  (0.21x vs BT)
+       10            LeafBTree-DS        4096         64      1452.983         14530  (0.05x vs BT)
+       10            LeafBTree-FS        4096         64      1380.635         13806  (0.06x vs BT)
+       10            LeafBTree-DS       16384        256      9235.025         92350  (0.01x vs BT)
+       10            LeafBTree-FS       16384        256     11443.114        114431  (0.01x vs BT)
+       10            LeafBTree-DS       65536       1024    108865.631       1088656  (0.00x vs BT)
+       10            LeafBTree-FS       65536       1024    111209.709       1112097  (0.00x vs BT)
+
+      100           std::BTreeMap           0          0       138.281          1383
+      100            LeafBTree-DS         256          4       391.364          3914  (0.35x vs BT)
+      100            LeafBTree-FS         256          4       297.867          2979  (0.46x vs BT)
+      100            LeafBTree-DS        1024         16       561.870          5619  (0.25x vs BT)
+      100            LeafBTree-FS        1024         16       548.058          5481  (0.25x vs BT)
+      100            LeafBTree-DS        4096         64      2251.126         22511  (0.06x vs BT)
+      100            LeafBTree-FS        4096         64      1496.389         14964  (0.09x vs BT)
+      100            LeafBTree-DS       16384        256      9023.457         90235  (0.02x vs BT)
+      100            LeafBTree-FS       16384        256      8925.277         89253  (0.02x vs BT)
+      100            LeafBTree-DS       65536       1024    109454.989       1094550  (0.00x vs BT)
+      100            LeafBTree-FS       65536       1024    108398.217       1083982  (0.00x vs BT)
+
+     1000           std::BTreeMap           0          0       380.994          3810
+     1000            LeafBTree-DS         256          4       896.754          8968  (0.42x vs BT)
+     1000            LeafBTree-FS         256          4       807.374          8074  (0.47x vs BT)
+     1000            LeafBTree-DS        1024         16      1110.262         11103  (0.34x vs BT)
+     1000            LeafBTree-FS        1024         16      1228.478         12285  (0.31x vs BT)
+     1000            LeafBTree-DS        4096         64      2319.678         23197  (0.16x vs BT)
+     1000            LeafBTree-FS        4096         64      2406.631         24066  (0.16x vs BT)
+     1000            LeafBTree-DS       16384        256     11445.594        114456  (0.03x vs BT)
+     1000            LeafBTree-FS       16384        256     12810.964        128110  (0.03x vs BT)

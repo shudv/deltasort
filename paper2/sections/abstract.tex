@@ -1,0 +1,24 @@
+\DeltaSort~\cite{deltasort} re-sorts an $n$-element array after $k$ known
+in-place updates in $O(n + k \log n)$ comparisons and $O(n\sqrt{k})$ moves,
+beating full sort and Extract--Sort--Merge (\ESM) for $k/n \lesssim 5\%$.
+But \emph{which production systems actually have this workload shape?}
+We answer empirically. (i) We port eight workloads ---
+limit-order-book depth maintenance, HFT alpha-basket repricing, polyphonic
+audio voice management, multi-target radar tracking, multi-hypothesis tracking,
+game depth-sort, weighted-fair-queue packet scheduling, and A$^*$ frontier
+maintenance --- into a uniform 500-sample microbenchmark harness with
+$p50/p95/p99$ statistics and verified correctness. \DeltaSort wins
+125 of 142 $(n,k)$ cells (88\%) against \ESM, with peak speedups of
+\textbf{346$\times$} (game depth-sort) and \textbf{123$\times$} (radar tracking).
+(ii) We validate this in a real C++ codebase by porting \DeltaSort to a
+header-only template ($\sim$140 lines, fuzz-tested) and integrating with the
+JUCE audio framework. On real \texttt{juce::MidiMessageSequence}, \DeltaSort
+beats JUCE's stock \texttt{sort()} in all 40 measured cells, by up to
+\textbf{2624$\times$} for typical DAW edit operations (drag, quantize) and
+$7$--$20\times$ even at $k/n = 25\%$. The gap is amplified because libc++'s
+\texttt{std::stable\_sort} is non-adaptive --- a finding that generalizes
+to any C++ codebase reaching for it after small edits.
+(iii) We report one decisive negative: priority-queue workloads (A$^*$,
+Dijkstra, discrete-event simulation) are dominated by a binary heap with
+position map by 4--600$\times$, confirming that \DeltaSort is a
+\emph{sorted-array} algorithm, not a priority-queue replacement.

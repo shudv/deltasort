@@ -1,3 +1,18 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artefacts
+cpp/deltasort_juce/build/
+external/
+
+# Editor
+.vscode/
+
+# Paper LaTeX build artefacts
+paper2/main.aux
+paper2/main.bbl
+paper2/main.blg
+paper2/main.log
+paper2/main.out
+paper2/main.pdf

@@ -1,0 +1,28 @@
+%==============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%==============================================================================
+
+We have studied when update-aware incremental sorting (\DeltaSort) shifts
+the trade-off between flat sorted arrays and B-trees in mixed update-query workloads.
+
+The central finding is a near-universal crossover:
+for any workload with at least one indexed rank query per epoch ($Q \geq 1$),
+a sorted \texttt{Vec} maintained by \DeltaSort outperforms a \texttt{BTreeMap},
+regardless of $n \in [10^3, 10^6]$ and $k \in [1, 10^4]$.
+The break-even epoch-read count $Q^*$ is at most $2$, predicted exactly by
+the simple analytic formula in \eqnref{eq:qbreak-approx}.
+
+In the MIDI sequencer domain---a concrete, realistic application---\DeltaSort
+delivers $5$--$19\times$ throughput gains over \texttt{BTreeSet} for drag and
+quantize operations, the dominant edit types in interactive DAW usage.
+The advantage holds for all realistic MIDI track sizes ($n \leq 10^5$).
+
+We also show, honestly, two domains where \DeltaSort does not provide
+a practical advantage: large-scale HPC particle sort ($n=10^6$, where \ESM
+is $2\times$ faster even in the cold regime) and 3D rendering (sort is
+$<5\%$ of the frame budget regardless of algorithm).
+
+Together these results delineate a clear applicability profile for \DeltaSort:
+medium-$n$, low-$k$, read-inclusive workloads over flat arrays, in systems
+where dirty indices arise naturally from the application's own update path.

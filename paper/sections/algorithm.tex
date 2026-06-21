@@ -140,25 +140,36 @@ Define the \emph{gap} at rank $j$ as:
 \[
 g_j = t_j - i_j
 \]
-This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position. By~\defref{def:direction}:
-\begin{itemize}
-  \item $g_j < 0$ implies the value is too small for its position, so direction is $L$.
-  \item $g_j \ge 0$ implies the value is adequate or too large, so direction is $R$.
-\end{itemize}
+This measures how far ahead (positive) or behind (negative) the value's target position is relative to its current position.
 
 The gap evolves as we move through the ranks. Let $\Delta i_j = i_{j+1} - i_j$ and $\Delta t_j = t_{j+1} - t_j$ denote the spacings between consecutive order statistics. The change in gap is:
 \[
 g_{j+1} - g_j = \Delta t_j - \Delta i_j
 \]
-Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_1, g_2, \ldots, g_k$ evolves as a \emph{symmetric random walk}.
+Since both $\Delta t_j$ and $\Delta i_j$ are spacings of independent uniform order statistics, they have the same expected value ($n/(k+1)$) and are independent of each other. Therefore, the increment $g_{j+1} - g_j$ has mean zero and behaves as a random step. This means the sequence $g_0, g_1, \ldots, g_{k-1}$ evolves as a \emph{symmetric random walk}.
 
-By~\defref{def:segment}, segment boundaries occur at $L \to R$ transitions---precisely when the gap $g_j$ crosses from negative to non-negative. This corresponds to an \emph{upcrossing} of zero in the random walk. A classical result from random walk theory~\cite{feller1968} states that a symmetric random walk of $k$ steps has expected number of zero crossings $\Theta(\sqrt{k})$. Since $L \to R$ transitions account for roughly half of all zero crossings, the expected number of segments is $O(\sqrt{k})$.
-
-With $O(\sqrt{k})$ segments partitioning the array of size $n$, the expected width of each segment is $O(n / \sqrt{k})$. By~\lemref{lem:confinement}, movement is confined within segments. Since each of the $k$ updated values moves at most the width of its containing segment, the expected total movement is:
+We now bound the total movement directly. Value $v_j$ is placed at position $i_j$ after Phase~1 and belongs at approximately position $t_j$ in the final sorted array. Therefore, the movement required for value $v_j$ is at most $|g_j| = |t_j - i_j|$. The total data movement is bounded by:
 \[
-\mathbb{E}[\text{total movement}] \le k \cdot O\!\left(\frac{n}{\sqrt{k}}\right) = O(n\sqrt{k}) \qedhere
+\sum_{j=0}^{k-1} |g_j|
 \]
+
+Since the gap process is a random walk with i.i.d.\ mean-zero increments, we can compute $\mathbb{E}[|g_j|]$ using standard results. Each increment has variance $\sigma^2 = \operatorname{Var}(\Delta t_j) + \operatorname{Var}(\Delta i_j)$, which for spacings of $k$ uniform order statistics on $[0, n)$ equals $2kn^2 / ((k+1)^2(k+2)) = \Theta(n^2/k^2)$. After $j$ steps, $g_j$ has variance $j\sigma^2$, so by Jensen's inequality and the central limit theorem~\cite{feller1968}:
+\[
+\mathbb{E}[|g_j|] = \Theta(\sqrt{j} \cdot \sigma) = \Theta\!\left(\sqrt{j} \cdot \frac{n}{k}\right)
+\]
+
+Summing over all $k$ values:
+\[
+\mathbb{E}\!\left[\sum_{j=0}^{k-1} |g_j|\right] = \sum_{j=0}^{k-1} \Theta\!\left(\sqrt{j} \cdot \frac{n}{k}\right) = \Theta\!\left(\frac{n}{k}\right) \cdot \sum_{j=0}^{k-1} \sqrt{j} = \Theta\!\left(\frac{n}{k}\right) \cdot \Theta(k^{3/2}) = \Theta(n\sqrt{k})
+\]
+where the last step uses $\sum_{j=0}^{k-1} \sqrt{j} = \Theta(k^{3/2})$, which follows from approximating the sum by the integral $\int_0^{k} \sqrt{x}\, dx = \tfrac{2}{3} k^{3/2}$.
+
+Therefore, $\mathbb{E}[\text{total movement}] = O(n\sqrt{k})$. \qed
 \end{proof}
+
+\begin{remark}[Segment Interpretation]
+The gap process also yields a natural bound on the number of segments. By~\defref{def:direction}, $g_j < 0$ corresponds to direction $L$ and $g_j \ge 0$ to direction $R$. By~\defref{def:segment}, segment boundaries occur at $L \to R$ transitions, which correspond to upcrossings of zero in the random walk. A classical result~\cite{feller1968} states that a symmetric random walk of $k$ steps has $\Theta(\sqrt{k})$ zero crossings, so the expected number of segments is $O(\sqrt{k})$.
+\end{remark}
 
 \begin{remark}[Worst Case Movement]
 While the expected movement is $O(n\sqrt{k})$, the worst-case movement is $O(nk)$. This occurs when updated values form a single segment spanning the entire array. This happens when updates \emph{cluster monotonically} at the start or end of the array (see~\figref{fig:worst-case}). Hence, in a practical setting, a hybrid algorithm will need to fall back to ESM or full re-sort based on the number of segments.
@@ -172,7 +183,7 @@ DeltaSort performs $O(k \log n)$ comparisons.
 \end{lemma}
 
 \begin{proof}
-Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. As shown in the proof of~\lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
+Phase~1 sorts the $k$ updated values, requiring $O(k \log k)$ comparisons. In Phase~2, each updated value is fixed using binary search within its containing segment. By the segment interpretation in the remark following~\lemref{lem:movement-bound}, the expected number of segments is $O(\sqrt{k})$, so the expected width of a segment is $O(n/\sqrt{k})$. Since searches are confined within segment boundaries, each fix requires $O(\log (n/\sqrt{k}))$ comparisons, for a total of $O(k \log (n/\sqrt{k}))$ comparisons in Phase~2. Summing both gives:
 \[
 O(k \log k) + O(k \log (n/\sqrt{k})) = O\!\bigl(k(\log k + \log n - \tfrac{1}{2}\log k)\bigr) = O(k \log (n \sqrt{k})) = O(k \log n) \qedhere
 \]

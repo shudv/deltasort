@@ -1,0 +1,69 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{xspace}
+
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+% Macros
+\newcommand{\DeltaSort}{\textsc{DeltaSort}\xspace}
+\newcommand{\ESM}{\textsc{ESM}\xspace}
+\newcommand{\BIS}{\textsc{BIS}\xspace}
+\newcommand{\Qbreak}{Q^*}
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\newcommand{\secref}[1]{Section~\ref{#1}}
+\newcommand{\tabref}[1]{Table~\ref{#1}}
+\newcommand{\eqnref}[1]{Eq.~(\ref{#1})}
+
+\title{%
+  Sorted Arrays Beat Trees:\\
+  Characterizing When Incremental Array Sorting Dominates\\
+  B-trees in Mixed Update-Query Workloads
+}
+
+\author{Shubham Dwivedi \\
+  \small Independent Researcher \\
+  \small \texttt{shubd3@gmail.com}
+}
+
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/background}
+\input{sections/model}
+\input{sections/crossover}
+\input{sections/applications}
+\input{sections/negative}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

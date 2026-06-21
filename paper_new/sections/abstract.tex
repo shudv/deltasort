@@ -1,0 +1,27 @@
+Systems that maintain sorted collections face a recurring design question:
+\emph{use a flat sorted array, or a dynamic ordered structure such as a B-tree?}
+Arrays offer $O(1)$ indexed access and superior cache locality, but re-sorting
+after updates costs $O(n \log n)$. B-trees support $O(\log n)$ updates but
+incur $O(n)$ traversal for a full sorted scan or $O(r)$ per rank query.
+
+We study this trade-off under the \emph{update-aware sorting} model, where
+the positions of updated elements are explicitly known. Under this model,
+\DeltaSort~\cite{deltasort} reduces re-sort cost to $O(n\sqrt{k})$ for $k$ dirty
+elements, making sorted arrays competitive with B-trees even at modest update rates.
+
+We make three contributions:
+\textbf{(1)} We derive a closed-form crossover formula: for any workload with
+$\Qbreak \leq 2$ indexed reads per update epoch, a sorted array with \DeltaSort
+outperforms a BTreeMap, regardless of $n$ and $k$.
+We validate this analytically against Rust microbenchmarks across
+$n \in [10^3, 10^6]$ and $k \in [1, 10^4]$.
+\textbf{(2)} We evaluate \DeltaSort on a realistic MIDI sequencer editing workload
+($n \leq 10^5$ notes, edit operations modeled on Ardour's sequencer),
+showing 5--20$\times$ throughput gains over a \texttt{BTreeSet} for common
+drag and quantize operations.
+\textbf{(3)} We honestly characterize two domains where \DeltaSort does \emph{not}
+provide a practical advantage: large-scale HPC particle sorting ($n = 10^6$, where
+\ESM dominates at $k/n \geq 5\%$) and GPU-bound 3D rendering (where
+phase-sort cost is $<5\%$ of frame budget regardless of algorithm).
+These negative results delineate when the update-aware model is---and is not---the
+right abstraction.

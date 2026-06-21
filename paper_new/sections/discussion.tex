@@ -1,0 +1,49 @@
+%==============================================================================
+\section{Discussion}
+\label{sec:discussion}
+%==============================================================================
+
+\paragraph{When does \DeltaSort help?}
+Our results converge on a clear regime:
+
+\begin{itemize}
+  \item $n \leq 10^5$ (collection fits in L2/L3 cache on modern hardware)
+  \item $k/n \leq 5\%$ (cold update regime)
+  \item $Q \geq 1$ indexed read per epoch (any non-trivial consumption)
+  \item Dirty indices are \emph{already known} at sort time (no extra instrumentation cost)
+\end{itemize}
+
+Interactive applications over medium-sized sorted lists naturally satisfy all four.
+Examples that fit: MIDI note editing, leaderboard updates, spreadsheet sorted
+view maintenance, priority-ranked notification feeds.
+
+\paragraph{When does it not help?}
+\DeltaSort is not the right choice when:
+
+\begin{itemize}
+  \item $k/n \gtrsim 5\%$: \ESM's linear merge is more cache-efficient.
+  \item $n \gg 10^6$ and sort is not the bottleneck: BTreeMap's per-update
+    $O(\log n)$ amortizes better over many reads.
+  \item The underlying structure is a hash map or tree: dirty-index recovery
+    requires a full scan, defeating the advantage.
+  \item The workload has $Q = 0$ (pure update log, no rank queries): BTreeMap wins.
+\end{itemize}
+
+\paragraph{ESM vs.\ \DeltaSort.}
+The HPC results reinforce the original \DeltaSort paper's finding: for
+$k/n \gtrsim 5\%$, \ESM dominates.
+\DeltaSort's advantage is in the $k/n < 5\%$ regime with reads.
+A practical adaptive strategy: use \DeltaSort for $k/n < 5\%$, \ESM otherwise.
+
+\paragraph{Correctness and reproducibility.}
+The \DeltaSort implementation is tested with randomized correctness tests
+for all four operation types in the MIDI benchmark.
+All benchmark code is open-source at \url{https://github.com/shudv/deltasort}.
+
+\paragraph{Limitations.}
+Our MIDI benchmark is a \emph{simulation} of Ardour's workload, not an
+integration into Ardour itself.
+End-to-end latency in a real DAW depends on audio buffer callbacks, plugin
+processing, and OS scheduling---factors we do not model.
+Our HPC simulation uses a simplified leapfrog integrator without gravity;
+production codes (GADGET-4's TreePM) have more complex dirty-set distributions.

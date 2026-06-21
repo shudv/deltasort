@@ -1,0 +1,33 @@
+%==============================================================================
+\section{Background: DeltaSort}
+\label{sec:background}
+%==============================================================================
+
+We briefly summarize \DeltaSort~\cite{deltasort}; see the original paper for
+proofs and full pseudocode.
+
+\paragraph{Setting.}
+Let $A[0..n-1]$ be a sorted array and $U \subseteq \{0,\dots,n-1\}$ a set of
+$k = |U|$ indices whose values may have changed.
+The goal is to restore global sorted order using the knowledge of $U$.
+
+\paragraph{Algorithm sketch.}
+\DeltaSort partitions $A$ into maximal \emph{segments}: contiguous runs
+that do not contain any dirty index or a boundary created by a dirty neighbor.
+Each updated value is then binary-searched to its correct position within its
+segment, and a rotation moves it there.
+Because the dirty indices tend to be spread across $O(\sqrt{k})$ segments
+under a random update model, the expected total data movement is $O(n\sqrt{k})$.
+
+\paragraph{Complexity.}
+Under the \emph{bounded-range} model (updated values drawn uniformly from the
+value range of the array), \DeltaSort runs in $O(n\sqrt{k})$ expected time
+using $O(k)$ auxiliary space.
+For $k \leq 0.01n$ (the practically relevant regime), this beats both
+\BIS ($O(nk)$) and \ESM ($O(n + k\log k)$) on the M3 Pro hardware we test.
+
+\paragraph{ESM for reference.}
+\ESM (Extract–Sort–Merge) extracts the $k$ dirty values, sorts them in
+$O(k \log k)$, and merges them back with the $n-k$ clean values in $O(n)$.
+Its total cost is $\Theta(n)$ regardless of $k$, making it superior to
+\DeltaSort when $k/n \gtrsim 5\%$ (hardware-dependent).

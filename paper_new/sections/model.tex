@@ -1,0 +1,47 @@
+%==============================================================================
+\section{Workload Model}
+\label{sec:model}
+%==============================================================================
+
+We study a generic \emph{batched update-query workload} parameterized by three integers:
+
+\begin{itemize}
+  \item $n$: the number of items in the collection.
+  \item $k$: the number of items whose sort keys change per \emph{epoch}.
+    Positions of updated items are known to the caller.
+  \item $Q$: the number of \emph{indexed rank queries} per epoch.
+    A rank query $\texttt{get\_rank}(i)$ retrieves the item currently at
+    sorted position $i$.
+\end{itemize}
+
+An \emph{epoch} proceeds as follows: (1) $k$ items are updated at known indices;
+(2) the sorted order is restored; (3) $Q$ rank queries are answered.
+Steps (1) and (2) alternate with step (3) repeatedly.
+
+\paragraph{Data structures.}
+We compare two canonical choices:
+
+\begin{description}
+  \item[Sorted Vec + \DeltaSort.]
+    Maintains a contiguous sorted array.
+    Step (2) costs $T_{\Delta}(n,k) = O(n\sqrt{k})$ in expectation.
+    Step (3) costs $O(1)$ per query (direct index).
+    Total per epoch: $T_{\Delta}(n,k) + O(Q)$.
+
+  \item[BTreeMap.]
+    A self-balancing search tree (Rust's \texttt{std::collections::BTreeMap}).
+    Step (2): each updated item is removed and reinserted in $O(\log n)$;
+    total $O(k \log n)$.
+    Step (3): the item at rank $i$ requires an in-order walk of $i$ nodes,
+    costing $O(i)$.
+    For $Q$ rank queries with uniformly random ranks, expected cost is
+    $Q \cdot O(n/2) = O(Qn)$.
+    Alternatively, the full sorted order can be materialized once in $O(n)$
+    and all $Q$ queries answered in $O(1)$ each; choose the cheaper option.
+    Total per epoch: $O(k \log n + \min(Qn,\; n + Q))$.
+\end{description}
+
+This model captures, for example, a leaderboard (updates from score changes,
+queries for top-$K$ ranking), a MIDI event list (updates from note drags,
+queries for playback iteration), or a sorted search result cache (updates
+from index refreshes, queries from UI rendering).

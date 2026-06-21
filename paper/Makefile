@@ -18,3 +18,4 @@ rebuild: clean all
 
 clean:
 	rm -rf *.aux *.bbl *.blg *.log *.out *.toc *.fls *.fdb_latexmk *.synctex.gz *.vtc article.pdf sea.pdf out/*
+	rm -rf out

@@ -1,0 +1,13 @@
+\begin{thebibliography}{1}
+
+\bibitem{drepper2007memory}
+Ulrich Drepper.
+\newblock {\em What Every Programmer Should Know About Memory}.
+\newblock Red Hat, Inc., 2007.
+
+\bibitem{deltasort}
+Shubham Dwivedi.
+\newblock {DeltaSort}: Incremental sorting of arrays with known updates, 2025.
+\newblock Preprint.
+
+\end{thebibliography}

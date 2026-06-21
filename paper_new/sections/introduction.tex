@@ -1,0 +1,81 @@
+%==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+%==============================================================================
+
+Sorted collections are fundamental to systems software.
+Priority queues, leaderboards, sorted result sets, MIDI note timelines,
+and particle simulation indices all require efficient maintenance of order
+as underlying data changes.
+The standard design choice is between two poles:
+
+\begin{itemize}
+  \item \textbf{Flat sorted arrays.} $O(1)$ indexed access, cache-optimal sequential
+    scans, SIMD-friendly comparisons~\cite{drepper2007memory}.
+    Update cost is $O(n \log n)$ for a full re-sort.
+  \item \textbf{Dynamic ordered structures (B-tree, red-black tree).}
+    $O(\log n)$ per update. Sequential access costs $O(n)$ traversal;
+    rank queries cost $O(r)$ per query or $O(n)$ to materialize.
+\end{itemize}
+
+Production systems have converged toward trees for write-heavy workloads
+(databases use B$^+$-trees; language standard libraries offer
+\texttt{std::map}, \texttt{BTreeMap}), and toward arrays for read-heavy or
+batch-processed collections.
+When updates are small and \emph{localized}---affecting $k \ll n$ elements
+per batch---neither choice is obviously optimal.
+The sorted array requires an expensive full re-sort; the B-tree pays $O(\log n)$
+per update but makes range iteration or rank queries costly.
+
+\paragraph{Update-aware sorting.}
+A recent line of work~\cite{deltasort} observes that in many practical systems,
+the \emph{positions} of updated elements are known at the time of sorting
+(they were just written by the application).
+Given this information, \DeltaSort~\cite{deltasort} restores sorted order of
+a flat array in $O(n\sqrt{k})$ expected time and $O(k)$ space,
+outperforming both BIS ($O(nk)$) and ESM ($O(n + k\log k)$) for $k \lesssim 1\%$.
+
+\paragraph{Our question.}
+The original \DeltaSort paper establishes the algorithm's superiority
+\emph{within} the sorted-array family (vs.\ BIS and ESM).
+We ask a different question: \emph{does update-aware sorting shift the
+trade-off between flat arrays and B-trees, and if so, in which real workloads?}
+
+\paragraph{Findings.} We find:
+
+\begin{enumerate}
+  \item \textbf{The crossover is nearly universal.}
+    For any workload with even a single indexed read per update epoch
+    ($Q \geq 1$), a sorted array maintained by \DeltaSort outperforms
+    a \texttt{BTreeMap} for all $(n, k)$ pairs we test.
+    The break-even reads-per-epoch $\Qbreak$ is at most $2$ across
+    $n \in [10^3, 10^6]$, $k \in [1, 10^4]$, predicted exactly by a
+    simple analytic formula (\secref{sec:crossover}).
+
+  \item \textbf{MIDI sequencing is a natural fit.}
+    A music sequencer stores events sorted by timestamp, receives small
+    batches of edits (drag, quantize, paste), and answers sorted reads
+    continuously.
+    \DeltaSort over a sorted \texttt{Vec} delivers
+    $5$--$20\times$ throughput over \texttt{BTreeSet} for drag and
+    quantize operations at $n \leq 10^5$ (\secref{sec:midi}).
+
+  \item \textbf{Large-scale HPC and 3D rendering are \emph{not} good fits.}
+    In cosmological particle simulations at $n = 10^6$, \ESM dominates
+    \DeltaSort for $k/n \geq 5\%$ because the linear merge pass is
+    more cache-efficient than DeltaSort's segment scan.
+    In 3D game-engine rendering (Bevy), the phase sort is $<5\%$ of
+    the frame budget even under worst-case fully-sorted conditions,
+    making algorithmic choices irrelevant to FPS (\secref{sec:negative}).
+\end{enumerate}
+
+These results paint a coherent picture: \DeltaSort is most valuable in
+\textbf{medium-$n$, low-$k$, read-inclusive} workloads where the collection
+is too large for full re-sort to be cheap but too read-heavy for a B-tree's
+traversal cost to be acceptable.
+MIDI editing, leaderboard maintenance, and interactive dashboards naturally
+fall into this regime.
+Large-batch HPC and GPU-bound rendering do not.
+
+\paragraph{Artifact.} All benchmarks are implemented in Rust and are
+available at \url{https://github.com/shudv/deltasort}.

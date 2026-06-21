@@ -16,3 +16,17 @@ paper2/main.blg
 paper2/main.log
 paper2/main.out
 paper2/main.pdf
+
+# paper_new LaTeX build artefacts
+paper_new/*.aux
+paper_new/*.bbl
+paper_new/*.blg
+paper_new/*.log
+paper_new/*.out
+paper_new/*.toc
+
+# Compiled binaries / build junk
+cpp/deltasort_juce/test_ds
+*.o
+*.d
+a.out

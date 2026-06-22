@@ -1,11 +1,10 @@
 # DeltaSort
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18132074.svg)](https://doi.org/10.5281/zenodo.18132074)
 [![CI](https://github.com/shudv/deltasort/actions/workflows/ci.yml/badge.svg)](https://github.com/shudv/deltasort/actions)
 
 An incremental soting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
 
-📄 **[Read the pre-print](https://doi.org/10.5281/zenodo.18132074)**
+📄 **[Read the paper](https://doi.org/10.4230/LIPIcs.SEA.2026.18)**
 
 ## Quick Start
 
@@ -72,7 +71,7 @@ js/      — JavaScript implementation + benchmarks
 
 ## Feedback Welcome
 
-This is early-stage. If you:
+If you:
 
 - Find bugs or edge cases
 - Have suggestions for the paper

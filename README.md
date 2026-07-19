@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/shudv/deltasort/actions/workflows/ci.yml/badge.svg)](https://github.com/shudv/deltasort/actions)
 
-An incremental soting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort.
+An incremental sorting algorithm for arrays. When you know _which_ values changed, DeltaSort restores order multi-fold faster than a full re-sort, and faster than linear merge for small update batches.
 
 📄 **[Read the paper](https://doi.org/10.4230/LIPIcs.SEA.2026.18)**
 
